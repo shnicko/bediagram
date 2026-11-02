@@ -19,7 +19,7 @@ so the file format must stay meaningful to code, not just pretty.
 ```
 BeDiagram.sln
 BeDiagram/
-  Models/Diagram.cs      data model: Diagram, Node, Edge, Comment, Group, PageSetup, NodeTypes, Palette, LineLook
+  Models/Diagram.cs      data model: Diagram, Node, Edge, TextBox (IsComment flag), Group, PageSetup, NodeTypes, Palette, TextPalette, LineLook
   Models/Geometry.cs     shape outlines, connector routing (elbow/straight), label + icon layout, bounds
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
@@ -40,7 +40,8 @@ BeDiagram/
   needs both renderers updated, and the Mermaid export updated where Mermaid can express it.
 - **Undo.** Every model change goes through `Change()` (snapshot + dirty) or, for drags, a snapshot taken at
   gesture start and pushed on pointer-up. Panel inputs call `Checkpoint` on focus.
-- **Groups** don't nest. Membership is `GroupId` on nodes/comments; moving a group moves its members (`MoveBox`).
+- **Text boxes** replace the old comments: one `TextBox` class, `IsComment` flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in `Geometry.Layout(TextBox)`, drawn with SVG text in both renderers.
+- **Groups** don't nest. Membership is `GroupId` on nodes/text boxes; moving a group moves its members (`MoveBox`).
 - **Connector labels** render in their own layer above shapes (canvas and export).
 - **Page mode** puts the sheet at world (0,0); sizes in mm convert at 96 px/inch (`PageSetup.PxPerMm`).
 - Razor gotchas: wrap SVG `<text>` in a `<g>` when it's the first element in a code block (Razor treats a bare

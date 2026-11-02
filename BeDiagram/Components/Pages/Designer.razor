@@ -92,7 +92,17 @@
                 <kbd>@num</kbd>
             </div>
         }
-        <div class="section">Notes &amp; groups</div>
+        <div class="section">Text &amp; groups</div>
+        <div class="item" draggable="true" data-palette="text"
+             @ondragstart="@(() => paletteDrag = "text")"
+             @onclick="AddTextQuick" title="Drag onto the canvas, click to add, or press T">
+            <svg width="52" height="32" viewBox="-2 -2 52 32">
+                <rect x="4" y="2" width="40" height="24" rx="3" fill="#ffffff" stroke="#9aa3ad" stroke-width="1.2" stroke-dasharray="3 2" />
+                <path d="M12,9 H36 M24,9 V21" stroke="#55606e" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <span>Text box</span>
+            <kbd>T</kbd>
+        </div>
         <div class="item" draggable="true" data-palette="comment"
              @ondragstart="@(() => paletteDrag = "comment")"
              @onclick="AddCommentQuick" title="Drag onto the canvas, click to add, or press C">
@@ -206,35 +216,65 @@
                     </g>
                 }
 
-                @* Comments sit underneath connectors and shapes *@
-                @foreach (var c in D.Comments)
+                @* Text boxes sit underneath connectors and shapes *@
+                @foreach (var t in D.TextBoxes)
                 {
-                    var cid = c.Id;
-                    var (cf, cs) = CommentColors.Get(c.Color);
-                    var sel = Sel.Contains(cid);
-                    <g class="comment @(sel ? "selected" : "")"
-                       @onpointerdown="e => ItemDown(e, cid)" @onpointerdown:stopPropagation="true"
-                       @ondblclick="() => BeginEdit(cid)" @ondblclick:stopPropagation="true">
-                        <rect x="@F(c.X)" y="@F(c.Y)" width="@F(c.W)" height="@F(c.H)" rx="4"
-                              fill="@cf" stroke="@(sel ? "#2563eb" : cs)" stroke-width="@(sel ? 2 : 1)" class="note-bg" />
-                        <path d="@($"M{F(c.X + c.W - 14)},{F(c.Y + c.H)} L{F(c.X + c.W)},{F(c.Y + c.H - 14)}")" stroke="@cs" />
-                        @if (EditId == cid)
+                    var tid = t.Id;
+                    var ts = TextStyle.For(t);
+                    var sel = Sel.Contains(tid);
+                    var tlay = Geometry.Layout(t);
+                    var outline = Geometry.TextBoxPath(t, ts.Radius);
+                    <g class="textbox @(t.IsComment ? "comment" : "") @(sel ? "selected" : "")"
+                       @onpointerdown="e => ItemDown(e, tid)" @onpointerdown:stopPropagation="true"
+                       @ondblclick="() => BeginEdit(tid)" @ondblclick:stopPropagation="true">
+                        @* Always-hittable body; only painted when the box has a fill *@
+                        <path d="@outline" fill="@(ts.Fill ?? "transparent")" stroke="none" />
+                        @if (ts.Stroke is null)
                         {
-                            <foreignObject x="@F(c.X)" y="@F(c.Y)" width="@F(c.W)" height="@F(c.H)">
-                                <textarea id="edit-box" class="inline-edit note" @bind="c.Text" @bind:event="oninput" @bind:after="MarkDirty"
+                            <path d="@outline" class="text-guide @(string.IsNullOrWhiteSpace(t.Text) ? "empty" : "")" />
+                        }
+                        else
+                        {
+                            <path d="@outline" fill="none" stroke="@ts.Stroke" stroke-width="@F(ts.StrokeWidth)"
+                                  stroke-dasharray="@ts.Dash" stroke-linecap="@ts.Cap" />
+                        }
+                        @if (t.IsComment)
+                        {
+                            <path d="@Geometry.FoldPath(t)" fill="none" stroke="@ts.FoldColour" />
+                        }
+                        @if (sel)
+                        {
+                            <rect x="@F(t.X - 4)" y="@F(t.Y - 4)" width="@F(t.W + 8)" height="@F(t.H + 8)" rx="6" class="sel-outline" />
+                        }
+                        @if (EditId == tid)
+                        {
+                            <foreignObject x="@F(t.X)" y="@F(t.Y)" width="@F(t.W)" height="@F(Math.Max(t.H, tlay.ContentHeight))">
+                                <textarea id="edit-box" class="inline-edit multiline" style="@TextEditStyle(t, ts)"
+                                          @bind="t.Text" @bind:event="oninput" @bind:after="MarkDirty"
                                           @onblur="EndEdit" @onpointerdown:stopPropagation="true"></textarea>
                             </foreignObject>
                         }
                         else
                         {
-                            <foreignObject x="@F(c.X)" y="@F(c.Y)" width="@F(c.W)" height="@F(c.H)" class="no-hit">
-                                <div class="note-text">@c.Text</div>
-                            </foreignObject>
+                            <g>
+                                <text class="text-body" font-family="@ts.Family" font-size="@F(t.FontSize)" font-weight="@(t.Bold ? "600" : null)"
+                                      fill="@ts.TextColour" text-anchor="@tlay.Anchor">
+                                    @foreach (var line in tlay.Lines)
+                                    {
+                                        <tspan x="@F(line.X)" y="@F(line.Y)">@line.Text</tspan>
+                                    }
+                                </text>
+                            </g>
+                        }
+                        @foreach (var (px, py) in Ports(t))
+                        {
+                            <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
+                                    @onpointerdown="e => PortDown(e, tid)" @onpointerdown:stopPropagation="true" />
                         }
                         @if (sel && Sel.Count == 1)
                         {
-                            <rect class="resize" x="@F(c.X + c.W - 6)" y="@F(c.Y + c.H - 6)" width="12" height="12"
-                                  @onpointerdown="e => ResizeDown(e, cid)" @onpointerdown:stopPropagation="true" />
+                            <rect class="resize" x="@F(t.X + t.W - 6)" y="@F(t.Y + t.H - 6)" width="12" height="12"
+                                  @onpointerdown="e => ResizeDown(e, tid)" @onpointerdown:stopPropagation="true" />
                         }
                     </g>
                 }
@@ -247,10 +287,9 @@
                     if (a is null || b is null) continue;
                     var eid = e.Id;
                     var sel = SelEdge == eid;
-                    var note = a is Comment || b is Comment;
-                    var geo = Geometry.EdgeGeometry(a, b, note ? EdgeStyles.Straight : e.Style, e.LabelOrient, e.LabelPos);
-                    var lw = note ? 1.2 : LineLook.Width(e.Weight);
-                    var lc = note ? "#9aa3ad" : LineLook.Colour(e.Color);
+                    var geo = Geometry.EdgeGeometry(a, b, e.Style, e.LabelOrient, e.LabelPos);
+                    var lw = LineLook.Width(e.Weight);
+                    var lc = LineLook.Colour(e.Color);
                     var marker = $"url(#{LineLook.MarkerId(lc, e.Weight)})";
                     <g class="edge @(sel ? "selected" : "")"
                        @onpointerdown="ev => EdgeDown(ev, eid)" @onpointerdown:stopPropagation="true"
@@ -261,9 +300,9 @@
                             <path d="@geo.D" class="edge-halo" stroke-width="@F(lw + 7)" />
                         }
                         <path d="@geo.D" class="edge-line" stroke="@lc" stroke-width="@F(lw)"
-                              stroke-dasharray="@(note ? "4 4" : LineLook.Dash(e.Pattern, lw))" stroke-linecap="@(note ? "butt" : LineLook.Cap(e.Pattern))"
-                              marker-end="@(note || e.Arrows == LineLook.ArrowNone ? null : marker)"
-                              marker-start="@(!note && e.Arrows == LineLook.ArrowBoth ? marker : null)" />
+                              stroke-dasharray="@LineLook.Dash(e.Pattern, lw)" stroke-linecap="@LineLook.Cap(e.Pattern)"
+                              marker-end="@(e.Arrows == LineLook.ArrowNone ? null : marker)"
+                              marker-start="@(e.Arrows == LineLook.ArrowBoth ? marker : null)" />
                     </g>
                 }
 
@@ -271,7 +310,7 @@
                 @if (mode == Mode.Connect && FindBox(connectFrom) is { } from)
                 {
                     var target = HitTest(curX, curY, connectFrom);
-                    var tempBox = target ?? new Comment { X = curX, Y = curY, W = 0, H = 0 };
+                    var tempBox = target ?? new TextBox { X = curX, Y = curY, W = 0, H = 0 };
                     <path d="@Geometry.EdgeGeometry(from, tempBox, D.DefaultConnector).D" class="edge-temp" marker-end="url(#arrow-sel)" />
                     @if (target is not null)
                     {
@@ -355,8 +394,7 @@
                     var a = FindBox(e.From);
                     var b = FindBox(e.To);
                     if (a is null || b is null) continue;
-                    var note = a is Comment || b is Comment;
-                    var geo = Geometry.EdgeGeometry(a, b, note ? EdgeStyles.Straight : e.Style, e.LabelOrient, e.LabelPos);
+                    var geo = Geometry.EdgeGeometry(a, b, e.Style, e.LabelOrient, e.LabelPos);
                     var eid = e.Id;
                     var sel = SelEdge == eid;
                     if (EditId == eid)
@@ -386,7 +424,7 @@
             </g>
         </svg>
 
-        @if (D.Nodes.Count == 0 && D.Comments.Count == 0)
+        @if (D.Nodes.Count == 0 && D.TextBoxes.Count == 0)
         {
             <div class="empty-hint">
                 <div class="big">Drag a shape here to start</div>
@@ -479,22 +517,127 @@
                 <button class="danger" @onclick="DeleteSelection">Delete</button>
             </div>
         }
-        else if (SelectedComment is { } sc)
+        else if (SelectedText is { } st)
         {
-            <h3>Comment</h3>
-            <label>Text</label>
-            <textarea rows="6" @bind="sc.Text" @bind:event="oninput" @bind:after="MarkDirty" @onfocus="Checkpoint"></textarea>
-            <label>Colour</label>
-            <div class="swatches">
-                @foreach (var (name, (fill, stroke)) in CommentColors.All)
+            <h3>@(st.IsComment ? "Comment" : "Text box")</h3>
+            <label>Text <span class="muted">(or double-click the box · Enter = new line)</span></label>
+            <textarea rows="5" @bind="st.Text" @bind:event="oninput" @bind:after="MarkDirty" @onfocus="Checkpoint"></textarea>
+            <label class="check" title="Comments are annotations: sticky-note look and dashed pin lines">
+                <input type="checkbox" checked="@st.IsComment" @onchange="e => SetComment(st, e.Value is true)" /> Comment
+            </label>
+            @if (st.IsComment)
+            {
+                <div class="chips"><button class="chip" @onclick="() => ResetCommentStyle(st)">Reset to comment style</button></div>
+            }
+
+            <h4>Text</h4>
+            <div class="seg wide three">
+                @foreach (var (key, name) in TextLook.Fonts)
                 {
-                    var nm = name;
-                    <button class="swatch @(sc.Color == nm ? "on" : "")" style="background:@fill;border-color:@stroke" title="@nm"
-                            @onclick="() => { Checkpoint(); sc.Color = nm; }"></button>
+                    var k = key;
+                    <button class="@(st.Font == k ? "on" : "")" style="font-family:@TextLook.Family(k)" @onclick="() => SetTextLook(st, x => x.Font = k)">@name</button>
                 }
             </div>
-            <p class="muted">Tip: select a comment and a shape, then press J to pin the comment to it.</p>
-            <div class="actions"><button class="danger" @onclick="DeleteSelection">Delete</button></div>
+            <div class="row">
+                <div>
+                    <label>Size</label>
+                    <select value="@F(st.FontSize)" @onchange="e => SetFontSize(st, e.Value)">
+                        @foreach (var sz in TextLook.Sizes.Append(st.FontSize).Distinct().OrderBy(v => v))
+                        {
+                            <option value="@F(sz)">@F(sz)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label>&nbsp;</label>
+                    <label class="check"><input type="checkbox" checked="@st.Bold" @onchange="e => SetTextLook(st, x => x.Bold = e.Value is true)" /> Bold</label>
+                </div>
+            </div>
+            <label>Alignment</label>
+            <div class="seg wide three">
+                @foreach (var (key, name) in new[] { (TextLook.Left, "Left"), (TextLook.Center, "Centre"), (TextLook.Right, "Right") })
+                {
+                    var k = key;
+                    <button class="@(st.Align == k ? "on" : "")" @onclick="() => SetTextLook(st, x => x.Align = k)">@name</button>
+                }
+            </div>
+            <div class="seg wide three" style="margin-top:6px">
+                @foreach (var (key, name) in new[] { (TextLook.Top, "Top"), (TextLook.Middle, "Middle"), (TextLook.Bottom, "Bottom") })
+                {
+                    var k = key;
+                    <button class="@(st.VAlign == k ? "on" : "")" @onclick="() => SetTextLook(st, x => x.VAlign = k)">@name</button>
+                }
+            </div>
+            <label>Text colour</label>
+            <div class="swatches">
+                <button class="swatch line @(st.TextColor is null ? "on" : "")" title="Default" @onclick="() => SetTextLook(st, x => x.TextColor = null)"><span style="background:@TextStyle.DefaultText"></span></button>
+                @foreach (var key in TextPalette.Strokes)
+                {
+                    var k = key;
+                    <button class="swatch line @(st.TextColor == k ? "on" : "")" title="@k" @onclick="() => SetTextLook(st, x => x.TextColor = k)"><span style="background:@TextPalette.StrokeOf(k, TextStyle.DefaultText)"></span></button>
+                }
+            </div>
+
+            <h4>Box</h4>
+            <label>Background</label>
+            <div class="swatches">
+                <button class="swatch default @(st.Fill is null ? "on" : "")" title="None (transparent)" @onclick="() => SetTextLook(st, x => x.Fill = null)">∅</button>
+                @foreach (var key in TextPalette.Fills)
+                {
+                    var k = key;
+                    var (fc, sc) = TextPalette.All[k];
+                    <button class="swatch @(st.Fill == k ? "on" : "")" style="background:@fc;border-color:@sc" title="@k" @onclick="() => SetTextLook(st, x => x.Fill = k)"></button>
+                }
+            </div>
+            <label>Border</label>
+            <div class="seg wide patterns">
+                <button class="@(st.Border == TextLook.NoBorder ? "on" : "")" title="No border" @onclick="() => SetTextLook(st, x => x.Border = TextLook.NoBorder)">None</button>
+                @foreach (var (key, name) in LineLook.Patterns)
+                {
+                    var k = key;
+                    <button class="@(st.Border == k ? "on" : "")" title="@name" @onclick="() => SetTextLook(st, x => x.Border = k)">@LinePreview(st.BorderWeight, k, LineLook.ArrowNone)</button>
+                }
+            </div>
+            @if (st.Border != TextLook.NoBorder)
+            {
+                <label>Border weight</label>
+                <div class="seg wide stacked">
+                    @foreach (var (key, name) in LineLook.Weights)
+                    {
+                        var k = key;
+                        <button class="@(st.BorderWeight == k ? "on" : "")" title="@name" @onclick="() => SetTextLook(st, x => x.BorderWeight = k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
+                    }
+                </div>
+                <label>Border colour</label>
+                <div class="swatches">
+                    <button class="swatch line @(st.BorderColor is null ? "on" : "")" title="Default grey" @onclick="() => SetTextLook(st, x => x.BorderColor = null)"><span style="background:@TextStyle.DefaultBorder"></span></button>
+                    @foreach (var key in TextPalette.Strokes)
+                    {
+                        var k = key;
+                        <button class="swatch line @(st.BorderColor == k ? "on" : "")" title="@k" @onclick="() => SetTextLook(st, x => x.BorderColor = k)"><span style="background:@TextPalette.StrokeOf(k, TextStyle.DefaultBorder)"></span></button>
+                    }
+                </div>
+            }
+            <label class="check"><input type="checkbox" checked="@st.Rounded" @onchange="e => SetTextLook(st, x => x.Rounded = e.Value is true)" /> Rounded corners</label>
+            <div class="row">
+                <div><label>Width</label><input type="number" step="10" @bind="st.W" @bind:after="MarkDirty" @onfocus="Checkpoint" /></div>
+                <div><label>Height</label><input type="number" step="10" @bind="st.H" @bind:after="MarkDirty" @onfocus="Checkpoint" /></div>
+            </div>
+            <div class="actions"><button @onclick="() => FitTextHeight(st)">Fit height to text</button></div>
+
+            @if (FindGroup(st.GroupId) is { } tg)
+            {
+                <p class="muted">In group “@tg.Title” · <button class="link" @onclick="() => RemoveFromGroup(st)">remove from group</button></p>
+            }
+            <p class="muted">Connect it like a shape: drag from a ● port, or select it with another item and press J.@(st.IsComment ? " Lines to a comment are dashed pins — restyle them like any connector." : "")</p>
+            <div class="actions">
+                @if (!st.IsComment)
+                {
+                    <button @onclick="() => QuickAdd(NodeTypes.Process)">+ Next step</button>
+                    <button @onclick="AddCommentQuick">+ Comment</button>
+                }
+                <button class="danger" @onclick="DeleteSelection">Delete</button>
+            </div>
         }
         else if (SelectedEdgeObj is { } se)
         {
@@ -627,7 +770,7 @@
             <h3>Diagram</h3>
             <label>Name</label>
             <input value="@D.Name" @onchange="e => { D.Name = DiagramStore.SafeName(e.Value?.ToString() ?? string.Empty); MarkDirty(); }" />
-            <p class="muted">@D.Nodes.Count shapes · @D.Edges.Count connectors · @D.Comments.Count comments · @D.Groups.Count groups</p>
+            <p class="muted">@D.Nodes.Count shapes · @D.Edges.Count connectors · @D.TextBoxes.Count(t => !t.IsComment) text boxes · @D.TextBoxes.Count(t => t.IsComment) comments · @D.Groups.Count groups</p>
 
             <h4>Page</h4>
             <select value="@D.Page.Size" @onchange="e => SetPageSize(e.Value?.ToString())">
@@ -678,6 +821,7 @@
             <h4>Shortcuts</h4>
             <table class="keys">
                 <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Add shape (joined to selection)</td></tr>
+                <tr><td><kbd>T</kbd></td><td>Add text box (joined to selection)</td></tr>
                 <tr><td><kbd>C</kbd></td><td>Add comment (pinned to selection)</td></tr>
                 <tr><td><kbd>Ctrl</kbd>+<kbd>G</kbd></td><td>Group selection (<kbd>Shift</kbd> to ungroup)</td></tr>
                 <tr><td><kbd>J</kbd></td><td>Join selected items in order</td></tr>
@@ -799,6 +943,11 @@ else if (dialog == Dialog.ConfirmNew)
             }
         </div>
     };
+
+    /// <summary>Inline editor styled like the box itself, so editing looks the same as the finished text.</summary>
+    static string TextEditStyle(TextBox t, TextStyle s) =>
+        $"font-family:{s.Family};font-size:{F(t.FontSize)}px;line-height:{F(t.FontSize * TextLook.LineSpacing)}px;" +
+        $"font-weight:{(t.Bold ? "600" : "400")};color:{s.TextColour};text-align:{t.Align};padding:{F(TextLook.PadY)}px {F(TextLook.PadX)}px;";
 
     static MarkupString IconSvg(string name, int size) =>
         new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(name)}</svg>");

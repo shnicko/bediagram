@@ -96,10 +96,48 @@ public static class Geometry
         return new(wrapped, cx, cy - (wrapped.Count - 1) * LineHeight / 2 + 4, false, false, 0, 0, 0);
     }
 
+    /// <summary>One positioned line of text-box text (baseline coordinates).</summary>
+    public record TextLine(string Text, double X, double Y);
+
+    /// <summary>Where a text box's lines go, plus the SVG text-anchor. Shared by the canvas and the SVG export.</summary>
+    public record TextBoxLayout(List<TextLine> Lines, string Anchor, double LineHeight, double ContentHeight);
+
+    public static TextBoxLayout Layout(TextBox t)
+    {
+        var size = Math.Max(4, t.FontSize);
+        var lh = size * TextLook.LineSpacing;
+        var charW = size * TextLook.CharWidth(t.Font) * (t.Bold ? 1.06 : 1);
+        var lines = Wrap(t.Text, Math.Max(10, t.W - 2 * TextLook.PadX), charW);
+        var block = lines.Count * lh;
+        var top = t.VAlign switch
+        {
+            TextLook.Middle => t.Y + (t.H - block) / 2,
+            TextLook.Bottom => t.Y + t.H - TextLook.PadY - block,
+            _ => t.Y + TextLook.PadY,
+        };
+        var (x, anchor) = t.Align switch
+        {
+            TextLook.Center => (t.X + t.W / 2, "middle"),
+            TextLook.Right => (t.X + t.W - TextLook.PadX, "end"),
+            _ => (t.X + TextLook.PadX, "start"),
+        };
+        // Baseline sits roughly 0.8 em below the top of the line box.
+        var first = top + (lh - size) / 2 + size * 0.8;
+        var placed = lines.Select((l, i) => new TextLine(l, x, first + i * lh)).ToList();
+        return new TextBoxLayout(placed, anchor, lh, block + 2 * TextLook.PadY);
+    }
+
+    /// <summary>Outline of a text box (square or slightly rounded rectangle).</summary>
+    public static string TextBoxPath(TextBox t, double radius) =>
+        radius > 0 ? RoundRect(t.X, t.Y, t.W, t.H, radius) : $"M{F(t.X)},{F(t.Y)} H{F(t.X + t.W)} V{F(t.Y + t.H)} H{F(t.X)} Z";
+
+    /// <summary>The small diagonal "folded corner" drawn on comments.</summary>
+    public static string FoldPath(TextBox t) => $"M{F(t.X + t.W - 14)},{F(t.Y + t.H)} L{F(t.X + t.W)},{F(t.Y + t.H - 14)}";
+
     /// <summary>Bounding box of everything on the canvas (null when empty).</summary>
     public static (double X, double Y, double W, double H)? ContentBounds(Diagram d)
     {
-        var boxes = d.Nodes.Cast<IBox>().Concat(d.Comments).Concat(d.Groups).ToList();
+        var boxes = d.Nodes.Cast<IBox>().Concat(d.TextBoxes).Concat(d.Groups).ToList();
         if (boxes.Count == 0) return null;
         double minX = boxes.Min(b => b.X), minY = boxes.Min(b => b.Y);
         double maxX = boxes.Max(b => b.X + b.W), maxY = boxes.Max(b => b.Y + b.H + ExtraBelow(b));

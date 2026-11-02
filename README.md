@@ -38,7 +38,8 @@ Each diagram can produce three files, side by side:
 - **Auto-join:** with *Auto-join* on, a new shape is connected from the currently selected shape. Number keys always join to the selection and place the new step below it (side by side for a second branch).
 - **Quick join:** select items (Shift+click or drag a box around them) and press `J` — they are joined in the order you selected them.
 - **Connect by dragging:** hover a shape, drag from one of its ● ports onto another shape. Drop on empty canvas to create a new step there, already joined.
-- **Comments:** drag *Comment* from the sidebar (drop it on a shape to pin it), or select a shape and press `C`. Pinned comments show a dashed leader line. Resize from the corner handle; pick a colour in the panel.
+- **Text boxes:** drag *Text box* from the sidebar, click it, or press `T` (joined to the selection when *Auto-join* is on). Multi-line — `Enter` adds a new line while editing; click away or `Esc` to finish. In the panel: font (*Sans* / *Serif* / *Mono*), size, bold, left / centre / right and top / middle / bottom alignment, text colour, background (none, white, sticky-note colours or the shape palette), border (none, solid, dashed, dotted, dash-dot, long dash) with weight and colour, rounded corners, and *Fit height to text*. Text boxes have ● ports and connect like shapes (to shapes, groups or other text boxes); number keys add the next step from a selected text box. Resize from the corner handle. A borderless box shows a faint dashed outline on hover so you can find it.
+- **Comments:** a comment is a text box with the *Comment* flag. Click *Comment* in the sidebar, press `C` (pins it to the selected item), or drop it on a shape. It gets the standard comment look — yellow sticky note, thin border, folded corner, Consolas — and its lines are dashed pins with no arrowhead (restyle them like any connector). Tick or untick *Comment* in the panel to flag any text box; *Reset to comment style* restores the look. Comments can't be pinned to each other.
 - **Groups:** select items and press `Ctrl+G` (or click/drag *Group* from the sidebar for an empty one). Name it by double-clicking the title bar, pick a colour in the panel. Drag a group by its title bar — its contents move with it. Drag items in or out to change membership; groups grow to fit. Click a group's body to select it; drag inside it to box-select its items.
   - **Align within the group:** left / centre / right, top / middle / bottom, distribute, *Arrange in a row / column*, *Fit to contents*.
   - **Attach groups:** groups have ● ports like shapes, so connect group → shape, shape → group, or group → group (or select both and press `J`).
@@ -67,13 +68,18 @@ Each diagram can produce three files, side by side:
   "edges":    [ { "id": "e_...", "from": "n_...", "to": "n_...", "label": "Pass",
                   "style": "elbow", "labelOrient": "along", "labelPos": 0.5,
                   "weight": "heavy", "pattern": "dashed", "color": "red", "arrows": "end" } ],
-  "comments": [ { "id": "c_...", "text": "...", "color": "yellow", "x": 0, "y": 0, "w": 200, "h": 110, "groupId": null } ],
+  "textBoxes": [ { "id": "t_...", "text": "Line one\nLine two", "isComment": true,
+                   "x": 0, "y": 0, "w": 200, "h": 110, "groupId": null,
+                   "fill": "yellow", "border": "solid", "borderWeight": "light", "borderColor": "yellow", "rounded": true,
+                   "font": "mono", "fontSize": 12, "bold": false, "textColor": "ink", "align": "left", "vAlign": "top" } ],
   "groups":   [ { "id": "g_...", "title": "Audit", "color": "teal", "x": 0, "y": 0, "w": 360, "h": 220 } ],
   "page":     { "size": "A4", "orientation": "landscape", "marginMm": 10, "fitOnExport": true, "customW": 210, "customH": 297 }
 }
 ```
 
-Nodes and comments carry an optional `groupId`; nodes also have optional `icon`, `color` and `filled`. Files saved by the first version open unchanged.
+Nodes and text boxes carry an optional `groupId`; nodes also have optional `icon`, `color` and `filled`. Text boxes: `fill`, `borderColor` and `textColor` are colour keys (`white`, `grey`, `ink`, `yellow`, `sky`, `mint`, `rose`, or a palette key such as `blue`) or `null` for the default; `border` is `none` or a line pattern; `font` is `sans`, `serif` or `mono`. `isComment` marks annotations, so code reading the file can skip them or treat them as notes. Older files with a `comments` list still open — those become comment text boxes and are saved as `textBoxes`.
+
+Mermaid export writes text boxes (comments included) as nodes with a `style` line for their background, border and text colour.
 
 Node types: `start`, `process`, `decision`, `check`, `action`, `data`, `status`, `end`, `circle`. Typed nodes + properties mean the audit tool can later read these files and turn a diagram into rules without a format change.
 

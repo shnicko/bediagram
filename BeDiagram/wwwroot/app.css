@@ -118,18 +118,12 @@ kbd {
 .drop-target { fill: rgba(37, 99, 235, .08); stroke: var(--accent); stroke-width: 2; pointer-events: none; }
 .marquee { fill: rgba(37, 99, 235, .07); stroke: var(--accent); stroke-dasharray: 4 3; pointer-events: none; }
 
-.comment { cursor: move; }
+.textbox { cursor: move; }
+.textbox:hover .port, .textbox.selected .port { opacity: 1; }
+.text-body { white-space: pre; pointer-events: none; }
+.text-guide { fill: none; stroke: #b8c0c9; stroke-width: 1; stroke-dasharray: 4 3; opacity: 0; pointer-events: none; }
+.text-guide.empty, .textbox:hover .text-guide, .textbox.selected .text-guide { opacity: 1; }
 .no-hit { pointer-events: none; }
-.note-text {
-    width: 100%; height: 100%;
-    padding: 10px 12px;
-    font-size: 12.5px;
-    line-height: 1.4;
-    color: #3d3a2a;
-    white-space: pre-wrap;
-    overflow: hidden;
-    word-wrap: break-word;
-}
 .resize { fill: #fff; stroke: var(--accent); cursor: nwse-resize; }
 
 .inline-edit {
@@ -143,7 +137,7 @@ kbd {
     outline: none;
     padding: 4px;
 }
-.inline-edit.note { text-align: left; background: transparent; border-style: dashed; padding: 9px 11px; font-size: 12.5px; line-height: 1.4; }
+.inline-edit.multiline { background: transparent; border-style: dashed; white-space: pre-wrap; overflow: hidden; }
 .inline-edit.edge-input { font-size: 12px; padding: 2px 4px; }
 
 .empty-hint {

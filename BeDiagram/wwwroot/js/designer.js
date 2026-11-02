@@ -20,13 +20,13 @@ function onKey(e) {
     }
     if (isTyping(e)) {
         if (key === 'Escape') e.target.blur();
-        // Enter finishes an inline label edit (Shift+Enter = new line); comments keep Enter for new lines.
+        // Enter finishes an inline label edit (Shift+Enter = new line); text boxes keep Enter for new lines.
         const t = e.target;
-        if (key === 'Enter' && !e.shiftKey && t.classList.contains('inline-edit') && !t.classList.contains('note')) e.preventDefault();
+        if (key === 'Enter' && !e.shiftKey && t.classList.contains('inline-edit') && !t.classList.contains('multiline')) e.preventDefault();
         return;
     }
     const handled = ['Delete', 'Backspace', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'];
-    const letters = ['j', 'c', 'g', 'l', 'f', 'a', 'z', 'y', 'd', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '=', '-', '0'];
+    const letters = ['j', 'c', 't', 'g', 'l', 'f', 'a', 'z', 'y', 'd', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '=', '-', '0'];
     if (handled.includes(key) || letters.includes(key.toLowerCase())) {
         if (ctrl || handled.includes(key)) e.preventDefault();
         dotnet.invokeMethodAsync('OnKey', key, ctrl, e.shiftKey);
