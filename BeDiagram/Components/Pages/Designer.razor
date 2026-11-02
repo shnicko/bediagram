@@ -77,7 +77,7 @@
     <aside class="palette">
         <div class="section">Shapes</div>
         @{ int idx = 0; }
-        @foreach (var t in NodeTypes.All)
+        @foreach (var t in NodeTypes.All.Where(t => t.Key != NodeTypes.Outcome))
         {
             var key = t.Key;
             var num = ++idx;
@@ -90,6 +90,18 @@
                 </svg>
                 <span>@t.Display</span>
                 <kbd>@num</kbd>
+            </div>
+        }
+        <div class="section">Outcomes</div>
+        @foreach (var o in Outcomes.All)
+        {
+            var key = $"{NodeTypes.Outcome}:{o.Key}";
+            <div class="item" draggable="true" data-palette="@key"
+                 @ondragstart="() => paletteDrag = key"
+                 @onclick="() => QuickAdd(key)"
+                 title="@($"{o.Hint}. Drag onto the canvas or click to add.")">
+                @OutcomeSwatch(o.Key, 30)
+                <span>@o.Display</span>
             </div>
         }
         <div class="section">Text &amp; groups</div>
@@ -343,8 +355,8 @@
                         @if (lay.HasIcon)
                         {
                             <g class="node-icon" transform="@($"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})")"
-                               fill="none" stroke="@st.IconColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                @((MarkupString)Icons.Get(n.Icon))
+                               fill="none" stroke="@st.IconColor" stroke-width="@F(Geometry.IconStroke(n))" stroke-linecap="round" stroke-linejoin="round">
+                                @((MarkupString)Icons.Get(Geometry.IconOf(n)))
                             </g>
                         }
                         @if (EditId == nid)
@@ -474,7 +486,7 @@
     <aside class="panel">
         @if (SelectedNode is { } sn)
         {
-            <h3>@NodeTypes.Get(sn.Type).Display</h3>
+            <h3>@(sn.Type == NodeTypes.Outcome ? $"Outcome · {Outcomes.Get(sn.Outcome).Display}" : NodeTypes.Get(sn.Type).Display)</h3>
             <label>Label</label>
             <textarea id="prop-label" rows="2" @bind="sn.Label" @bind:event="oninput" @bind:after="MarkDirty" @onfocus="Checkpoint"></textarea>
             <label>Type</label>
@@ -500,6 +512,22 @@
             </div>
             <label class="check"><input type="checkbox" checked="@sn.Filled" @onchange="e => SetFilled(sn, e.Value is true)" /> Solid fill (presentation style)</label>
 
+            @if (sn.Type == NodeTypes.Outcome)
+            {
+                <label>Outcome</label>
+                <div class="outcome-picker">
+                    @foreach (var o in Outcomes.All)
+                    {
+                        var ok = o.Key;
+                        <button class="@(Outcomes.Get(sn.Outcome).Key == ok ? "on" : "")" title="@o.Hint" @onclick="() => SetOutcome(sn, ok)">
+                            @OutcomeSwatch(ok, 26)<span>@o.Display</span>
+                        </button>
+                    }
+                </div>
+                <p class="muted small-note">@Outcomes.Get(sn.Outcome).Hint. The outline and symbol come from the outcome, so it reads the same in greyscale.</p>
+            }
+            else
+            {
             <label>Icon @if (sn.Type != NodeTypes.Circle) {<span class="muted">(shown beside the label)</span>}</label>
             <div class="icon-current">
                 @if (Icons.Exists(sn.Icon))
@@ -528,6 +556,7 @@
                     </div>
                 }
             </div>
+            }
 
             @if (FindGroup(sn.GroupId) is { } ng)
             {
@@ -993,6 +1022,16 @@ else if (dialog == Dialog.ConfirmNew)
     static string TextEditStyle(TextBox t, TextStyle s) =>
         $"font-family:{s.Family};font-size:{F(t.FontSize)}px;line-height:{F(t.FontSize * TextLook.LineSpacing)}px;" +
         $"font-weight:{(t.Bold ? "600" : "400")};color:{s.TextColour};text-align:{t.Align};padding:{F(TextLook.PadY)}px {F(TextLook.PadX)}px;";
+
+    /// <summary>Small solid outcome symbol for the palette and the panel (same geometry as the canvas).</summary>
+    static MarkupString OutcomeSwatch(string outcome, int size)
+    {
+        var n = new Node { Type = NodeTypes.Outcome, Outcome = outcome, Filled = true, W = 24, H = 24 };
+        var st = NodeStyle.For(n);
+        var lay = Geometry.Layout(n, "");
+        return new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"-1 -1 26 26\"><path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\"/>"
+                 + $"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g></svg>");
+    }
 
     static MarkupString IconSvg(string name, int size) =>
         new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(name)}</svg>");

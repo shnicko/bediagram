@@ -153,6 +153,12 @@ public static class Icons
         ["move-up-right"] = "<path d=\"M13 5H19V11\"/> <path d=\"M19 5L5 19\"/>",
         ["rectangle-vertical"] = "<rect width=\"12\" height=\"20\" x=\"6\" y=\"2\" rx=\"2\"/>",
         ["rectangle-horizontal"] = "<rect width=\"20\" height=\"12\" x=\"2\" y=\"6\" rx=\"2\"/>",
+        // Outcome glyphs (drawn inside outcome shapes; bolder and fuller than the picker icons).
+        ["outcome-tick"] = "<path d=\"M4.5 12.5 9.5 17.5 19.5 6.5\"/>",
+        ["outcome-cross"] = "<path d=\"M6.5 6.5 17.5 17.5\"/> <path d=\"M17.5 6.5 6.5 17.5\"/>",
+        ["outcome-rework"] = "<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\"/> <path d=\"M3 3v5h5\"/>",
+        ["outcome-exclaim"] = "<path d=\"M12 4.5v10\"/> <path d=\"M12 19.5h.01\"/>",
+        ["outcome-clock"] = "<circle cx=\"12\" cy=\"12\" r=\"9\"/> <path d=\"M12 7v5l3.5 2.2\"/>",
     };
 
     public static bool Exists(string? name) => name is not null && Markup.ContainsKey(name);
