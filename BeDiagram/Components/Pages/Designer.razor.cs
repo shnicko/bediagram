@@ -13,7 +13,7 @@ public partial class Designer
     [Inject] DiagramStore Store { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
-    enum Mode { None, Move, Connect, Pan, Marquee, Resize }
+    enum Mode { None, Move, Connect, Pan, Marquee, Resize, EdgeEnd, Bend }
     enum Dialog { None, Open, SaveAs, ConfirmNew }
     public enum AlignOp { Left, CenterX, Right, Top, Middle, Bottom, DistributeH, DistributeV, Row, Column }
 
@@ -44,6 +44,11 @@ public partial class Designer
     string? gestureSnapshot;
     string? paletteDrag;
     bool skipRender;
+    // Connector handle drags
+    string? edgeDragId;
+    bool edgeDragFrom;
+    double bendCoord0, bend0;
+    bool bendVertical;
 
     // Undo
     readonly List<string> undo = new();
@@ -635,6 +640,100 @@ public partial class Designer
         SelEdge = id;
     }
 
+    /// <summary>Pressing a ● end of the selected connector: drag it to another side of its shape.</summary>
+    void EdgeEndDown(PointerEventArgs e, string id, bool fromEnd)
+    {
+        if (e.Button != 0) { StartPan(e); return; }
+        edgeDragId = id;
+        edgeDragFrom = fromEnd;
+        gestureSnapshot = Snapshot();
+        (startX, startY) = ToWorld(e.ClientX, e.ClientY);
+        (curX, curY) = (startX, startY);
+        moved = false;
+        mode = Mode.EdgeEnd;
+    }
+
+    /// <summary>Pressing the ■ on an elbow connector's middle segment: slide that segment sideways.</summary>
+    void BendDown(PointerEventArgs e, string id)
+    {
+        if (e.Button != 0) { StartPan(e); return; }
+        var edge = D.Edges.FirstOrDefault(x => x.Id == id);
+        if (edge is null || FindBox(edge.From) is not { } a || FindBox(edge.To) is not { } b) return;
+        var r = Geometry.Route(a, b, edge);
+        if (r.BendIndex < 0) return;
+        edgeDragId = id;
+        bendVertical = r.BendIsVertical;
+        bendCoord0 = bendVertical ? r.Points[r.BendIndex].X : r.Points[r.BendIndex].Y;
+        bend0 = edge.Bend;
+        gestureSnapshot = Snapshot();
+        (startX, startY) = ToWorld(e.ClientX, e.ClientY);
+        (curX, curY) = (startX, startY);
+        moved = false;
+        mode = Mode.Bend;
+    }
+
+    /// <summary>
+    /// The first time a connector is adjusted by hand, fix both ends to the sides they use now,
+    /// so the change you make doesn't make the other end jump, and moving shapes later keeps your choice.
+    /// </summary>
+    void PinSides(Edge edge)
+    {
+        if (edge.Style == EdgeStyles.Straight) return;
+        if (FindBox(edge.From) is not { } a || FindBox(edge.To) is not { } b) return;
+        var r = Geometry.Route(a, b, edge);
+        edge.FromSide ??= r.FromSide;
+        edge.ToSide ??= r.ToSide;
+    }
+
+    void DragEdgeEnd()
+    {
+        var edge = D.Edges.FirstOrDefault(x => x.Id == edgeDragId);
+        if (edge is null) return;
+        var box = FindBox(edgeDragFrom ? edge.From : edge.To);
+        if (box is null) return;
+        // Nearest side middle to the pointer.
+        var side = Sides.All.MinBy(s =>
+        {
+            var (px, py) = Geometry.SidePoint(box, s);
+            return (px - curX) * (px - curX) + (py - curY) * (py - curY);
+        })!;
+        var route = Geometry.Route(FindBox(edge.From)!, FindBox(edge.To)!, edge);
+        var current = edgeDragFrom ? route.FromSide : route.ToSide;
+        if (side == current) return;
+        if (!moved && Math.Abs(curX - startX) + Math.Abs(curY - startY) < 4) return;
+        if (!moved) PinSides(edge);
+        moved = true;
+        if (edgeDragFrom) edge.FromSide = side; else edge.ToSide = side;
+        edge.Bend = 0; // a new side means a new shape of route — start its bend from the middle again
+    }
+
+    void DragBend(double dx, double dy)
+    {
+        var edge = D.Edges.FirstOrDefault(x => x.Id == edgeDragId);
+        if (edge is null) return;
+        var d = bendVertical ? dx : dy;
+        if (!moved && Math.Abs(d) < 4) return;
+        if (!moved) PinSides(edge);
+        moved = true;
+        // Snap the segment itself (not the offset) to the grid.
+        edge.Bend = bend0 + SnapV(bendCoord0 + d) - bendCoord0;
+    }
+
+    void ResetRoute(Edge e)
+    {
+        if (!e.IsManual) return;
+        Change();
+        e.ResetRoute();
+    }
+
+    void ResetBend(string id)
+    {
+        var edge = D.Edges.FirstOrDefault(x => x.Id == id);
+        if (edge is null || edge.Bend == 0) return;
+        Change();
+        edge.Bend = 0;
+    }
+
     void StartPan(PointerEventArgs e)
     {
         lastClientX = e.ClientX; lastClientY = e.ClientY;
@@ -697,6 +796,12 @@ public partial class Designer
                     moved = true;
                 }
                 break;
+            case Mode.EdgeEnd:
+                DragEdgeEnd();
+                break;
+            case Mode.Bend:
+                DragBend(dx, dy);
+                break;
         }
     }
 
@@ -719,7 +824,7 @@ public partial class Designer
                     UpdateMembership(loose);
                 }
                 break;
-            case Mode.Resize:
+            case Mode.Resize or Mode.EdgeEnd or Mode.Bend:
                 if (moved && gestureSnapshot is not null) { PushUndo(gestureSnapshot); Dirty = true; }
                 break;
             case Mode.Connect when connectFrom is not null:
@@ -760,6 +865,7 @@ public partial class Designer
         mode = Mode.None;
         connectFrom = null;
         resizeId = null;
+        edgeDragId = null;
         pendingGroupSelect = null;
         gestureSnapshot = null;
     }
@@ -828,6 +934,7 @@ public partial class Designer
             {
                 var copy = new Edge { From = f, To = t, Label = e.Label, LabelPos = e.LabelPos };
                 copy.CopyLookFrom(e);
+                copy.CopyRouteFrom(e);
                 D.Edges.Add(copy);
             }
         var newSel = Sel.Where(map.ContainsKey).Select(id => map[id]).ToList();
@@ -987,6 +1094,7 @@ public partial class Designer
     {
         Change();
         (e.From, e.To) = (e.To, e.From);
+        (e.FromSide, e.ToSide) = (e.ToSide, e.FromSide);
     }
 
     void ChangeType(Node n, string? type)

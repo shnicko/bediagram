@@ -69,7 +69,7 @@ public static class Exporters
         foreach (var e in d.Edges)
         {
             if (!lookup.TryGetValue(e.From, out var a) || !lookup.TryGetValue(e.To, out var b)) continue;
-            var geo = Geometry.EdgeGeometry(a, b, e.Style, e.LabelOrient, e.LabelPos);
+            var geo = Geometry.EdgeGeometry(a, b, e);
             var lw = LineLook.Width(e.Weight);
             var lc = LineLook.Colour(e.Color);
             var dash = LineLook.Dash(e.Pattern, lw);

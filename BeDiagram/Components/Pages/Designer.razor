@@ -287,7 +287,7 @@
                     if (a is null || b is null) continue;
                     var eid = e.Id;
                     var sel = SelEdge == eid;
-                    var geo = Geometry.EdgeGeometry(a, b, e.Style, e.LabelOrient, e.LabelPos);
+                    var geo = Geometry.EdgeGeometry(a, b, e);
                     var lw = LineLook.Width(e.Weight);
                     var lc = LineLook.Colour(e.Color);
                     var marker = $"url(#{LineLook.MarkerId(lc, e.Weight)})";
@@ -394,7 +394,7 @@
                     var a = FindBox(e.From);
                     var b = FindBox(e.To);
                     if (a is null || b is null) continue;
-                    var geo = Geometry.EdgeGeometry(a, b, e.Style, e.LabelOrient, e.LabelPos);
+                    var geo = Geometry.EdgeGeometry(a, b, e);
                     var eid = e.Id;
                     var sel = SelEdge == eid;
                     if (EditId == eid)
@@ -414,6 +414,43 @@
                             <text x="0" y="4" class="edge-label">@e.Label</text>
                         </g>
                     }
+                }
+
+                @* Handles on the selected connector: ends (move to another side) and the bend (drag sideways) *@
+                @if (SelectedEdgeObj is { } he && FindBox(he.From) is { } ha && FindBox(he.To) is { } hb && EditId != he.Id)
+                {
+                    var hr = Geometry.Route(ha, hb, he);
+                    var heid = he.Id;
+                    @if (mode == Mode.EdgeEnd)
+                    {
+                        var box = edgeDragFrom ? ha : hb;
+                        var cur = edgeDragFrom ? hr.FromSide : hr.ToSide;
+                        @foreach (var side in Sides.All)
+                        {
+                            var (sx, sy) = Geometry.SidePoint(box, side);
+                            <circle class="side-target @(side == cur ? "on" : "")" cx="@F(sx)" cy="@F(sy)" r="@F(7 / Zoom)" />
+                        }
+                    }
+                    @if (hr.BendIndex >= 0 && he.Style != EdgeStyles.Straight)
+                    {
+                        var (bx, by) = hr.BendHandle;
+                        var bs = 12 / Zoom;
+                        <rect class="bend-handle @(hr.BendIsVertical ? "ew" : "ns")" x="@F(bx - bs / 2)" y="@F(by - bs / 2)" width="@F(bs)" height="@F(bs)" rx="@F(2 / Zoom)"
+                              @onpointerdown="ev => BendDown(ev, heid)" @onpointerdown:stopPropagation="true"
+                              @ondblclick="() => ResetBend(heid)" @ondblclick:stopPropagation="true">
+                            <title>Drag to move this segment · double-click to reset</title>
+                        </rect>
+                    }
+                    var (p0x, p0y) = hr.Points[0];
+                    var (p1x, p1y) = hr.Points[^1];
+                    <circle class="edge-handle" cx="@F(p0x)" cy="@F(p0y)" r="@F(6 / Zoom)"
+                            @onpointerdown="ev => EdgeEndDown(ev, heid, true)" @onpointerdown:stopPropagation="true">
+                        <title>Drag to another side of the shape</title>
+                    </circle>
+                    <circle class="edge-handle" cx="@F(p1x)" cy="@F(p1y)" r="@F(6 / Zoom)"
+                            @onpointerdown="ev => EdgeEndDown(ev, heid, false)" @onpointerdown:stopPropagation="true">
+                        <title>Drag to another side of the shape</title>
+                    </circle>
                 }
 
                 @if (mode == Mode.Marquee)
@@ -648,6 +685,14 @@
                 <button class="@(se.Style == EdgeStyles.Elbow ? "on" : "")" @onclick="() => SetEdgeStyle(se, EdgeStyles.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
                 <button class="@(se.Style == EdgeStyles.Straight ? "on" : "")" @onclick="() => SetEdgeStyle(se, EdgeStyles.Straight)">@IconSvg("move-up-right", 16) Straight</button>
             </div>
+
+            <p class="muted">Drag a ● end on the canvas to move it to another side@(se.Style == EdgeStyles.Straight ? "" : "; drag the ■ on the middle segment to move the bend").</p>
+            @if (se.IsManual)
+            {
+                <div class="chips">
+                    <button class="chip" title="Let the connector pick its sides and bend again" @onclick="() => ResetRoute(se)">Reset route to auto</button>
+                </div>
+            }
 
             <label>Weight</label>
             <div class="seg wide stacked">

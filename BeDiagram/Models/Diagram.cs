@@ -111,6 +111,24 @@ public class Edge
     /// <summary>"end", "both" or "none".</summary>
     public string Arrows { get; set; } = LineLook.ArrowEnd;
 
+    /// <summary>Side of the source shape the connector leaves from ("top", "right", "bottom", "left"); null = automatic.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? FromSide { get; set; }
+    /// <summary>Side of the target shape the connector arrives at; null = automatic.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToSide { get; set; }
+    /// <summary>Elbow connectors only: how far (px) the middle segment has been dragged from its automatic position.
+    /// Horizontal segments move in y, vertical ones in x. 0 = automatic.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public double Bend { get; set; }
+
+    public bool IsManual => FromSide is not null || ToSide is not null || Bend != 0;
+
+    /// <summary>Back to fully automatic sides and bend.</summary>
+    public void ResetRoute() { FromSide = null; ToSide = null; Bend = 0; }
+
+    public void CopyRouteFrom(Edge o) { FromSide = o.FromSide; ToSide = o.ToSide; Bend = o.Bend; }
+
     public void CopyLookFrom(Edge o) { Style = o.Style; Weight = o.Weight; Pattern = o.Pattern; Color = o.Color; Arrows = o.Arrows; LabelOrient = o.LabelOrient; }
 }
 
@@ -161,6 +179,26 @@ public static class EdgeStyles
 {
     public const string Elbow = "elbow";
     public const string Straight = "straight";
+}
+
+/// <summary>Connection points on a shape: the middle of each side.</summary>
+public static class Sides
+{
+    public const string Top = "top", Right = "right", Bottom = "bottom", Left = "left";
+    public static readonly string[] All = { Top, Right, Bottom, Left };
+
+    /// <summary>Outward direction of a side.</summary>
+    public static (double X, double Y) Dir(string side) => side switch
+    {
+        Top => (0, -1), Right => (1, 0), Bottom => (0, 1), _ => (-1, 0),
+    };
+
+    public static string Opposite(string side) => side switch
+    {
+        Top => Bottom, Right => Left, Bottom => Top, _ => Right,
+    };
+
+    public static bool IsValid(string? side) => side is Top or Right or Bottom or Left;
 }
 
 public static class LabelOrients
