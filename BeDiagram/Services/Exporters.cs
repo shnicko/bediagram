@@ -13,7 +13,7 @@ public static class Exporters
     /// <summary>Standalone SVG of the whole diagram.</summary>
     public static string ToSvg(Diagram d)
     {
-        var boxes = d.Nodes.Cast<IBox>().Concat(d.Comments).Concat(d.Groups).ToList();
+        var boxes = d.Nodes.Cast<IBox>().Concat(d.TextBoxes).Concat(d.Groups).ToList();
         var lookup = boxes.ToDictionary(b => b.Id);
         var sb = new StringBuilder();
         var defs = "<defs>" + string.Concat(d.Edges.Select(x => (LineLook.Colour(x.Color), x.Weight)).Distinct()
@@ -62,39 +62,23 @@ public static class Exporters
             sb.Append($"<text x=\"{F(g.X + 14)}\" y=\"{F(g.Y + 21)}\" font-size=\"13\" font-weight=\"600\" fill=\"{sw.Stroke}\">{E(g.Title)}</text>\n");
         }
 
-        foreach (var c in d.Comments)
-        {
-            var (fill, stroke) = CommentColors.Get(c.Color);
-            sb.Append($"<rect x=\"{F(c.X)}\" y=\"{F(c.Y)}\" width=\"{F(c.W)}\" height=\"{F(c.H)}\" rx=\"4\" fill=\"{fill}\" stroke=\"{stroke}\"/>\n");
-            var lines = Geometry.Wrap(c.Text, c.W - 20, 6.6);
-            sb.Append($"<text x=\"{F(c.X + 10)}\" y=\"{F(c.Y + 20)}\" font-size=\"12\" fill=\"#3d3a2a\">");
-            for (int i = 0; i < lines.Count; i++)
-                sb.Append($"<tspan x=\"{F(c.X + 10)}\" dy=\"{(i == 0 ? "0" : "16")}\">{E(lines[i])}</tspan>");
-            sb.Append("</text>\n");
-        }
+        foreach (var t in d.TextBoxes)
+            sb.Append(TextBoxSvg(t));
 
         var labels = new StringBuilder();
         foreach (var e in d.Edges)
         {
             if (!lookup.TryGetValue(e.From, out var a) || !lookup.TryGetValue(e.To, out var b)) continue;
-            bool note = a is Comment || b is Comment;
-            var geo = Geometry.EdgeGeometry(a, b, note ? EdgeStyles.Straight : e.Style, e.LabelOrient, e.LabelPos);
-            if (note)
-            {
-                sb.Append($"<path d=\"{geo.D}\" fill=\"none\" stroke=\"#9aa3ad\" stroke-width=\"1.2\" stroke-dasharray=\"4 4\"/>\n");
-            }
-            else
-            {
-                var lw = LineLook.Width(e.Weight);
-                var lc = LineLook.Colour(e.Color);
-                var dash = LineLook.Dash(e.Pattern, lw);
-                var mk = $"url(#{LineLook.MarkerId(lc, e.Weight)})";
-                sb.Append($"<path d=\"{geo.D}\" fill=\"none\" stroke=\"{lc}\" stroke-width=\"{F(lw)}\" stroke-linecap=\"{LineLook.Cap(e.Pattern)}\"");
-                if (dash is not null) sb.Append($" stroke-dasharray=\"{dash}\"");
-                if (e.Arrows != LineLook.ArrowNone) sb.Append($" marker-end=\"{mk}\"");
-                if (e.Arrows == LineLook.ArrowBoth) sb.Append($" marker-start=\"{mk}\"");
-                sb.Append("/>\n");
-            }
+            var geo = Geometry.EdgeGeometry(a, b, e.Style, e.LabelOrient, e.LabelPos);
+            var lw = LineLook.Width(e.Weight);
+            var lc = LineLook.Colour(e.Color);
+            var dash = LineLook.Dash(e.Pattern, lw);
+            var mk = $"url(#{LineLook.MarkerId(lc, e.Weight)})";
+            sb.Append($"<path d=\"{geo.D}\" fill=\"none\" stroke=\"{lc}\" stroke-width=\"{F(lw)}\" stroke-linecap=\"{LineLook.Cap(e.Pattern)}\"");
+            if (dash is not null) sb.Append($" stroke-dasharray=\"{dash}\"");
+            if (e.Arrows != LineLook.ArrowNone) sb.Append($" marker-end=\"{mk}\"");
+            if (e.Arrows == LineLook.ArrowBoth) sb.Append($" marker-start=\"{mk}\"");
+            sb.Append("/>\n");
             if (!string.IsNullOrWhiteSpace(e.Label))
             {
                 var w = Geometry.LabelWidth(e.Label);
@@ -128,6 +112,30 @@ public static class Exporters
         sb.Append(labels);
         sb.Append(closeContent);
         sb.Append("</svg>\n");
+        return sb.ToString();
+    }
+
+    /// <summary>A text box: background, border, folded corner (comments) and wrapped lines.</summary>
+    static string TextBoxSvg(TextBox t)
+    {
+        var st = TextStyle.For(t);
+        var sb = new StringBuilder("<g>");
+        if (st.Fill is not null || st.Stroke is not null)
+        {
+            sb.Append($"<path d=\"{Geometry.TextBoxPath(t, st.Radius)}\" fill=\"{st.Fill ?? "none"}\"");
+            if (st.Stroke is not null)
+            {
+                sb.Append($" stroke=\"{st.Stroke}\" stroke-width=\"{F(st.StrokeWidth)}\" stroke-linecap=\"{st.Cap}\"");
+                if (st.Dash is not null) sb.Append($" stroke-dasharray=\"{st.Dash}\"");
+            }
+            sb.Append("/>");
+        }
+        if (t.IsComment) sb.Append($"<path d=\"{Geometry.FoldPath(t)}\" fill=\"none\" stroke=\"{st.FoldColour}\"/>");
+        var lay = Geometry.Layout(t);
+        sb.Append($"<text font-family=\"{E(st.Family)}\" font-size=\"{F(t.FontSize)}\"{(t.Bold ? " font-weight=\"600\"" : "")} fill=\"{st.TextColour}\" text-anchor=\"{lay.Anchor}\" xml:space=\"preserve\">");
+        foreach (var l in lay.Lines)
+            sb.Append($"<tspan x=\"{F(l.X)}\" y=\"{F(l.Y)}\">{E(l.Text)}</tspan>");
+        sb.Append("</text></g>\n");
         return sb.ToString();
     }
 
@@ -171,14 +179,33 @@ public static class Exporters
             };
             sb.Append($"    {id}{shape}\n");
         }
+        int ti = 0;
+        var styles = new StringBuilder();
+        foreach (var t in d.TextBoxes)
+        {
+            var id = $"T{++ti}";
+            ids[t.Id] = id;
+            var text = (t.Text ?? "").Replace("\"", "'").Replace("\r", "").Trim().Replace("\n", "<br/>");
+            sb.Append($"    {id}[\"{(text.Length == 0 ? " " : text)}\"]\n");
+            var st = TextStyle.For(t);
+            var css = new List<string> { $"fill:{st.Fill ?? "transparent"}", $"color:{st.TextColour}" };
+            if (st.Stroke is null) css.Add("stroke-width:0px");
+            else
+            {
+                css.Add($"stroke:{st.Stroke}");
+                css.Add($"stroke-width:{F(st.StrokeWidth)}px");
+                if (st.Dash is not null) css.Add($"stroke-dasharray:{st.Dash}");
+            }
+            styles.Append($"    style {id} {string.Join(",", css)}\n");
+        }
         int gi = 0;
         foreach (var g in d.Groups)
         {
             var gid = $"G{++gi}";
             ids[g.Id] = gid;
             sb.Append($"    subgraph {gid}[{Q(g.Title)}]\n");
-            foreach (var n in d.Nodes.Where(n => n.GroupId == g.Id))
-                sb.Append($"        {ids[n.Id]}\n");
+            foreach (var m in d.Nodes.Cast<IGroupable>().Concat(d.TextBoxes).Where(m => m.GroupId == g.Id))
+                sb.Append($"        {ids[m.Id]}\n");
             sb.Append("    end\n");
         }
         foreach (var e in d.Edges)
@@ -186,6 +213,7 @@ public static class Exporters
             if (!ids.TryGetValue(e.From, out var a) || !ids.TryGetValue(e.To, out var b)) continue;
             sb.Append($"    {a} {MermaidLink(e)} {b}\n");
         }
+        sb.Append(styles);
         return sb.ToString();
     }
 }

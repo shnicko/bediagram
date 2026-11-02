@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace BeDiagram.Models;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace BeDiagram.Models;
 /// Nodes are typed (see <see cref="NodeTypes"/>) and carry free-form properties so that a
 /// future audit-rule builder can interpret the same file without a format change.
 /// </summary>
-public class Diagram
+public class Diagram : IJsonOnDeserialized
 {
     public string Schema { get; set; } = "bediagram/1";
     public string Name { get; set; } = "Untitled";
@@ -19,7 +21,37 @@ public class Diagram
     public List<Group> Groups { get; set; } = new();
     public List<Node> Nodes { get; set; } = new();
     public List<Edge> Edges { get; set; } = new();
-    public List<Comment> Comments { get; set; } = new();
+    public List<TextBox> TextBoxes { get; set; } = new();
+
+    /// <summary>Read-only shim: files saved before text boxes had a "comments" list. They load as comment text boxes.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<LegacyComment>? Comments { get; set; }
+
+    void IJsonOnDeserialized.OnDeserialized()
+    {
+        if (Comments is null) return;
+        foreach (var c in Comments)
+        {
+            var t = TextBox.NewComment();
+            t.Id = c.Id; t.Text = c.Text; t.X = c.X; t.Y = c.Y; t.W = c.W; t.H = c.H; t.GroupId = c.GroupId;
+            t.Fill = t.BorderColor = c.Color switch { "blue" => "sky", "green" => "mint", "pink" => "rose", _ => "yellow" };
+            TextBoxes.Add(t);
+            foreach (var e in Edges.Where(e => e.From == c.Id || e.To == c.Id)) TextBox.ApplyPinLook(e);
+        }
+        Comments = null;
+    }
+}
+
+public class LegacyComment
+{
+    public string Id { get; set; } = "";
+    public string Text { get; set; } = "";
+    public string Color { get; set; } = "yellow";
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double W { get; set; } = 200;
+    public double H { get; set; } = 110;
+    public string? GroupId { get; set; }
 }
 
 public interface IBox
@@ -110,7 +142,7 @@ public static class LineLook
     public static string Cap(string pattern) => pattern is Dotted or DashDot ? "round" : "butt";
 
     public static string Colour(string? key) =>
-        key is not null && Palette.All.TryGetValue(key, out var sw) ? sw.Stroke : DefaultColor;
+        key is not null && Palette.All.TryGetValue(key, out var sw) ? sw.Stroke : TextPalette.StrokeOf(key, DefaultColor);
 
     /// <summary>Marker id for an arrowhead in a given colour and weight (one marker per combination).</summary>
     public static string MarkerId(string colour, string weight) => $"arr-{colour.TrimStart('#')}-{weight}";
@@ -138,16 +170,152 @@ public static class LabelOrients
     public const string Perpendicular = "perpendicular";
 }
 
-public class Comment : IGroupable
+/// <summary>
+/// Free text: multi-line, with optional background, border and font settings. Text boxes can be
+/// connected like shapes. <see cref="IsComment"/> flags annotations (sticky-note look, dashed pin lines)
+/// so code reading the file can tell notes apart from text that is part of the diagram.
+/// </summary>
+public class TextBox : IGroupable
 {
-    public string Id { get; set; } = Node.NewId("c");
-    public string Text { get; set; } = "Comment";
-    public string Color { get; set; } = "yellow";
+    public string Id { get; set; } = Node.NewId("t");
+    public string Text { get; set; } = "";
+    /// <summary>An annotation rather than diagram content.</summary>
+    public bool IsComment { get; set; }
     public double X { get; set; }
     public double Y { get; set; }
     public double W { get; set; } = 200;
-    public double H { get; set; } = 110;
+    public double H { get; set; } = 60;
     public string? GroupId { get; set; }
+
+    /// <summary>Background colour key from <see cref="TextPalette"/>; null = transparent.</summary>
+    public string? Fill { get; set; }
+    /// <summary>"none" or a line pattern from <see cref="LineLook"/> (solid, dashed, dotted, dashdot, longdash).</summary>
+    public string Border { get; set; } = TextLook.NoBorder;
+    /// <summary>"light", "regular" or "heavy".</summary>
+    public string BorderWeight { get; set; } = LineLook.Regular;
+    /// <summary>Border colour key from <see cref="TextPalette"/>; null = default grey.</summary>
+    public string? BorderColor { get; set; }
+    public bool Rounded { get; set; } = true;
+
+    /// <summary>"sans", "serif" or "mono".</summary>
+    public string Font { get; set; } = TextLook.Sans;
+    public double FontSize { get; set; } = 14;
+    public bool Bold { get; set; }
+    /// <summary>Text colour key from <see cref="TextPalette"/>; null = default dark.</summary>
+    public string? TextColor { get; set; }
+    /// <summary>"left", "center" or "right".</summary>
+    public string Align { get; set; } = TextLook.Left;
+    /// <summary>"top", "middle" or "bottom".</summary>
+    public string VAlign { get; set; } = TextLook.Top;
+
+    public TextBox Copy() { var c = (TextBox)MemberwiseClone(); c.Id = Node.NewId("t"); return c; }
+
+    /// <summary>The standard comment look: yellow sticky note, thin border, Consolas, folded corner.</summary>
+    public void ApplyCommentStyle()
+    {
+        IsComment = true;
+        Fill = "yellow"; Border = LineLook.Solid; BorderWeight = LineLook.Light; BorderColor = "yellow"; Rounded = true;
+        Font = TextLook.Mono; FontSize = 12; Bold = false; TextColor = "ink";
+        Align = TextLook.Left; VAlign = TextLook.Top;
+    }
+
+    public static TextBox NewComment()
+    {
+        var t = new TextBox { W = 200, H = 110 };
+        t.ApplyCommentStyle();
+        return t;
+    }
+
+    /// <summary>Connector look for lines pinned to a comment: light, dashed, no arrows, straight.</summary>
+    public static void ApplyPinLook(Edge e)
+    {
+        e.Style = EdgeStyles.Straight; e.Weight = LineLook.Light; e.Pattern = LineLook.Dashed;
+        e.Color = "grey"; e.Arrows = LineLook.ArrowNone;
+    }
+}
+
+public static class TextLook
+{
+    public const string NoBorder = "none";
+    public const string Sans = "sans", Serif = "serif", Mono = "mono";
+    public const string Left = "left", Center = "center", Right = "right";
+    public const string Top = "top", Middle = "middle", Bottom = "bottom";
+
+    public static readonly (string Key, string Name)[] Fonts = { (Sans, "Sans"), (Serif, "Serif"), (Mono, "Mono") };
+    public static readonly double[] Sizes = { 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 40 };
+
+    public static string Family(string font) => font switch
+    {
+        Mono => "Consolas, 'Cascadia Mono', 'Courier New', monospace",
+        Serif => "Georgia, 'Times New Roman', serif",
+        _ => "'Segoe UI', Arial, sans-serif",
+    };
+
+    /// <summary>Average character width as a fraction of the font size (used for wrapping).</summary>
+    public static double CharWidth(string font) => font switch { Mono => 0.56, Serif => 0.52, _ => 0.54 };
+
+    public const double LineSpacing = 1.35;
+    public const double PadX = 10, PadY = 8;
+}
+
+/// <summary>
+/// Colours for text boxes. Fill = background, Stroke = border and text. Includes the sticky-note
+/// colours, white, greys and the shared shape <see cref="Palette"/>.
+/// </summary>
+public static class TextPalette
+{
+    public static readonly IReadOnlyDictionary<string, (string Fill, string Stroke)> All = BuildAll();
+
+    static Dictionary<string, (string, string)> BuildAll()
+    {
+        var d = new Dictionary<string, (string, string)>
+        {
+            ["white"] = ("#ffffff", "#cfd4da"),
+            ["grey"] = ("#f1f3f5", "#9aa3ad"),
+            ["ink"] = ("#3d3a2a", "#3d3a2a"),
+            ["yellow"] = ("#fff7c2", "#d9c255"),
+            ["sky"] = ("#dcecff", "#7ea6d8"),
+            ["mint"] = ("#dcf5df", "#7fbf88"),
+            ["rose"] = ("#fde0ea", "#d88aa6"),
+        };
+        foreach (var (k, s) in Palette.All) d[k] = (s.Light, s.Stroke);
+        return d;
+    }
+
+    /// <summary>Swatches offered for backgrounds (pale colours).</summary>
+    public static readonly string[] Fills = { "white", "grey", "yellow", "sky", "mint", "rose", "blue", "teal", "green", "amber", "red", "pink", "purple", "slate" };
+    /// <summary>Swatches offered for borders and text (strong colours).</summary>
+    public static readonly string[] Strokes = { "grey", "yellow", "sky", "mint", "rose", "blue", "teal", "green", "amber", "red", "pink", "purple", "slate", "ink" };
+
+    public static string? FillOf(string? key) => key is not null && All.TryGetValue(key, out var c) ? c.Fill : null;
+    public static string StrokeOf(string? key, string fallback) => key is not null && All.TryGetValue(key, out var c) ? c.Stroke : fallback;
+}
+
+/// <summary>Resolved colours and lines for drawing a text box (canvas and export).</summary>
+public record TextStyle(string? Fill, string? Stroke, double StrokeWidth, string? Dash, string Cap, double Radius,
+                        string Family, string TextColour, string FoldColour)
+{
+    public const string DefaultBorder = "#9aa3ad";
+    public const string DefaultText = "#1f2933";
+
+    public static TextStyle For(TextBox t)
+    {
+        var hasBorder = t.Border != TextLook.NoBorder;
+        var w = LineLook.Width(t.BorderWeight);
+        var stroke = TextPalette.StrokeOf(t.BorderColor, DefaultBorder);
+        // Folded corner follows the border colour, or the background's own edge colour when there is no border.
+        var fold = hasBorder ? stroke : TextPalette.StrokeOf(t.Fill, DefaultBorder);
+        return new TextStyle(
+            TextPalette.FillOf(t.Fill),
+            hasBorder ? stroke : null,
+            w,
+            hasBorder ? LineLook.Dash(t.Border, w) : null,
+            LineLook.Cap(t.Border),
+            t.Rounded ? 4 : 0,
+            TextLook.Family(t.Font),
+            TextPalette.StrokeOf(t.TextColor, DefaultText),
+            fold);
+    }
 }
 
 /// <summary>A coloured container. Members are the nodes/comments whose GroupId points here.</summary>
@@ -233,21 +401,6 @@ public record NodeStyle(string Fill, string Stroke, string Text, string IconColo
         }
         return new NodeStyle(fill, stroke, "#1f2933", stroke);
     }
-}
-
-public static class CommentColors
-{
-    public static readonly IReadOnlyDictionary<string, (string Fill, string Stroke)> All =
-        new Dictionary<string, (string, string)>
-        {
-            ["yellow"] = ("#fff7c2", "#d9c255"),
-            ["blue"] = ("#dcecff", "#7ea6d8"),
-            ["green"] = ("#dcf5df", "#7fbf88"),
-            ["pink"] = ("#fde0ea", "#d88aa6"),
-        };
-
-    public static (string Fill, string Stroke) Get(string key) =>
-        All.TryGetValue(key, out var c) ? c : All["yellow"];
 }
 
 /// <summary>Fixed page for diagrams that go into documents. The page sits at (0,0) on the canvas.</summary>

@@ -104,34 +104,40 @@ public partial class Designer
     IBox? FindBox(string? id) =>
         id is null ? null
         : (IBox?)D.Nodes.FirstOrDefault(n => n.Id == id)
-          ?? (IBox?)D.Comments.FirstOrDefault(c => c.Id == id)
+          ?? (IBox?)D.TextBoxes.FirstOrDefault(c => c.Id == id)
           ?? D.Groups.FirstOrDefault(g => g.Id == id);
 
     Group? FindGroup(string? id) => id is null ? null : D.Groups.FirstOrDefault(g => g.Id == id);
 
     IEnumerable<IGroupable> Members(Group g) =>
-        D.Nodes.Where(n => n.GroupId == g.Id).Cast<IGroupable>().Concat(D.Comments.Where(c => c.GroupId == g.Id));
+        D.Nodes.Where(n => n.GroupId == g.Id).Cast<IGroupable>().Concat(D.TextBoxes.Where(c => c.GroupId == g.Id));
 
     Node? SelectedNode => Sel.Count == 1 ? D.Nodes.FirstOrDefault(n => n.Id == Sel[0]) : null;
-    Comment? SelectedComment => Sel.Count == 1 ? D.Comments.FirstOrDefault(c => c.Id == Sel[0]) : null;
+    TextBox? SelectedText => Sel.Count == 1 ? D.TextBoxes.FirstOrDefault(c => c.Id == Sel[0]) : null;
     Group? SelectedGroup => Sel.Count == 1 ? FindGroup(Sel[0]) : null;
     Edge? SelectedEdgeObj => SelEdge is null ? null : D.Edges.FirstOrDefault(e => e.Id == SelEdge);
 
     string LabelOf(string id) => FindBox(id) switch
     {
         Node n => string.IsNullOrWhiteSpace(n.Label) ? NodeTypes.Get(n.Type).Display : n.Label,
-        Comment => "Comment",
+        TextBox t => t.IsComment ? "Comment" : $"Text “{TextPreview(t.Text)}”",
         Group g => $"Group “{g.Title}”",
         _ => "?",
     };
 
-    /// <summary>Top-most item under a world point: shapes first, then comments, then groups.</summary>
+    static string TextPreview(string text)
+    {
+        var first = (text ?? "").Replace("\r", "").Split('\n')[0].Trim();
+        return first.Length == 0 ? "…" : first.Length > 24 ? first[..24] + "…" : first;
+    }
+
+    /// <summary>Top-most item under a world point: shapes first, then text boxes, then groups.</summary>
     IBox? HitTest(double x, double y, string? exclude = null)
     {
         for (int i = D.Nodes.Count - 1; i >= 0; i--)
             if (D.Nodes[i].Id != exclude && Geometry.Contains(D.Nodes[i], x, y)) return D.Nodes[i];
-        for (int i = D.Comments.Count - 1; i >= 0; i--)
-            if (D.Comments[i].Id != exclude && Geometry.Contains(D.Comments[i], x, y)) return D.Comments[i];
+        for (int i = D.TextBoxes.Count - 1; i >= 0; i--)
+            if (D.TextBoxes[i].Id != exclude && Geometry.Contains(D.TextBoxes[i], x, y)) return D.TextBoxes[i];
         var ownGroup = (FindBox(exclude) as IGroupable)?.GroupId;
         for (int i = D.Groups.Count - 1; i >= 0; i--)
             if (D.Groups[i].Id != exclude && D.Groups[i].Id != ownGroup && Geometry.Contains(D.Groups[i], x, y)) return D.Groups[i];
@@ -272,7 +278,7 @@ public partial class Designer
     void GroupSelection()
     {
         var items = Sel.Select(FindBox).OfType<IGroupable>().ToList();
-        if (items.Count == 0) { ShowToast("Select shapes or comments to group"); return; }
+        if (items.Count == 0) { ShowToast("Select shapes or text boxes to group"); return; }
         Change();
         var g = new Group { Title = "Group", Color = NextGroupColour() };
         (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(items);
@@ -428,23 +434,27 @@ public partial class Designer
         if (from == to) return false;
         if (D.Edges.Any(e => (e.From == from && e.To == to))) return false;
         var a = FindBox(from); var b = FindBox(to);
-        if (a is null || b is null || (a is Comment && b is Comment)) return false;
+        if (a is null || b is null) return false;
+        // Two comments pinned to each other is meaningless; any other pairing (text ↔ shape, text ↔ text) is fine.
+        bool aNote = a is TextBox { IsComment: true }, bNote = b is TextBox { IsComment: true };
+        if (aNote && bNote) return false;
         // A group connecting to its own member is meaningless.
         if (a is Group ga && (b as IGroupable)?.GroupId == ga.Id) return false;
         if (b is Group gb && (a as IGroupable)?.GroupId == gb.Id) return false;
         var edge = new Edge { From = from, To = to, Label = label };
         edge.CopyLookFrom(D.DefaultLook);
         edge.Style = D.DefaultConnector;
+        if (aNote || bNote) TextBox.ApplyPinLook(edge);
         D.Edges.Add(edge);
         return true;
     }
 
-    /// <summary>The item new shapes are auto-joined to: the most recently selected shape or group.</summary>
+    /// <summary>The item new shapes are auto-joined to: the most recently selected shape, group or (non-comment) text box.</summary>
     IBox? JoinSource()
     {
         if (Sel.Count == 0) return null;
         var b = FindBox(Sel[^1]);
-        return b is Node or Group ? b : null;
+        return b is Node or Group or TextBox { IsComment: false } ? b : null;
     }
 
     void AddNodeAt(string type, double cx, double cy, bool join, string? groupId = null)
@@ -482,21 +492,35 @@ public partial class Designer
         AddNodeAt(type, cx, cy, join: src is not null, groupId: (src as IGroupable)?.GroupId);
     }
 
-    void AddCommentAt(double x, double y, string? pinTo)
+    /// <summary>Adds a text box (or a comment) with its top-left at (x, y), optionally joined/pinned to an item.</summary>
+    void AddTextAt(double x, double y, string? joinTo, bool comment)
     {
         Change();
-        var c = new Comment { X = SnapV(x), Y = SnapV(y), Text = "" };
-        D.Comments.Add(c);
-        if (pinTo is not null) AddEdge(c.Id, pinTo);
-        SelectOnly(c.Id);
-        BeginEdit(c.Id, checkpoint: false);
+        var t = comment ? TextBox.NewComment() : new TextBox();
+        t.X = SnapV(x); t.Y = SnapV(y);
+        D.TextBoxes.Add(t);
+        // Comments point at what they annotate; plain text continues the flow from the selection.
+        if (joinTo is not null) { if (comment) AddEdge(t.Id, joinTo); else AddEdge(joinTo, t.Id); }
+        UpdateMembership(new[] { t });
+        SelectOnly(t.Id);
+        BeginEdit(t.Id, checkpoint: false);
     }
 
     void AddCommentQuick()
     {
+        var src = Sel.Count > 0 ? FindBox(Sel[^1]) : null;
+        if (src is TextBox { IsComment: true }) src = null;
+        if (src is not null) AddTextAt(src.X + src.W + 50, src.Y - 30, src.Id, comment: true);
+        else { var (cx, cy) = ViewCentre(); AddTextAt(cx - 100, cy - 55, null, comment: true); }
+    }
+
+    void AddTextQuick()
+    {
         var src = JoinSource();
-        if (src is not null) AddCommentAt(src.X + src.W + 50, src.Y - 30, src.Id);
-        else { var (cx, cy) = ViewCentre(); AddCommentAt(cx - 100, cy - 55, null); }
+        var t = new TextBox();
+        if (src is not null && AutoConnect)
+            AddTextAt(src.X + src.W / 2 - t.W / 2, src.Y + src.H + Geometry.ExtraBelow(src) + 60, src.Id, comment: false);
+        else { var (cx, cy) = ViewCentre(); AddTextAt(cx - t.W / 2, cy - t.H / 2, null, comment: false); }
     }
 
     void AddGroupAt(double cx, double cy)
@@ -524,8 +548,10 @@ public partial class Designer
         switch (paletteDrag)
         {
             case "comment":
-                AddCommentAt(x - 100, y - 55, (HitTest(x, y) as Node)?.Id);
-                UpdateMembership(D.Comments.TakeLast(1));
+                AddTextAt(x - 100, y - 55, (HitTest(x, y) as Node)?.Id, comment: true);
+                break;
+            case "text":
+                AddTextAt(x - 100, y - 30, null, comment: false);
                 break;
             case "group":
                 AddGroupAt(x, y);
@@ -665,7 +691,7 @@ public partial class Designer
                 if (resizeId is not null && FindBox(resizeId) is { } r)
                 {
                     var (ow, oh) = moveOrigins[resizeId];
-                    var (minW, minH) = r is Group ? (160.0, 100.0) : (80.0, 40.0);
+                    var (minW, minH) = r switch { Group => (160.0, 100.0), TextBox => (40.0, 24.0), _ => (80.0, 40.0) };
                     r.W = Math.Max(minW, SnapV(ow + dx));
                     r.H = Math.Max(minH, SnapV(oh + dy));
                     moved = true;
@@ -716,7 +742,7 @@ public partial class Designer
                 if (Math.Abs(curX - startX) + Math.Abs(curY - startY) > 4)
                 {
                     double x1 = Math.Min(startX, curX), y1 = Math.Min(startY, curY), x2 = Math.Max(startX, curX), y2 = Math.Max(startY, curY);
-                    var hits = D.Nodes.Cast<IBox>().Concat(D.Comments)
+                    var hits = D.Nodes.Cast<IBox>().Concat(D.TextBoxes)
                         .Where(b => Geometry.Intersects(b, x1, y1, x2, y2))
                         // Groups only when fully enclosed, so dragging inside a group selects its contents.
                         .Concat(D.Groups.Where(g => g.X >= x1 && g.Y >= y1 && g.X + g.W <= x2 && g.Y + g.H <= y2))
@@ -759,7 +785,7 @@ public partial class Designer
         // Deleting a group deletes its contents too (Ungroup keeps them).
         var ids = WithMembers(Sel).Select(b => b.Id).ToHashSet();
         D.Nodes.RemoveAll(n => ids.Contains(n.Id));
-        D.Comments.RemoveAll(c => ids.Contains(c.Id));
+        D.TextBoxes.RemoveAll(c => ids.Contains(c.Id));
         D.Groups.RemoveAll(g => ids.Contains(g.Id));
         D.Edges.RemoveAll(e => ids.Contains(e.From) || ids.Contains(e.To));
         ClearSelection();
@@ -791,9 +817,10 @@ public partial class Designer
                         Properties = new(n.Properties),
                     };
                     D.Nodes.Add(nn); map[n.Id] = nn.Id; break;
-                case Comment c:
-                    var cc = new Comment { Text = c.Text, Color = c.Color, X = c.X + 30, Y = c.Y + 30, W = c.W, H = c.H, GroupId = NewGroup(c.GroupId) };
-                    D.Comments.Add(cc); map[c.Id] = cc.Id; break;
+                case TextBox c:
+                    var cc = c.Copy();
+                    cc.X += 30; cc.Y += 30; cc.GroupId = NewGroup(c.GroupId);
+                    D.TextBoxes.Add(cc); map[c.Id] = cc.Id; break;
             }
         }
         foreach (var e in D.Edges.ToList())
@@ -837,7 +864,7 @@ public partial class Designer
     {
         if (!D.Page.Enabled) return new();
         double W = D.Page.WidthPx, H = D.Page.HeightPx;
-        return D.Nodes.Cast<IBox>().Concat(D.Comments).Concat(D.Groups)
+        return D.Nodes.Cast<IBox>().Concat(D.TextBoxes).Concat(D.Groups)
             .Where(b => b.X < -0.5 || b.Y < -0.5 || b.X + b.W > W + 0.5 || b.Y + b.H + Geometry.ExtraBelow(b) > H + 0.5)
             .ToList();
     }
@@ -892,7 +919,7 @@ public partial class Designer
         double W = D.Page.WidthPx, H = D.Page.HeightPx, m = D.Page.MarginPx;
         double dx = SnapV(m + (W - 2 * m - cb.W) / 2 - cb.X);
         double dy = SnapV(m + (H - 2 * m - cb.H) / 2 - cb.Y);
-        foreach (var b in D.Nodes.Cast<IBox>().Concat(D.Comments).Concat(D.Groups)) { b.X += dx; b.Y += dy; }
+        foreach (var b in D.Nodes.Cast<IBox>().Concat(D.TextBoxes).Concat(D.Groups)) { b.X += dx; b.Y += dy; }
         if (checkpoint && ContentTooBigForPage())
             ShowToast("Centred — but the drawing is bigger than the printable area");
     }
@@ -980,6 +1007,41 @@ public partial class Designer
     void SetFilled(Node n, bool filled) { Change(); n.Filled = filled; }
     void SetIcon(Node n, string? icon) { Change(); n.Icon = icon; }
     void SetGroupColour(Group g, string colour) { Change(); g.Color = colour; }
+
+    // ───────────── Text boxes ─────────────
+
+    void SetTextLook(TextBox t, Action<TextBox> change) { Change(); change(t); }
+
+    /// <summary>Turning the comment flag on applies the standard comment look; turning it off keeps the look.</summary>
+    void SetComment(TextBox t, bool on)
+    {
+        if (t.IsComment == on) return;
+        Change();
+        if (on) t.ApplyCommentStyle(); else t.IsComment = false;
+        foreach (var e in D.Edges.Where(e => e.From == t.Id || e.To == t.Id))
+        {
+            if (on) TextBox.ApplyPinLook(e);
+            else { e.CopyLookFrom(D.DefaultLook); e.Style = D.DefaultConnector; }
+        }
+        // Comments can't be pinned to other comments.
+        if (on) D.Edges.RemoveAll(e => (e.From == t.Id && FindBox(e.To) is TextBox { IsComment: true }) || (e.To == t.Id && FindBox(e.From) is TextBox { IsComment: true }));
+    }
+
+    void ResetCommentStyle(TextBox t) { Change(); t.ApplyCommentStyle(); }
+
+    /// <summary>Sets the height so the wrapped text just fits.</summary>
+    void FitTextHeight(TextBox t)
+    {
+        Change();
+        t.H = Math.Max(24, Math.Ceiling(Geometry.Layout(t).ContentHeight / 2) * 2);
+    }
+
+    void SetFontSize(TextBox t, object? value)
+    {
+        if (!double.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) return;
+        Change();
+        t.FontSize = Math.Clamp(v, 6, 96);
+    }
 
     void AddProp(Node n)
     {
@@ -1092,7 +1154,7 @@ public partial class Designer
                 case "y": Redo(); break;
                 case "a":
                     Sel.Clear();
-                    Sel.AddRange(D.Nodes.Select(n => n.Id)); Sel.AddRange(D.Comments.Select(c => c.Id)); Sel.AddRange(D.Groups.Select(g => g.Id));
+                    Sel.AddRange(D.Nodes.Select(n => n.Id)); Sel.AddRange(D.TextBoxes.Select(c => c.Id)); Sel.AddRange(D.Groups.Select(g => g.Id));
                     SelEdge = null; break;
                 case "d": Duplicate(); break;
                 case "g":
@@ -1123,6 +1185,7 @@ public partial class Designer
                 else return;
                 break;
             case "c": AddCommentQuick(); break;
+            case "t": AddTextQuick(); break;
             case "g": AddGroupQuick(); break;
             case "f": Fit(); break;
             case "+" or "=": ZoomBy(1.2); break;
