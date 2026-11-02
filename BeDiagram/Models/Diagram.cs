@@ -401,7 +401,7 @@ public static class NodeTypes
         new(Status,   "Status",        "hexagon",       "#fdeef0", "#b8475a", 150, 56),
         new(End,      "End",           "pill",          "#fbe9e7", "#b4472f", 140, 52),
         new(Circle,   "Circle",        "circle",        "#eef3fb", "#3b6fb6", 84, 84),
-        new(Outcome,  "Outcome",       "outcome",       "#e7f5ec", "#2f8f5b", 84, 84),
+        new(Outcome,  "Outcome",       "outcome",       "#e7f5ec", "#2f8f5b", 50, 50),
     };
 
     public static NodeTypeInfo Get(string key) => All.FirstOrDefault(t => t.Key == key) ?? All[1];
