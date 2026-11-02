@@ -30,6 +30,8 @@ Each diagram can produce three files, side by side:
 |---|---|
 | `Name.diagram.json` | The diagram (source of truth) |
 | `Name.svg` | Export → SVG image — for reports, Word, PowerPoint (page-sized in mm when a page is set) |
+| `Name.pdf` | Export → PDF — the whole page at the selected paper size, or (open canvas) the drawing zoomed to its extents |
+| `Name.view.pdf` | Export → PDF — current view: exactly what's on screen (fitted inside the page margins when a page size is set) |
 | `Name.mmd` | Export → Mermaid — paste into Mermaid-aware tools (Markdown, wikis) |
 
 ## Using it
@@ -53,7 +55,7 @@ Each diagram can produce three files, side by side:
   - *Hold* — rounded square with a clock (slate): on hold / awaiting review
 
   Click or drag one in; switch between them with the *Outcome* buttons in the panel (a label still showing the old name follows). Solid fill is on by default; untick *Solid fill* for an outline look, or pick any colour — the outline and symbol stay. Labels sit under the symbol. Straight connectors clip to the real outline (seal, octagon, triangle).
-- **Page size (for documents):** the *Page* box in the toolbar switches between the open canvas (default) and a fixed sheet — A5–A0, US Letter, Legal, Tabloid, 16:9 and 4:3 slides, or a custom size in mm — with portrait/landscape buttons. The sheet shows on the canvas with dashed margin guides; the status bar warns if anything is off the page. In the Diagram panel (click empty canvas): margin, *Centre drawing on page*, and *Scale down to fit the margins on export*. **Export → SVG image** then produces a file exactly that paper size in mm, so every diagram drops into Word/PowerPoint at a consistent size. Switching back to the open canvas leaves the drawing untouched.
+- **Page size (for documents):** the *Page* box in the toolbar switches between the open canvas (default) and a fixed sheet — A5–A0, US Letter, Legal, Tabloid, 16:9 and 4:3 slides, or a custom size in mm — with portrait/landscape buttons. The sheet shows on the canvas with dashed margin guides; the status bar warns if anything is off the page. In the Diagram panel (click empty canvas): margin, *Centre drawing on page*, and *Scale down to fit the margins on export*. **Export → SVG image** then produces a file exactly that paper size in mm, so every diagram drops into Word/PowerPoint at a consistent size. **Export → PDF — page** does the same as a PDF. Switching back to the open canvas leaves the drawing untouched.
 - **Connector lines:** *Elbow* (right-angled) or *Straight* (direct, clipped neatly to each shape's outline — circles, diamonds, hexagons included). The *Lines* switch in the toolbar sets the style for new connectors; change any single connector in its panel or press `L` with it selected. With several items selected you can switch all connectors between them at once; *Apply style to all* copies a connector's look to every connector.
 - **Connector ends and bends:** select a connector to show its handles. Drag a ● end to another side of its shape — it snaps to the nearest side middle (top / right / bottom / left), and the side points light up while you drag. On elbow connectors, drag the ■ on the middle segment sideways to move the bend (snaps to the grid; double-click it to put it back in the middle). Once you've adjusted a connector both ends stay on the sides you chose and the bend keeps its offset when you move shapes; *Reset route to auto* in the panel hands control back. L-shaped connectors (a single corner) have no bend to drag — move an end to another side instead.
 - **Connector line types:** in a connector's panel choose *Weight* (light / regular / heavy), *Line type* (solid, dashed, dotted, dash-dot, long dash), *Colour*, and *Arrowheads* (end / both / none). *Use as default* makes new connectors look the same; *Apply to all* restyles every connector. Mermaid export maps broken lines to dotted (`-.->`) and heavy solid lines to thick (`==>`).
@@ -102,7 +104,8 @@ BeDiagram/                   the web app project
   Models/Icons.cs              built-in icon set (Lucide, ISC licence — see LICENSE-lucide.txt)
   Models/Geometry.cs           shape paths, elbow connectors, text wrap (shared by canvas + export)
   Services/DiagramStore.cs     local folder save / open / list / delete
-  Services/Exporters.cs        SVG and Mermaid export
+  Services/Exporters.cs        SVG and Mermaid export (SVG optionally of the current view)
+  Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
   Components/Pages/Designer.razor(.cs)   the editor UI and interaction logic
   wwwroot/js/designer.js       keyboard shortcuts, wheel zoom, canvas size, focus
   wwwroot/app.css              styling
@@ -115,7 +118,8 @@ To add a shape type: add an entry to `NodeTypes.All` (and optionally default pro
 - Connectors (elbow or straight) don't route around other shapes yet.
 - No auto-layout ("tidy up") yet — candidate: MSAGL.
 - Groups can't be nested inside other groups yet.
-- No Mermaid import or PNG/PDF export yet (open the SVG in a browser and print to PDF — with a page size set it prints at the right size).
+- No Mermaid import or PNG export yet.
+- PDF text uses the standard PDF fonts (Helvetica / Times / Courier), so text widths differ slightly from Segoe UI on screen; characters outside Windows-1252 print as `?`.
 - One page per diagram (no multi-page documents).
 - Single user, local only, by design.
 

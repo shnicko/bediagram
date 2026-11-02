@@ -21,6 +21,8 @@
             {
                 <div class="menu" @onclick="() => exportMenu = false">
                     <button @onclick="ExportSvg">SVG image@(D.Page.Enabled ? $" ({D.Page.Mm.W:0.#} × {D.Page.Mm.H:0.#} mm)" : "")</button>
+                    <button @onclick="() => ExportPdf(false)" title="@PdfTip(false)">@PdfLabel()</button>
+                    <button @onclick="() => ExportPdf(true)" title="@PdfTip(true)">PDF — current view</button>
                     <button @onclick="ExportMermaid">Mermaid text (.mmd)</button>
                 </div>
             }
@@ -886,7 +888,7 @@
                     <button @onclick="CentreOnPage">Centre drawing on page</button>
                     <button @onclick="Fit">Show whole page</button>
                 </div>
-                <p class="muted">Export SVG produces a file exactly this paper size (in mm), ready to insert into Word or PowerPoint.</p>
+                <p class="muted">Export SVG or PDF produces a file exactly this paper size (in mm), ready to insert into Word or PowerPoint or to print.</p>
             }
             else
             {

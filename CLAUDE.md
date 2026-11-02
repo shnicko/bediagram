@@ -23,7 +23,8 @@ BeDiagram/
   Models/Geometry.cs     shape outlines, connector routing (elbow/straight), label + icon layout, bounds
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
-  Services/Exporters.cs      SVG export (page-sized in mm when a page is set) and Mermaid export
+  Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
+  Services/PdfExporter.cs    PDF = Exporters.ToSvg output converted to PDF operators (own SVG-subset reader, core fonts)
   Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs)
   Components/Pages/Designer.razor.cs   editor state + interaction logic
   wwwroot/js/designer.js     keyboard shortcuts, wheel zoom/pan, canvas size, focus, drag data
@@ -43,6 +44,8 @@ BeDiagram/
   gesture start and pushed on pointer-up. Panel inputs call `Checkpoint` on focus.
 - **Text boxes** replace the old comments: one `TextBox` class, `IsComment` flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in `Geometry.Layout(TextBox)`, drawn with SVG text in both renderers.
 - **Groups** don't nest. Membership is `GroupId` on nodes/text boxes; moving a group moves its members (`MoveBox`).
+- **PDF is drawn from the SVG export**, so it has no geometry of its own. If a new visual feature uses an SVG
+  element or attribute `PdfExporter` doesn't read yet (gradients, images, …), extend `PdfExporter` as well.
 - **Connector labels** render in their own layer above shapes (canvas and export).
 - **Page mode** puts the sheet at world (0,0); sizes in mm convert at 96 px/inch (`PageSetup.PxPerMm`).
 - Razor gotchas: wrap SVG `<text>` in a `<g>` when it's the first element in a code block (Razor treats a bare
@@ -67,7 +70,7 @@ BeDiagram/
 
 1. Connector routing around shapes (lines currently pass behind obstacles).
 2. Auto-layout ("tidy") — candidate: MSAGL (Microsoft Automatic Graph Layout, MIT).
-3. PNG / PDF export (PDF at page size).
+3. PNG export (PDF is done: page / extents / current view).
 4. Nested groups.
 5. Mermaid import.
 6. Later: visual rule builder for the Data Audit Tools rules engine (Excel template stays a valid source).
