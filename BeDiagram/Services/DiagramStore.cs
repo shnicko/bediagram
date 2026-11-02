@@ -68,6 +68,13 @@ public class DiagramStore
         return path;
     }
 
+    public async Task<string> SaveBytesAsync(string name, string ext, byte[] content)
+    {
+        var path = PathFor(name, ext);
+        await File.WriteAllBytesAsync(path, content);
+        return path;
+    }
+
     public void Delete(string name)
     {
         var p = PathFor(name, Extension);

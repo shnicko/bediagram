@@ -5,13 +5,22 @@ using BeDiagram.Models;
 
 namespace BeDiagram.Services;
 
+/// <summary>
+/// A window onto the drawing in world coordinates (what's on screen) plus the on-screen size in px.
+/// Exported as-is on an open canvas, or scaled to fit inside the margins when a page size is set.
+/// </summary>
+public record ExportView(double X, double Y, double W, double H, double ScreenW, double ScreenH);
+
 public static class Exporters
 {
     static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
     static string E(string s) => WebUtility.HtmlEncode(s ?? "");
 
-    /// <summary>Standalone SVG of the whole diagram.</summary>
-    public static string ToSvg(Diagram d)
+    /// <summary>
+    /// Standalone SVG of the diagram. Without a view: the page (when a size is set) or the drawing extents.
+    /// With a view: just that window, clipped — at screen size, or fitted to the page when a size is set.
+    /// </summary>
+    public static string ToSvg(Diagram d, ExportView? view = null)
     {
         var boxes = d.Nodes.Cast<IBox>().Concat(d.TextBoxes).Concat(d.Groups).ToList();
         var lookup = boxes.ToDictionary(b => b.Id);
@@ -20,7 +29,31 @@ public static class Exporters
             .Select(m => LineLook.MarkerDef(m.Item1, m.Weight))) + "</defs>\n";
         var closeContent = "";
 
-        if (d.Page.Enabled)
+        if (view is not null)
+        {
+            if (d.Page.Enabled)
+            {
+                var (wmm, hmm) = d.Page.Mm;
+                double W = d.Page.WidthPx, H = d.Page.HeightPx, m = d.Page.MarginPx;
+                double availW = Math.Max(1, W - 2 * m), availH = Math.Max(1, H - 2 * m);
+                var scale = Math.Min(availW / view.W, availH / view.H);
+                var tx = m + (availW - view.W * scale) / 2 - view.X * scale;
+                var ty = m + (availH - view.H * scale) / 2 - view.Y * scale;
+                sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(wmm)}mm\" height=\"{F(hmm)}mm\" viewBox=\"0 0 {F(W)} {F(H)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+                sb.Append(defs.Replace("</defs>", $"<clipPath id=\"view\"><rect x=\"{F(view.X)}\" y=\"{F(view.Y)}\" width=\"{F(view.W)}\" height=\"{F(view.H)}\"/></clipPath></defs>"));
+                sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
+                sb.Append($"<g transform=\"translate({F(tx)},{F(ty)}) scale({F(scale)})\"><g clip-path=\"url(#view)\">\n");
+                closeContent = "</g></g>\n";
+            }
+            else
+            {
+                // Exactly the screen: the viewBox does the clipping.
+                sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{F(view.X)} {F(view.Y)} {F(view.W)} {F(view.H)}\" width=\"{F(view.ScreenW)}\" height=\"{F(view.ScreenH)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+                sb.Append(defs);
+                sb.Append($"<rect x=\"{F(view.X)}\" y=\"{F(view.Y)}\" width=\"{F(view.W)}\" height=\"{F(view.H)}\" fill=\"#ffffff\"/>\n");
+            }
+        }
+        else if (d.Page.Enabled)
         {
             // Fixed paper size: physical mm dimensions so it drops into Word/PowerPoint at the right size.
             var (wmm, hmm) = d.Page.Mm;

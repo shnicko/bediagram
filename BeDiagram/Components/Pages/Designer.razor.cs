@@ -1424,6 +1424,39 @@ public partial class Designer
         ShowToast($"Exported {Path.GetFileName(path)}");
     }
 
+    /// <summary>
+    /// PDF next to the saved diagram. Whole export: the page when a size is set, otherwise the drawing extents.
+    /// Current view: what is on screen (fitted to the page when a size is set), saved as "name.view.pdf".
+    /// </summary>
+    string PdfLabel() => D.Page.Enabled
+        ? $"PDF — page ({D.Page.Mm.W:0.#} × {D.Page.Mm.H:0.#} mm)"
+        : "PDF — drawing extents";
+
+    string PdfTip(bool currentView) => (currentView, D.Page.Enabled) switch
+    {
+        (true, true) => "What is on screen now, fitted inside the page margins",
+        (true, false) => "Exactly what is on screen now",
+        (false, true) => "The whole page at the selected paper size",
+        _ => "The whole drawing, zoomed to its extents",
+    };
+
+    async Task ExportPdf(bool currentView)
+    {
+        try
+        {
+            ExportView? view = currentView
+                ? new ExportView(-PanX / Zoom, -PanY / Zoom, canvasW / Zoom, canvasH / Zoom, canvasW, canvasH)
+                : null;
+            var pdf = PdfExporter.FromSvg(Exporters.ToSvg(D, view), D.Name);
+            var path = await Store.SaveBytesAsync(D.Name, currentView ? ".view.pdf" : ".pdf", pdf);
+            ShowToast($"Exported {Path.GetFileName(path)}");
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"PDF export failed: {ex.Message}");
+        }
+    }
+
     async Task ExportMermaid()
     {
         var path = await Store.SaveTextAsync(D.Name, ".mmd", Exporters.ToMermaid(D));
