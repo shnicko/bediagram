@@ -174,42 +174,196 @@ public static class Geometry
         return new EdgeGeom(PathD(pts), x, y, LabelAngle(labelOrient, seg));
     }
 
-    public static List<(double X, double Y)> Route(IBox a, IBox b, string style) =>
-        style == EdgeStyles.Straight ? StraightRoute(a, b) : ElbowRoute(a, b);
-
-    /// <summary>Straight line between the shapes' outlines, aimed centre to centre.</summary>
-    static List<(double X, double Y)> StraightRoute(IBox a, IBox b)
+    /// <summary>Connector geometry for a stored edge, honouring pinned sides and a dragged bend.</summary>
+    public static EdgeGeom EdgeGeometry(IBox a, IBox b, Edge e)
     {
-        double acx = a.X + a.W / 2, acy = a.Y + a.H / 2, bcx = b.X + b.W / 2, bcy = b.Y + b.H / 2;
-        return new() { Boundary(a, bcx, bcy), Boundary(b, acx, acy) };
+        var r = Route(a, b, e);
+        var (x, y, seg) = PointAt(r.Points, e.LabelPos);
+        return new EdgeGeom(PathD(r.Points), x, y, LabelAngle(e.LabelOrient, seg));
     }
 
-    /// <summary>Right-angled connector between side mid-points.</summary>
-    static List<(double X, double Y)> ElbowRoute(IBox a, IBox b)
+    /// <summary>
+    /// A routed connector. <see cref="BendIndex"/> is the segment (Points[i] → Points[i+1]) the user can drag
+    /// sideways, or -1 when there isn't one. <see cref="FromSide"/>/<see cref="ToSide"/> are the sides actually
+    /// used (null for an automatic straight end, which aims at the other shape rather than a side).
+    /// </summary>
+    public record EdgeRoute(List<(double X, double Y)> Points, int BendIndex, string? FromSide, string? ToSide)
     {
-        double acx = a.X + a.W / 2, acy = a.Y + a.H / 2;
-        double bcx = b.X + b.W / 2, bcy = b.Y + b.H / 2;
-        double dx = bcx - acx, dy = bcy - acy;
+        public bool BendIsVertical => BendIndex >= 0 && Math.Abs(Points[BendIndex].X - Points[BendIndex + 1].X) < 0.5;
+        public (double X, double Y) BendHandle => BendIndex < 0 ? (0, 0)
+            : ((Points[BendIndex].X + Points[BendIndex + 1].X) / 2, (Points[BendIndex].Y + Points[BendIndex + 1].Y) / 2);
+    }
 
-        // Vertical flow if the target is clearly above/below, otherwise horizontal.
+    public static EdgeRoute Route(IBox a, IBox b, Edge e) =>
+        Route(a, b, e.Style, Sides.IsValid(e.FromSide) ? e.FromSide : null, Sides.IsValid(e.ToSide) ? e.ToSide : null, e.Bend);
+
+    public static List<(double X, double Y)> Route(IBox a, IBox b, string style) => Route(a, b, style, null, null, 0).Points;
+
+    public static EdgeRoute Route(IBox a, IBox b, string style, string? fromSide, string? toSide, double bend)
+    {
+        if (style == EdgeStyles.Straight) return StraightRoute(a, b, fromSide, toSide);
+        if (fromSide is null && toSide is null)
+        {
+            var (s1, s2) = AutoSides(a, b);
+            return ElbowRoute(a, b, s1, s2, bend, legacy: true);
+        }
+        if (fromSide is not null && toSide is not null) return ElbowRoute(a, b, fromSide, toSide, bend, legacy: false);
+
+        // One end pinned: pick the other end's side that gives the shortest, simplest route.
+        EdgeRoute? best = null;
+        double bestScore = double.MaxValue;
+        foreach (var s in Sides.All)
+        {
+            var r = ElbowRoute(a, b, fromSide ?? s, toSide ?? s, bend, legacy: false);
+            var score = Length(r.Points) + 25 * r.Points.Count;
+            if (score < bestScore) { bestScore = score; best = r; }
+        }
+        return best!;
+    }
+
+    /// <summary>Middle of a side of the shape's box — the same spots as the ● ports.</summary>
+    public static (double X, double Y) SidePoint(IBox b, string side) => side switch
+    {
+        Sides.Top => (b.X + b.W / 2, b.Y),
+        Sides.Right => (b.X + b.W, b.Y + b.H / 2),
+        Sides.Bottom => (b.X + b.W / 2, b.Y + b.H),
+        _ => (b.X, b.Y + b.H / 2),
+    };
+
+    /// <summary>Straight line between the shapes' outlines, aimed centre to centre; pinned ends start at a side middle.</summary>
+    static EdgeRoute StraightRoute(IBox a, IBox b, string? fromSide, string? toSide)
+    {
+        (double X, double Y) ca = (a.X + a.W / 2, a.Y + a.H / 2), cb = (b.X + b.W / 2, b.Y + b.H / 2);
+        (double X, double Y)? p1 = fromSide is null ? null : SidePoint(a, fromSide);
+        (double X, double Y)? p2 = toSide is null ? null : SidePoint(b, toSide);
+        var aimA = p2 ?? cb;
+        var aimB = p1 ?? ca;
+        var start = p1 ?? Boundary(a, aimA.X, aimA.Y);
+        var end = p2 ?? Boundary(b, aimB.X, aimB.Y);
+        return new EdgeRoute(new() { start, end }, -1, fromSide, toSide);
+    }
+
+    /// <summary>The sides the automatic elbow uses: vertical flow if the target is clearly above/below, otherwise horizontal.</summary>
+    public static (string From, string To) AutoSides(IBox a, IBox b)
+    {
+        double dx = (b.X + b.W / 2) - (a.X + a.W / 2), dy = (b.Y + b.H / 2) - (a.Y + a.H / 2);
         bool vertical = Math.Abs(dy) - (a.H + b.H) / 2 > Math.Abs(dx) - (a.W + b.W) / 2 - 20
                         && Math.Abs(dy) > (a.H + b.H) / 2;
-        if (vertical)
+        return vertical
+            ? (dy > 0 ? (Sides.Bottom, Sides.Top) : (Sides.Top, Sides.Bottom))
+            : (dx > 0 ? (Sides.Right, Sides.Left) : (Sides.Left, Sides.Right));
+    }
+
+    const double Stub = 20;
+
+    /// <summary>
+    /// Right-angled connector from a side of <paramref name="a"/> to a side of <paramref name="b"/>.
+    /// Shapes: Z (facing sides), U (same side), L (perpendicular, corner ahead of both), or a 4–5 segment
+    /// detour when the target is behind a side. <paramref name="legacy"/> keeps the original automatic
+    /// behaviour (always a Z between facing sides, even when the shapes overlap).
+    /// </summary>
+    static EdgeRoute ElbowRoute(IBox a, IBox b, string s1, string s2, double bend, bool legacy)
+    {
+        var p1 = SidePoint(a, s1);
+        var p2 = SidePoint(b, s2);
+        var d1 = Sides.Dir(s1);
+        var d2 = Sides.Dir(s2);
+        List<(double X, double Y)> pts;
+        int idx;
+
+        double Dot((double X, double Y) u, (double X, double Y) v) => u.X * v.X + u.Y * v.Y;
+        (double X, double Y) Add((double X, double Y) p, (double X, double Y) d, double k) => (p.X + d.X * k, p.Y + d.Y * k);
+        (double X, double Y) Sub((double X, double Y) p, (double X, double Y) q) => (p.X - q.X, p.Y - q.Y);
+        // Extent of a box along a unit axis.
+        (double Min, double Max) Span(IBox box, (double X, double Y) ax)
         {
-            double x1 = acx, y1 = dy > 0 ? a.Y + a.H : a.Y;
-            double x2 = bcx, y2 = dy > 0 ? b.Y : b.Y + b.H;
-            double my = (y1 + y2) / 2;
-            if (Math.Abs(x1 - x2) < 1) return new() { (x1, y1), (x1, y2) };
-            return new() { (x1, y1), (x1, my), (x2, my), (x2, y2) };
+            double v1 = Dot((box.X, box.Y), ax), v2 = Dot((box.X + box.W, box.Y + box.H), ax);
+            return (Math.Min(v1, v2), Math.Max(v1, v2));
+        }
+
+        bool opposite = d1.X == -d2.X && d1.Y == -d2.Y;
+        bool same = d1 == d2;
+
+        if (opposite)
+        {
+            double gap = Dot(Sub(p2, p1), d1);
+            if (gap > 0 || legacy)
+            {
+                // Z: out, across at half way, in.
+                var m1 = Add(p1, d1, gap / 2);
+                var m2 = Add(p2, d2, gap / 2);
+                pts = new() { p1, m1, m2, p2 };
+                idx = 1;
+            }
+            else
+            {
+                // Target is behind the start side: step out, cross over between (or around) the shapes, step back in.
+                (double X, double Y) n = (Math.Abs(d1.Y), Math.Abs(d1.X)); // perpendicular axis
+                var (aMin, aMax) = Span(a, n);
+                var (bMin, bMax) = Span(b, n);
+                double lane = aMax < bMin ? (aMax + bMin) / 2
+                            : bMax < aMin ? (bMax + aMin) / 2
+                            : Math.Max(aMax, bMax) + Stub;
+                var q1 = Add(p1, d1, Stub);
+                var q2 = Add(p2, d2, Stub);
+                double o1 = lane - Dot(q1, n), o2 = lane - Dot(q2, n);
+                pts = new() { p1, q1, Add(q1, n, o1), Add(q2, n, o2), q2, p2 };
+                idx = 2;
+            }
+        }
+        else if (same)
+        {
+            // U: out past whichever end sticks out further, across, back in.
+            double level = Math.Max(Dot(p1, d1), Dot(p2, d1)) + Stub;
+            var q1 = Add(p1, d1, level - Dot(p1, d1));
+            var q2 = Add(p2, d2, level - Dot(p2, d2));
+            pts = new() { p1, q1, q2, p2 };
+            idx = 1;
         }
         else
         {
-            double y1 = acy, x1 = dx > 0 ? a.X + a.W : a.X;
-            double y2 = bcy, x2 = dx > 0 ? b.X : b.X + b.W;
-            double mx = (x1 + x2) / 2;
-            if (Math.Abs(y1 - y2) < 1) return new() { (x1, y1), (x2, y1) };
-            return new() { (x1, y1), (mx, y1), (mx, y2), (x2, y2) };
+            double t1 = Dot(Sub(p2, p1), d1); // how far ahead of the start side the end point is
+            double t2 = Dot(Sub(p1, p2), d2); // how far ahead of the end side the start point is
+            if (t1 > Stub / 2 && t2 > Stub / 2)
+            {
+                // L: a single corner.
+                pts = new() { p1, Add(p1, d1, t1), p2 };
+                idx = -1;
+            }
+            else
+            {
+                // Step out of the start side (half way to the target's box when there's room), run across, step into the end side.
+                double ahead = Span(b, d1).Min - Dot(p1, d1); // gap to the target box's near face
+                double out1 = ahead > 2 * Stub ? ahead / 2 : Stub;
+                var q1 = Add(p1, d1, out1);
+                var q2 = Add(p2, d2, Stub);
+                var x = Add(q1, d2, Dot(Sub(q2, q1), d2));
+                pts = new() { p1, q1, x, q2, p2 };
+                idx = 1;
+            }
         }
+
+        if (idx >= 0 && bend != 0)
+        {
+            bool vertical = Math.Abs(pts[idx].X - pts[idx + 1].X) < 0.5;
+            for (int k = idx; k <= idx + 1; k++)
+                pts[k] = vertical ? (pts[k].X + bend, pts[k].Y) : (pts[k].X, pts[k].Y + bend);
+        }
+        else if (idx == 1 && pts.Count == 4 && bend == 0
+                 && Math.Abs(pts[1].X - pts[2].X) < 1 && Math.Abs(pts[1].Y - pts[2].Y) < 1)
+        {
+            // Ends line up: one straight run, as before.
+            pts = new() { p1, p2 };
+            idx = -1;
+        }
+        return new EdgeRoute(pts, idx, s1, s2);
+    }
+
+    static double Length(List<(double X, double Y)> pts)
+    {
+        double len = 0;
+        for (int i = 1; i < pts.Count; i++) len += Math.Abs(pts[i].X - pts[i - 1].X) + Math.Abs(pts[i].Y - pts[i - 1].Y);
+        return len;
     }
 
     /// <summary>Where a ray from the box centre towards (tx, ty) leaves the shape's outline.</summary>
