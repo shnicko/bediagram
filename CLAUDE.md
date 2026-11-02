@@ -7,12 +7,12 @@ so the file format must stay meaningful to code, not just pretty.
 
 ## Working agreement
 
-- One feature or fix per branch and pull request, into `main`. Never push to `main` directly.
+- One feature or fix per branch and pull request, into `master` (the default branch). Never push to `master` directly.
 - Branch names: `feature/<short-name>` or `fix/<short-name>`.
 - Keep PRs reviewable: say what changed, how it was tested, and anything the user should check by eye.
 - Update `README.md` (usage + file format sections) whenever a user-visible feature changes.
 - No backwards-compatibility / file versioning work for now unless asked.
-- The user opens the solution in Visual Studio and pulls `main` after merging — don't commit build output or IDE files.
+- The user opens the solution in Visual Studio and pulls `master` after merging — don't commit build output or IDE files.
 
 ## Layout
 
