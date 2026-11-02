@@ -240,14 +240,18 @@ public partial class Designer
 
     // ───────────── Groups ─────────────
 
-    /// <summary>Puts items into the group under their centre (or takes them out), then grows groups to fit.</summary>
+    /// <summary>
+    /// After a drag: a loose item joins the group under its centre; a member moves to another group only when
+    /// dropped inside that group, otherwise it stays in its own group (which grows to fit, like nudging with
+    /// the arrow keys). Leaving a group is done with Ungroup or "remove from group" in the panel.
+    /// </summary>
     void UpdateMembership(IEnumerable<IGroupable> items)
     {
         var touched = new HashSet<Group>();
         foreach (var it in items)
         {
             var old = FindGroup(it.GroupId);
-            var g = GroupAt(it.X + it.W / 2, it.Y + it.H / 2);
+            var g = GroupAt(it.X + it.W / 2, it.Y + it.H / 2) ?? old;
             it.GroupId = g?.Id;
             if (g is not null) touched.Add(g);
             if (old is not null && old != g) touched.Add(old);
