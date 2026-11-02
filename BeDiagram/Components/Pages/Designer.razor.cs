@@ -420,13 +420,21 @@ public partial class Designer
         _ => new(),
     };
 
-    Node CreateNode(string type, double cx, double cy)
+    /// <summary>Palette keys are a node type, or "outcome:&lt;variant&gt;" for an outcome.</summary>
+    static (string Type, string? Outcome) ParsePaletteKey(string key) =>
+        key.StartsWith(NodeTypes.Outcome + ":") ? (NodeTypes.Outcome, key[(NodeTypes.Outcome.Length + 1)..]) : (key, null);
+
+    Node CreateNode(string key, double cx, double cy)
     {
+        var (type, outcome) = ParsePaletteKey(key);
         var t = NodeTypes.Get(type);
+        var isOutcome = t.Key == NodeTypes.Outcome;
         var n = new Node
         {
             Type = t.Key,
-            Label = t.Key == NodeTypes.Circle ? "Label" : t.Display,
+            Outcome = isOutcome ? Outcomes.Get(outcome).Key : null,
+            Filled = isOutcome,
+            Label = t.Key == NodeTypes.Circle ? "Label" : isOutcome ? Outcomes.Get(outcome).Display : t.Display,
             Icon = t.Key == NodeTypes.Circle ? "layers" : null,
             W = t.W,
             H = t.H,
@@ -481,7 +489,7 @@ public partial class Designer
     void QuickAdd(string type)
     {
         var src = JoinSource();
-        var t = NodeTypes.Get(type);
+        var t = NodeTypes.Get(ParsePaletteKey(type).Type);
         double cx, cy;
         if (src is not null)
         {
@@ -923,7 +931,7 @@ public partial class Designer
                     var nn = new Node
                     {
                         Type = n.Type, Label = n.Label, X = n.X + 30, Y = n.Y + 30, W = n.W, H = n.H,
-                        Icon = n.Icon, Color = n.Color, Filled = n.Filled, GroupId = NewGroup(n.GroupId),
+                        Icon = n.Icon, Color = n.Color, Filled = n.Filled, Outcome = n.Outcome, GroupId = NewGroup(n.GroupId),
                         Properties = new(n.Properties),
                     };
                     D.Nodes.Add(nn); map[n.Id] = nn.Id; break;
@@ -1107,7 +1115,10 @@ public partial class Designer
         Change();
         var oldT = NodeTypes.Get(n.Type);
         var t = NodeTypes.Get(type);
-        if (n.Label == oldT.Display) n.Label = t.Display;
+        var oldDisplay = n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : oldT.Display;
+        if (t.Key == NodeTypes.Outcome) { n.Outcome ??= Outcomes.Pass; n.Filled = true; }
+        else n.Outcome = null;
+        if (n.Label == oldDisplay) n.Label = t.Key == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : t.Display;
         var cx = n.X + n.W / 2; var cy = n.Y + n.H / 2;
         n.Type = t.Key; n.W = t.W; n.H = t.H;
         n.X = SnapV(cx) - t.W / 2; n.Y = SnapV(cy) - t.H / 2;
@@ -1117,6 +1128,15 @@ public partial class Designer
 
     void SetNodeColour(Node n, string? colour) { Change(); n.Color = colour; }
     void SetFilled(Node n, bool filled) { Change(); n.Filled = filled; }
+
+    void SetOutcome(Node n, string outcome)
+    {
+        if (n.Outcome == outcome) return;
+        Change();
+        // A label still showing the old outcome's name follows the new one.
+        if (n.Label == Outcomes.Get(n.Outcome).Display) n.Label = Outcomes.Get(outcome).Display;
+        n.Outcome = outcome;
+    }
     void SetIcon(Node n, string? icon) { Change(); n.Icon = icon; }
     void SetGroupColour(Group g, string colour) { Change(); g.Color = colour; }
 

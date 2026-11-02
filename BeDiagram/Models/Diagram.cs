@@ -85,6 +85,10 @@ public class Node : IGroupable
     public string? Color { get; set; }
     /// <summary>Solid fill with white text/icon (presentation style).</summary>
     public bool Filled { get; set; }
+    /// <summary>Outcome nodes only: "pass", "fail", "rework", "conditional" or "hold" (see <see cref="Outcomes"/>).
+    /// This carries the meaning; the shape and glyph are just how it is drawn.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Outcome { get; set; }
     public Dictionary<string, string> Properties { get; set; } = new();
 
     public static string NewId(string prefix) => $"{prefix}_{Guid.NewGuid().ToString("N")[..8]}";
@@ -384,6 +388,7 @@ public static class NodeTypes
     public const string Data = "data";
     public const string Status = "status";
     public const string Circle = "circle";
+    public const string Outcome = "outcome";
 
     public static readonly IReadOnlyList<NodeTypeInfo> All = new List<NodeTypeInfo>
     {
@@ -396,9 +401,32 @@ public static class NodeTypes
         new(Status,   "Status",        "hexagon",       "#fdeef0", "#b8475a", 150, 56),
         new(End,      "End",           "pill",          "#fbe9e7", "#b4472f", 140, 52),
         new(Circle,   "Circle",        "circle",        "#eef3fb", "#3b6fb6", 84, 84),
+        new(Outcome,  "Outcome",       "outcome",       "#e7f5ec", "#2f8f5b", 84, 84),
     };
 
     public static NodeTypeInfo Get(string key) => All.FirstOrDefault(t => t.Key == key) ?? All[1];
+}
+
+/// <summary>
+/// One result of a review or check. The outline differs per outcome (not just the colour), so a sheet printed
+/// in greyscale or read by a colour-blind reviewer still tells them apart.
+/// </summary>
+public record OutcomeInfo(string Key, string Display, string Shape, string Glyph, string Color, string Hint);
+
+public static class Outcomes
+{
+    public const string Pass = "pass", Fail = "fail", Rework = "rework", Conditional = "conditional", Hold = "hold";
+
+    public static readonly IReadOnlyList<OutcomeInfo> All = new List<OutcomeInfo>
+    {
+        new(Pass,        "Pass",        "seal",           "outcome-tick",    "green", "Accepted / approved"),
+        new(Fail,        "Fail",        "octagon",        "outcome-cross",   "red",   "Rejected — stops here"),
+        new(Rework,      "Rework",      "circle",         "outcome-rework",  "pink",  "Returned to the author for rework"),
+        new(Conditional, "Conditional", "triangle",       "outcome-exclaim", "amber", "Pass with comments / approved subject to changes"),
+        new(Hold,        "Hold",        "square-rounded", "outcome-clock",   "slate", "On hold / awaiting review"),
+    };
+
+    public static OutcomeInfo Get(string? key) => All.FirstOrDefault(o => o.Key == key) ?? All[0];
 }
 
 /// <summary>Shared colour set for shapes and groups. Light = pale fill, Stroke = outline/icon, Solid = filled style.</summary>
@@ -428,6 +456,15 @@ public record NodeStyle(string Fill, string Stroke, string Text, string IconColo
     {
         var t = NodeTypes.Get(n.Type);
         string fill = t.Fill, stroke = t.Stroke;
+        if (n.Type == NodeTypes.Outcome)
+        {
+            // Outcomes default to their own colour (green pass, red fail, ...).
+            var os = Palette.Get(Outcomes.Get(n.Outcome).Color);
+            fill = os.Light; stroke = os.Stroke;
+            // Conditional uses a dark mark on amber, like a warning sign: white on amber is too faint in greyscale.
+            if (n.Color is null && n.Filled)
+                return new NodeStyle(os.Solid, os.Solid, "#ffffff", n.Outcome == Outcomes.Conditional ? "#1f2933" : "#ffffff");
+        }
         if (n.Color is not null && Palette.All.TryGetValue(n.Color, out var sw))
         {
             fill = sw.Light; stroke = sw.Stroke;

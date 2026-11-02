@@ -98,7 +98,7 @@ public static class Exporters
                 sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
             var lay = Geometry.Layout(n, string.IsNullOrWhiteSpace(n.Label) ? t.Display : n.Label);
             if (lay.HasIcon)
-                sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(n.Icon)}</g>\n");
+                sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(Geometry.IconStroke(n))}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g>\n");
             if (lay.Below)
             {
                 var bw = lay.Lines.Max(l => l.Length) * 7.2 + 14;
@@ -161,12 +161,31 @@ public static class Exporters
         static string Q(string s) => "\"" + (s ?? "").Replace("\"", "'").Replace("\r", "").Replace("\n", " ").Trim() + "\"";
         var sb = new StringBuilder("flowchart TD\n");
         var ids = new Dictionary<string, string>();
+        var styles = new StringBuilder();
         int i = 0;
         foreach (var n in d.Nodes)
         {
             var id = $"N{++i}";
             ids[n.Id] = id;
-            var label = Q(string.IsNullOrWhiteSpace(n.Label) ? NodeTypes.Get(n.Type).Display : n.Label);
+            var text = string.IsNullOrWhiteSpace(n.Label) ? NodeTypes.Get(n.Type).Display : n.Label;
+            if (n.Type == NodeTypes.Outcome)
+            {
+                // Mermaid has no seal/octagon: a symbol in the label plus the closest classic shape and a solid fill.
+                var o = Outcomes.Get(n.Outcome);
+                var (sym, open, close) = o.Key switch
+                {
+                    Outcomes.Fail => ("✕", "{{", "}}"),
+                    Outcomes.Rework => ("↺", "((", "))"),
+                    Outcomes.Conditional => ("⚠", "[/", "\\]"),
+                    Outcomes.Hold => ("⏸", "(", ")"),
+                    _ => ("✓", "((", "))"),
+                };
+                sb.Append($"    {id}{open}{Q($"{sym} {text}")}{close}\n");
+                var ost = NodeStyle.For(n);
+                styles.Append($"    style {id} fill:{ost.Fill},stroke:{ost.Stroke},color:{(n.Filled ? ost.IconColor : "#1f2933")}\n");
+                continue;
+            }
+            var label = Q(text);
             var shape = NodeTypes.Get(n.Type).Shape switch
             {
                 "pill" => $"([{label}])",
@@ -180,7 +199,6 @@ public static class Exporters
             sb.Append($"    {id}{shape}\n");
         }
         int ti = 0;
-        var styles = new StringBuilder();
         foreach (var t in d.TextBoxes)
         {
             var id = $"T{++ti}";

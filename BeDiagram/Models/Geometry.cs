@@ -8,11 +8,24 @@ public static class Geometry
 {
     static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
+    /// <summary>The outline actually drawn: the type's shape, or for outcome nodes the outcome's own shape.</summary>
+    public static string ShapeOf(Node n) =>
+        n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Shape : NodeTypes.Get(n.Type).Shape;
+
+    /// <summary>The icon drawn in a node: the outcome glyph for outcome nodes, otherwise the chosen icon.</summary>
+    public static string? IconOf(Node n) => n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Glyph : n.Icon;
+
+    /// <summary>Icon stroke width in 24-unit icon space (outcome glyphs are bolder).</summary>
+    public static double IconStroke(Node n) => n.Type == NodeTypes.Outcome ? 2.75 : 2;
+
+    /// <summary>Shapes whose label sits underneath (icon in the middle): circles with an icon, and every outcome.</summary>
+    public static bool LabelBelow(Node n) =>
+        n.Type == NodeTypes.Outcome || (ShapeOf(n) == "circle" && Icons.Exists(n.Icon));
+
     public static string ShapePath(Node n)
     {
-        var t = NodeTypes.Get(n.Type);
         double x = n.X, y = n.Y, w = n.W, h = n.H;
-        switch (t.Shape)
+        switch (ShapeOf(n))
         {
             case "pill":
             {
@@ -36,12 +49,42 @@ public static class Geometry
                 var r = Math.Min(w, h) / 2; var cx = x + w / 2; var cy = y + h / 2;
                 return $"M{F(cx - r)},{F(cy)} A{F(r)},{F(r)} 0 1 1 {F(cx + r)},{F(cy)} A{F(r)},{F(r)} 0 1 1 {F(cx - r)},{F(cy)} Z";
             }
+            case "seal":
+                return SealPath(x + w / 2, y + h / 2, Math.Min(w, h) / 2);
+            case "octagon":
+            case "triangle":
+                return PolyPath(Outline(n, ShapeOf(n)));
+            case "square-rounded":
+            {
+                var s = Math.Min(w, h); var sx = x + (w - s) / 2; var sy = y + (h - s) / 2;
+                return RoundRect(sx, sy, s, s, s * 0.22);
+            }
             case "rect-rounded":
                 return RoundRect(x, y, w, h, 14);
             default: // rect, check
                 return RoundRect(x, y, w, h, 5);
         }
     }
+
+    /// <summary>Scalloped seal: a ring of semicircular bumps whose tips touch radius <paramref name="r"/>.</summary>
+    public static string SealPath(double cx, double cy, double r)
+    {
+        const int bumps = 16;
+        var step = 2 * Math.PI / bumps;
+        // Chord points sit inside so that each bump's tip reaches r.
+        var r0 = r / (Math.Cos(step / 2) + Math.Sin(step / 2));
+        var bump = r0 * Math.Sin(step / 2);
+        var sb = new StringBuilder();
+        for (int i = 0; i <= bumps; i++)
+        {
+            var a = -Math.PI / 2 + i * step;
+            var (px, py) = (cx + r0 * Math.Cos(a), cy + r0 * Math.Sin(a));
+            sb.Append(i == 0 ? $"M{F(px)},{F(py)}" : $" A{F(bump)},{F(bump)} 0 0 1 {F(px)},{F(py)}");
+        }
+        return sb.Append(" Z").ToString();
+    }
+
+    static string PolyPath(List<(double X, double Y)> pts) => PathD(pts) + " Z";
 
     public static string RoundRect(double x, double y, double w, double h, double r)
     {
@@ -60,6 +103,17 @@ public static class Geometry
         var t = NodeTypes.Get(n.Type);
         double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
         bool icon = Icons.Exists(n.Icon);
+
+        if (n.Type == NodeTypes.Outcome)
+        {
+            // Glyph centred in the outline, label underneath. A triangle's visual centre is lower down.
+            var shape = ShapeOf(n);
+            var m = Math.Min(n.W, n.H);
+            var size = m * (shape == "triangle" ? 0.38 : shape == "seal" ? 0.44 : 0.48);
+            var gy = shape == "triangle" ? n.Y + n.H * 0.62 : cy;
+            var lines = Wrap(label, Math.Max(n.W * 1.7, 130));
+            return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, gy - size / 2, size);
+        }
 
         if (t.Shape == "circle")
         {
@@ -141,7 +195,7 @@ public static class Geometry
         if (boxes.Count == 0) return null;
         double minX = boxes.Min(b => b.X), minY = boxes.Min(b => b.Y);
         double maxX = boxes.Max(b => b.X + b.W), maxY = boxes.Max(b => b.Y + b.H + ExtraBelow(b));
-        // Labels drawn under circles can be wider than the circle.
+        // Labels drawn under circles and outcomes can be wider than the shape.
         foreach (var n in d.Nodes.Where(n => ExtraBelow(n) > 0))
         {
             var half = Math.Max(n.W * 1.7, 130) / 2;
@@ -162,7 +216,7 @@ public static class Geometry
 
     /// <summary>Space taken under a box by an external label (circle with icon).</summary>
     public static double ExtraBelow(IBox b) =>
-        b is Node n && NodeTypes.Get(n.Type).Shape == "circle" && Icons.Exists(n.Icon) ? 34 : 0;
+        b is Node n && LabelBelow(n) ? 34 : 0;
 
     public record EdgeGeom(string D, double LabelX, double LabelY, double LabelAngle);
 
@@ -372,9 +426,9 @@ public static class Geometry
         double cx = box.X + box.W / 2, cy = box.Y + box.H / 2;
         double dx = tx - cx, dy = ty - cy;
         if (Math.Abs(dx) < 1e-6 && Math.Abs(dy) < 1e-6) return (cx, cy);
-        var shape = box is Node n ? NodeTypes.Get(n.Type).Shape : "rect";
+        var shape = box is Node n ? ShapeOf(n) : "rect";
 
-        if (shape == "circle")
+        if (shape is "circle" or "seal")
         {
             var r = Math.Min(box.W, box.H) / 2;
             var len = Math.Sqrt(dx * dx + dy * dy);
@@ -398,11 +452,26 @@ public static class Geometry
         return best == double.MaxValue ? (cx, cy) : (cx + dx * best, cy + dy * best);
     }
 
-    static List<(double, double)> Outline(IBox b, string shape)
+    static List<(double X, double Y)> Outline(IBox b, string shape)
     {
         double x = b.X, y = b.Y, w = b.W, h = b.H;
         switch (shape)
         {
+            case "octagon":
+            {
+                // Regular octagon (stop sign) centred in the box, flat sides touching it.
+                var r = Math.Min(w, h) / 2; var k = r * Math.Tan(Math.PI / 8);
+                double cx = x + w / 2, cy = y + h / 2;
+                return new() { (cx - k, cy - r), (cx + k, cy - r), (cx + r, cy - k), (cx + r, cy + k),
+                               (cx + k, cy + r), (cx - k, cy + r), (cx - r, cy + k), (cx - r, cy - k) };
+            }
+            case "triangle":
+                return new() { (x + w / 2, y), (x + w, y + h), (x, y + h) };
+            case "square-rounded":
+            {
+                var s = Math.Min(w, h);
+                return new() { (x + (w - s) / 2, y + (h - s) / 2), (x + (w + s) / 2, y + (h - s) / 2), (x + (w + s) / 2, y + (h + s) / 2), (x + (w - s) / 2, y + (h + s) / 2) };
+            }
             case "diamond":
                 return new() { (x + w / 2, y), (x + w, y + h / 2), (x + w / 2, y + h), (x, y + h / 2) };
             case "parallelogram":

@@ -32,8 +32,9 @@ BeDiagram/
 
 ## Design rules
 
-- **Typed nodes.** Every shape has a `Type` (start, process, decision, check, action, data, status, end, circle)
-  and free-form `Properties`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`, `value`.
+- **Typed nodes.** Every shape has a `Type` (start, process, decision, check, action, data, status, end, circle, outcome)
+  and free-form `Properties`. Outcome nodes carry `Outcome` (pass, fail, rework, conditional, hold — see `Outcomes`);
+  `Geometry.ShapeOf`/`IconOf` turn that into the drawn outline and glyph, so use those rather than `NodeTypes.Get(..).Shape`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`, `value`.
   This is what lets the audit tool read diagrams later — don't replace types with purely visual styling.
 - **One geometry, two renderers.** The canvas (Designer.razor) and the SVG export (Exporters.cs) must draw the
   same thing. Put shape/connector/label maths in `Geometry.cs` and call it from both. Any new visual feature
