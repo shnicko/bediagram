@@ -92,6 +92,69 @@ public static class Geometry
         return $"M{F(x + r)},{F(y)} H{F(x + w - r)} Q{F(x + w)},{F(y)} {F(x + w)},{F(y + r)} V{F(y + h - r)} Q{F(x + w)},{F(y + h)} {F(x + w - r)},{F(y + h)} H{F(x + r)} Q{F(x)},{F(y + h)} {F(x)},{F(y + h - r)} V{F(y + r)} Q{F(x)},{F(y)} {F(x + r)},{F(y)} Z";
     }
 
+    // ───────────── Link badge ─────────────
+
+    /// <summary>Radius of the round "has a more detailed diagram" badge.</summary>
+    public const double BadgeR = 9;
+
+    /// <summary>True when the item links to another diagram.</summary>
+    public static bool HasLink(IBox b) => !string.IsNullOrWhiteSpace(b switch { Node n => n.Link, Group g => g.Link, _ => null });
+
+    /// <summary>
+    /// Centre of the link badge: the bottom-right of the drawn outline (on the curve for circles, seals and
+    /// octagons, on the lower-right edge for diamonds), or tucked inside the bottom-right corner of a group.
+    /// </summary>
+    public static (double X, double Y) LinkBadgeCentre(IBox b)
+    {
+        double x = b.X, y = b.Y, w = b.W, h = b.H, cx = x + w / 2, cy = y + h / 2;
+        const double d45 = 0.7071;
+        if (b is not Node n) return (x + w - 18, y + h - 18);
+        switch (ShapeOf(n))
+        {
+            case "circle":
+            case "seal":
+            case "octagon":
+            {
+                var r = Math.Min(w, h) / 2;
+                return (cx + r * d45, cy + r * d45);
+            }
+            case "square-rounded":
+            {
+                var s = Math.Min(w, h); var k = s * 0.22 * (1 - d45);
+                return (cx + s / 2 - k, cy + s / 2 - k);
+            }
+            case "pill":
+            {
+                var r = h / 2;
+                return (x + w - r + r * d45, cy + r * d45);
+            }
+            case "diamond":
+                return (x + w * 0.75, y + h * 0.75);
+            case "triangle":
+                return (x + w - 8, y + h);
+            case "parallelogram":
+                return (x + w - Math.Min(18, w / 6), y + h);
+            case "hexagon":
+            {
+                var k = Math.Min(20, w / 5);
+                return (x + w - k / 2, y + h * 0.75);
+            }
+            case "rect-rounded":
+                return (x + w - 14 * (1 - d45), y + h - 14 * (1 - d45));
+            default: // rect, check
+                return (x + w - 1.5, y + h - 1.5);
+        }
+    }
+
+    /// <summary>SVG markup for the link badge (white disc, coloured ring, Lucide "link" glyph). Used by canvas and export.</summary>
+    public static string LinkBadgeSvg(IBox b, string colour)
+    {
+        var (cx, cy) = LinkBadgeCentre(b);
+        const double glyph = 12;
+        return $"<circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(BadgeR)}\" fill=\"#ffffff\" stroke=\"{colour}\" stroke-width=\"1.4\"/>"
+             + $"<g transform=\"translate({F(cx - glyph / 2)},{F(cy - glyph / 2)}) scale({F(glyph / 24)})\" fill=\"none\" stroke=\"{colour}\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get("link")}</g>";
+    }
+
     /// <summary>Where a node's label and icon go. Shared by the canvas and the SVG export.</summary>
     public record LabelLayout(List<string> Lines, double TextX, double TextY, bool Below,
                               bool HasIcon, double IconX, double IconY, double IconSize);

@@ -309,3 +309,16 @@ kbd {
 .outcome-picker button { display: flex; align-items: center; gap: 6px; padding: 3px 6px; text-align: left; }
 .outcome-picker button.on { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
 .small-note { margin: 6px 0 0; line-height: 1.35; }
+
+/* ── Linked diagrams ── */
+.link-badge { cursor: pointer; }
+.link-badge:hover circle { fill: #eef3fb; stroke-width: 2; }
+.link-badge.missing { opacity: .45; }
+.link-badge.missing circle { stroke-dasharray: 2 2; }
+.link-pick { display: flex; gap: 6px; align-items: center; }
+.link-pick select { flex: 1; min-width: 0; }
+.link-pick button { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.trail { gap: 6px; font-size: 13px; white-space: nowrap; }
+.trail .crumb { font-size: 13px; }
+.trail .crumb-sep { color: #9aa3ad; }
+.trail .crumb-here { font-weight: 600; }

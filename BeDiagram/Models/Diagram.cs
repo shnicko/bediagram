@@ -90,6 +90,9 @@ public class Node : IGroupable
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Outcome { get; set; }
     public Dictionary<string, string> Properties { get; set; } = new();
+    /// <summary>Name of another saved diagram (without extension) holding this step's more detailed flow. Shows a link badge.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Link { get; set; }
 
     public static string NewId(string prefix) => $"{prefix}_{Guid.NewGuid().ToString("N")[..8]}";
 }
@@ -373,6 +376,9 @@ public class Group : IBox
     public double Y { get; set; }
     public double W { get; set; } = 360;
     public double H { get; set; } = 220;
+    /// <summary>Name of another saved diagram (without extension) holding this group's more detailed flow. Shows a link badge.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Link { get; set; }
 }
 
 public record NodeTypeInfo(string Key, string Display, string Shape, string Fill, string Stroke, double W, double H);

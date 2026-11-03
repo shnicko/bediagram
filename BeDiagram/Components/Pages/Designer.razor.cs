@@ -14,7 +14,7 @@ public partial class Designer
     [Inject] IJSRuntime JS { get; set; } = default!;
 
     enum Mode { None, Move, Connect, Pan, Marquee, Resize, EdgeEnd, Bend }
-    enum Dialog { None, Open, SaveAs, ConfirmNew }
+    enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave }
     public enum AlignOp { Left, CenterX, Right, Top, Middle, Bottom, DistributeH, DistributeV, Row, Column }
 
     // Document state
@@ -1334,8 +1334,9 @@ public partial class Designer
 
     // ───────────── Files ─────────────
 
-    void Reset()
+    void Reset(bool keepTrail = false)
     {
+        if (!keepTrail) trail.Clear();
         D = new Diagram();
         hasFile = false;
         Dirty = false;
@@ -1362,23 +1363,103 @@ public partial class Designer
 
     void CloseDialog() { dialog = Dialog.None; confirmDelete = null; }
 
+    /// <summary>Open from the Open dialog: a fresh start, so the linked-diagram trail is cleared.</summary>
     async Task Open(string name)
+    {
+        if (await Load(name)) trail.Clear();
+    }
+
+    async Task<bool> Load(string name)
     {
         try
         {
             var loaded = await Store.LoadAsync(name);
-            Reset();
+            Reset(keepTrail: true);
             D = loaded;
             hasFile = true;
             CloseDialog();
             Fit();
             ShowToast($"Opened {name}");
+            return true;
         }
         catch (Exception ex)
         {
             ShowToast($"Could not open {name}: {ex.Message}");
+            return false;
         }
     }
+
+    // ───────────── Linked diagrams ─────────────
+
+    /// <summary>Diagrams we drilled down from via link badges, outermost first. Shown as a breadcrumb with Back.</summary>
+    readonly List<string> trail = new();
+
+    /// <summary>Where we're going once the unsaved-changes question is answered. KeepTrail = trail entries to keep (-1 = push current).</summary>
+    (string Target, int KeepTrail)? pendingNav;
+
+    void SetNodeLink(Node n, string? link) { Change(); n.Link = link; }
+
+    void SetGroupLink(Group g, string? link) { Change(); g.Link = link; }
+
+    void FollowLink(string? link)
+    {
+        if (string.IsNullOrWhiteSpace(link)) return;
+        if (hasFile && link == D.Name) { ShowToast("That link points to this diagram"); return; }
+        if (!Store.Exists(link)) { ShowToast($"Linked diagram “{link}” not found in {Store.Folder}"); return; }
+        Navigate(link, -1);
+    }
+
+    void GoBack() { if (trail.Count > 0) GoUpTo(trail.Count - 1); }
+
+    /// <summary>Jump back to trail[level], dropping it and everything below it from the trail.</summary>
+    void GoUpTo(int level)
+    {
+        if (level < 0 || level >= trail.Count) return;
+        Navigate(trail[level], level);
+    }
+
+    void Navigate(string target, int keepTrail)
+    {
+        EndEdit();
+        if (Dirty)
+        {
+            pendingNav = (target, keepTrail);
+            dialog = Dialog.ConfirmLeave;
+            return;
+        }
+        _ = DoNavigate(target, keepTrail);
+    }
+
+    async Task DoNavigate(string target, int keepTrail)
+    {
+        var from = hasFile ? D.Name : null;
+        var before = trail.ToList();
+        if (!await Load(target)) return;
+        trail.Clear();
+        if (keepTrail >= 0) trail.AddRange(before.Take(keepTrail));
+        else
+        {
+            trail.AddRange(before);
+            if (from is not null) trail.Add(from);
+        }
+        StateHasChanged();
+    }
+
+    async Task ConfirmLeave(bool save)
+    {
+        if (pendingNav is not { } nav) { CloseDialog(); return; }
+        if (save)
+        {
+            await Save();
+            if (Dirty) return; // save failed: stay put, the toast says why
+        }
+        pendingNav = null;
+        CloseDialog();
+        Dirty = false;
+        await DoNavigate(nav.Target, nav.KeepTrail);
+    }
+
+    void CancelLeave() { pendingNav = null; CloseDialog(); }
 
     void DeleteFile(string name)
     {
