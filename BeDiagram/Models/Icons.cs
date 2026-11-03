@@ -162,5 +162,5 @@ public static class Icons
     };
 
     public static bool Exists(string? name) => name is not null && Markup.ContainsKey(name);
-    public static string Get(string? name) => name is not null && Markup.TryGetValue(name, out var m) ? m : "";
+    public static string Get(string? name) => name is not null && Markup.TryGetValue(name, out string? m) ? m : "";
 }
