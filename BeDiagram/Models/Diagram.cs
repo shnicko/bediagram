@@ -30,13 +30,13 @@ public class Diagram : IJsonOnDeserialized
     void IJsonOnDeserialized.OnDeserialized()
     {
         if (Comments is null) return;
-        foreach (var c in Comments)
+        foreach (LegacyComment c in Comments)
         {
-            var t = TextBox.NewComment();
+            TextBox t = TextBox.NewComment();
             t.Id = c.Id; t.Text = c.Text; t.X = c.X; t.Y = c.Y; t.W = c.W; t.H = c.H; t.GroupId = c.GroupId;
             t.Fill = t.BorderColor = c.Color switch { "blue" => "sky", "green" => "mint", "pink" => "rose", _ => "yellow" };
             TextBoxes.Add(t);
-            foreach (var e in Edges.Where(e => e.From == c.Id || e.To == c.Id)) TextBox.ApplyPinLook(e);
+            foreach (Edge e in Edges.Where(e => e.From == c.Id || e.To == c.Id)) TextBox.ApplyPinLook(e);
         }
         Comments = null;
     }
@@ -167,7 +167,7 @@ public static class LineLook
     public static string Cap(string pattern) => pattern is Dotted or DashDot ? "round" : "butt";
 
     public static string Colour(string? key) =>
-        key is not null && Palette.All.TryGetValue(key, out var sw) ? sw.Stroke : TextPalette.StrokeOf(key, DefaultColor);
+        key is not null && Palette.All.TryGetValue(key, out Palette.Swatch? sw) ? sw.Stroke : TextPalette.StrokeOf(key, DefaultColor);
 
     /// <summary>Marker id for an arrowhead in a given colour and weight (one marker per combination).</summary>
     public static string MarkerId(string colour, string weight) => $"arr-{colour.TrimStart('#')}-{weight}";
@@ -175,7 +175,7 @@ public static class LineLook
     /// <summary>Arrowhead marker sized in user units so heavy lines don't get giant arrows.</summary>
     public static string MarkerDef(string colour, string weight)
     {
-        var size = weight switch { Light => 8, Heavy => 13, _ => 10 };
+        int size = weight switch { Light => 8, Heavy => 13, _ => 10 };
         return $"<marker id=\"{MarkerId(colour, weight)}\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"{size}\" markerHeight=\"{size}\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"{colour}\"/></marker>";
     }
 
@@ -253,7 +253,7 @@ public class TextBox : IGroupable
     /// <summary>"top", "middle" or "bottom".</summary>
     public string VAlign { get; set; } = TextLook.Top;
 
-    public TextBox Copy() { var c = (TextBox)MemberwiseClone(); c.Id = Node.NewId("t"); return c; }
+    public TextBox Copy() { TextBox c = (TextBox)MemberwiseClone(); c.Id = Node.NewId("t"); return c; }
 
     /// <summary>The standard comment look: yellow sticky note, thin border, Consolas, folded corner.</summary>
     public void ApplyCommentStyle()
@@ -266,7 +266,7 @@ public class TextBox : IGroupable
 
     public static TextBox NewComment()
     {
-        var t = new TextBox { W = 200, H = 110 };
+        TextBox t = new TextBox { W = 200, H = 110 };
         t.ApplyCommentStyle();
         return t;
     }
@@ -313,7 +313,7 @@ public static class TextPalette
 
     static Dictionary<string, (string, string)> BuildAll()
     {
-        var d = new Dictionary<string, (string, string)>
+        Dictionary<string, (string, string)> d = new Dictionary<string, (string, string)>
         {
             ["white"] = ("#ffffff", "#cfd4da"),
             ["grey"] = ("#f1f3f5", "#9aa3ad"),
@@ -323,7 +323,7 @@ public static class TextPalette
             ["mint"] = ("#dcf5df", "#7fbf88"),
             ["rose"] = ("#fde0ea", "#d88aa6"),
         };
-        foreach (var (k, s) in Palette.All) d[k] = (s.Light, s.Stroke);
+        foreach ((string k, Palette.Swatch s) in Palette.All) d[k] = (s.Light, s.Stroke);
         return d;
     }
 
@@ -332,8 +332,8 @@ public static class TextPalette
     /// <summary>Swatches offered for borders and text (strong colours).</summary>
     public static readonly string[] Strokes = { "grey", "yellow", "sky", "mint", "rose", "blue", "teal", "green", "amber", "red", "pink", "purple", "slate", "ink" };
 
-    public static string? FillOf(string? key) => key is not null && All.TryGetValue(key, out var c) ? c.Fill : null;
-    public static string StrokeOf(string? key, string fallback) => key is not null && All.TryGetValue(key, out var c) ? c.Stroke : fallback;
+    public static string? FillOf(string? key) => key is not null && All.TryGetValue(key, out (string Fill, string Stroke) c) ? c.Fill : null;
+    public static string StrokeOf(string? key, string fallback) => key is not null && All.TryGetValue(key, out (string Fill, string Stroke) c) ? c.Stroke : fallback;
 }
 
 /// <summary>Resolved colours and lines for drawing a text box (canvas and export).</summary>
@@ -345,11 +345,11 @@ public record TextStyle(string? Fill, string? Stroke, double StrokeWidth, string
 
     public static TextStyle For(TextBox t)
     {
-        var hasBorder = t.Border != TextLook.NoBorder;
-        var w = LineLook.Width(t.BorderWeight);
-        var stroke = TextPalette.StrokeOf(t.BorderColor, DefaultBorder);
+        bool hasBorder = t.Border != TextLook.NoBorder;
+        double w = LineLook.Width(t.BorderWeight);
+        string stroke = TextPalette.StrokeOf(t.BorderColor, DefaultBorder);
         // Folded corner follows the border colour, or the background's own edge colour when there is no border.
-        var fold = hasBorder ? stroke : TextPalette.StrokeOf(t.Fill, DefaultBorder);
+        string fold = hasBorder ? stroke : TextPalette.StrokeOf(t.Fill, DefaultBorder);
         return new TextStyle(
             TextPalette.FillOf(t.Fill),
             hasBorder ? stroke : null,
@@ -452,7 +452,7 @@ public static class Palette
         ["slate"] = new("#f1f3f5", "#55606e", "#4a5563"),
     };
 
-    public static Swatch Get(string? key) => key is not null && All.TryGetValue(key, out var s) ? s : All["blue"];
+    public static Swatch Get(string? key) => key is not null && All.TryGetValue(key, out Swatch? s) ? s : All["blue"];
 }
 
 /// <summary>Resolved colours for drawing a node.</summary>
@@ -460,18 +460,18 @@ public record NodeStyle(string Fill, string Stroke, string Text, string IconColo
 {
     public static NodeStyle For(Node n)
     {
-        var t = NodeTypes.Get(n.Type);
+        NodeTypeInfo t = NodeTypes.Get(n.Type);
         string fill = t.Fill, stroke = t.Stroke;
         if (n.Type == NodeTypes.Outcome)
         {
             // Outcomes default to their own colour (green pass, red fail, ...).
-            var os = Palette.Get(Outcomes.Get(n.Outcome).Color);
+            Palette.Swatch os = Palette.Get(Outcomes.Get(n.Outcome).Color);
             fill = os.Light; stroke = os.Stroke;
             // Conditional uses a dark mark on amber, like a warning sign: white on amber is too faint in greyscale.
             if (n.Color is null && n.Filled)
                 return new NodeStyle(os.Solid, os.Solid, "#ffffff", n.Outcome == Outcomes.Conditional ? "#1f2933" : "#ffffff");
         }
-        if (n.Color is not null && Palette.All.TryGetValue(n.Color, out var sw))
+        if (n.Color is not null && Palette.All.TryGetValue(n.Color, out Palette.Swatch? sw))
         {
             fill = sw.Light; stroke = sw.Stroke;
             if (n.Filled) return new NodeStyle(sw.Solid, sw.Solid, "#ffffff", "#ffffff");
@@ -529,7 +529,7 @@ public class PageSetup
             if (Size == Custom) { w = Math.Max(20, CustomW); h = Math.Max(20, CustomH); }
             else
             {
-                var s = Sizes.FirstOrDefault(x => x.Key == Size);
+                (string Key, string Name, double W, double H) s = Sizes.FirstOrDefault(x => x.Key == Size);
                 (w, h) = s.Key is null ? (210, 297) : (s.W, s.H);
                 // Stored portrait; landscape swaps. (For custom sizes the user's numbers are used as typed.)
                 (w, h) = (Math.Min(w, h), Math.Max(w, h));
@@ -546,9 +546,9 @@ public class PageSetup
     public string Describe()
     {
         if (!Enabled) return "Open canvas";
-        var (w, h) = Mm;
-        var name = Size == Custom ? "Custom" : Sizes.First(x => x.Key == Size).Name;
-        var orient = Size == Custom ? "" : (Landscape ? " · Landscape" : " · Portrait");
+        (double w, double h) = Mm;
+        string name = Size == Custom ? "Custom" : Sizes.First(x => x.Key == Size).Name;
+        string orient = Size == Custom ? "" : (Landscape ? " · Landscape" : " · Portrait");
         return $"{name}{orient} · {w:0.#} × {h:0.#} mm";
     }
 }

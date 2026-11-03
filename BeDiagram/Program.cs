@@ -1,7 +1,7 @@
 using BeDiagram.Components;
 using BeDiagram.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -10,7 +10,7 @@ builder.Services.AddRazorComponents()
 // Diagrams are stored as JSON files in a local folder (see appsettings.json -> Storage:Folder).
 builder.Services.AddSingleton<DiagramStore>();
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

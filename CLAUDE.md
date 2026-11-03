@@ -25,11 +25,25 @@ BeDiagram/
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
   Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
   Services/PdfExporter.cs    PDF = Exporters.ToSvg output converted to PDF operators (own SVG-subset reader, core fonts)
-  Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs)
-  Components/Pages/Designer.razor.cs   editor state + interaction logic
+  Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs) — markup only
+  Components/Pages/Designer.razor.cs   editor state + interaction logic + render helpers (view records the markup reads)
+  Components/Shared/*.razor(.cs)       small child components: AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas)
+  Components/UiSvg.cs                  IconSvg / OutcomeSwatch helpers (imported with `@using static` in _Imports.razor)
+  Components/AlignOp.cs                align / distribute / row / column operations
   wwwroot/js/designer.js     keyboard shortcuts, wheel zoom/pan, canvas size, focus, drag data
   wwwroot/app.css            all styling
 ```
+
+## Code style (owner's preference — keep to it)
+
+- **No `var`.** Write the actual type (`Node n = ...`, `foreach (Edge e in ...)`, `(double x, double y) = ...`), so code
+  reads clearly when browsing. `.editorconfig` flags `var` as a warning (IDE0008). In a `foreach` over a non-null
+  collection use the plain type, not `Edge?`.
+- **No C# in `.razor` files.** No `@code` blocks and no `@{ }` blocks: every `.razor` has a `.razor.cs` partial class.
+  The markup only loops, branches and reads values. Anything that needs working out (layouts, paths, transforms,
+  filtered lists) is a method, property or view record in the partial class. Event handlers are named methods;
+  a one-line lambda that only passes an argument (`@onclick="() => Select(n.Id)"`) is fine.
+  Markup that needs parameters becomes a small component in `Components/Shared`, not a `RenderFragment` in C#.
 
 ## Design rules
 

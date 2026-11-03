@@ -1,0 +1,6 @@
+<div class="alignbar">
+    @foreach (AlignButton b in Buttons)
+    {
+        <button class="icon-btn" title="@b.Tip" disabled="@(!Enabled)" @onclick="() => Click(b.Op)">@IconSvg(b.Icon, 18)</button>
+    }
+</div>

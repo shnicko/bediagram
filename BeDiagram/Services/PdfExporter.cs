@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace BeDiagram.Services;
@@ -20,19 +21,19 @@ public static class PdfExporter
     /// <summary>One page PDF, sized from the SVG's width/height (mm or px).</summary>
     public static byte[] FromSvg(string svg, string title)
     {
-        var root = XDocument.Parse(svg).Root ?? throw new InvalidOperationException("Empty SVG");
-        var vb = Nums(Attr(root, "viewBox") ?? "");
+        XElement root = XDocument.Parse(svg).Root ?? throw new InvalidOperationException("Empty SVG");
+        List<double> vb = Nums(Attr(root, "viewBox") ?? "");
         double vbX = 0, vbY = 0, vbW, vbH;
-        double wPt = Length(Attr(root, "width"), out var wPx), hPt = Length(Attr(root, "height"), out var hPx);
+        double wPt = Length(Attr(root, "width"), out double wPx), hPt = Length(Attr(root, "height"), out double hPx);
         if (vb.Count == 4) { vbX = vb[0]; vbY = vb[1]; vbW = vb[2]; vbH = vb[3]; }
         else { vbW = wPx; vbH = hPx; }
         if (wPt <= 0) wPt = vbW * PtPerPx;
         if (hPt <= 0) hPt = vbH * PtPerPx;
 
-        var r = new Renderer();
-        foreach (var el in root.Descendants())
+        Renderer r = new Renderer();
+        foreach (XElement el in root.Descendants())
         {
-            var id = Attr(el, "id");
+            string? id = Attr(el, "id");
             if (id is null) continue;
             if (el.Name.LocalName == "marker") r.Markers[id] = el;
             else if (el.Name.LocalName == "clipPath") r.Clips[id] = el;
@@ -53,7 +54,7 @@ public static class PdfExporter
 
         public Style With(XElement e)
         {
-            var s = this;
+            Style s = this;
             double opacity = Num(Attr(e, "opacity"), 1);
             s = s with
             {
@@ -85,25 +86,25 @@ public static class PdfExporter
 
         public void Children(XElement parent, Style st)
         {
-            foreach (var c in parent.Elements()) Element(c, st);
+            foreach (XElement c in parent.Elements()) Element(c, st);
         }
 
         void Element(XElement e, Style inherited)
         {
-            var name = e.Name.LocalName;
+            string name = e.Name.LocalName;
             if (name is "defs" or "marker" or "clipPath" or "title" or "desc" or "pattern" or "filter") return;
             if (Attr(e, "display") == "none" || Attr(e, "visibility") == "hidden") return;
-            var st = inherited.With(e);
-            var tf = Attr(e, "transform");
-            var clip = Attr(e, "clip-path");
+            Style st = inherited.With(e);
+            string? tf = Attr(e, "transform");
+            string? clip = Attr(e, "clip-path");
             bool push = tf is not null || clip is not null;
             if (push) Out.Append("q\n");
-            if (tf is not null) foreach (var m in Transforms(tf)) Out.Append(Cm(m));
-            if (clip is not null && ClipRef(clip) is { } cp && Clips.TryGetValue(cp, out var clipEl))
+            if (tf is not null) foreach (Matrix m in Transforms(tf)) Out.Append(Cm(m));
+            if (clip is not null && ClipRef(clip) is { } cp && Clips.TryGetValue(cp, out XElement? clipEl))
             {
-                foreach (var shape in clipEl.Elements())
+                foreach (XElement shape in clipEl.Elements())
                 {
-                    var p = Geometry(shape);
+                    PathData? p = Geometry(shape);
                     if (p is null) continue;
                     Out.Append(p.Ops).Append("W n\n");
                 }
@@ -119,7 +120,7 @@ public static class PdfExporter
                     Text(e, st);
                     break;
                 default:
-                    var path = Geometry(e);
+                    PathData? path = Geometry(e);
                     if (path is not null)
                     {
                         Paint(path, st);
@@ -133,8 +134,8 @@ public static class PdfExporter
         /// <summary>Fill and/or stroke a built path with the current style.</summary>
         void Paint(PathData p, Style st)
         {
-            var fill = Colour(st.Fill);
-            var stroke = st.StrokeWidth > 0 ? Colour(st.Stroke) : null;
+            (double R, double G, double B)? fill = Colour(st.Fill);
+            (double R, double G, double B)? stroke = st.StrokeWidth > 0 ? Colour(st.Stroke) : null;
             if (p.IsOpenLine) fill = null; // lines have no fill area
             if (fill is null && stroke is null) return;
             Out.Append("q\n");
@@ -145,7 +146,7 @@ public static class PdfExporter
                 Out.Append($"{F(s.R)} {F(s.G)} {F(s.B)} RG {F(st.StrokeWidth)} w ");
                 Out.Append(st.Cap switch { "round" => "1", "square" => "2", _ => "0" }).Append(" J ");
                 Out.Append(st.Join switch { "round" => "1", "bevel" => "2", _ => "0" }).Append(" j\n");
-                var dash = st.Dash is null ? new List<double>() : Nums(st.Dash);
+                List<double> dash = st.Dash is null ? new List<double>() : Nums(st.Dash);
                 if (dash.Count > 0 && dash.Any(x => x > 0))
                 {
                     if (dash.Count % 2 == 1) dash.AddRange(dash);
@@ -160,8 +161,8 @@ public static class PdfExporter
         string Gs(double fill, double stroke)
         {
             if (fill >= 0.999 && stroke >= 0.999) return "";
-            var key = (Math.Round(fill, 3), Math.Round(stroke, 3));
-            if (!Alpha.TryGetValue(key, out var n)) Alpha[key] = n = $"GS{Alpha.Count + 1}";
+            (double, double) key = (Math.Round(fill, 3), Math.Round(stroke, 3));
+            if (!Alpha.TryGetValue(key, out string? n)) Alpha[key] = n = $"GS{Alpha.Count + 1}";
             return $"/{n} gs\n";
         }
 
@@ -170,14 +171,14 @@ public static class PdfExporter
         {
             void Draw(string? attr, (double X, double Y, double A)? at, bool start)
             {
-                if (attr is null || at is null || ClipRef(attr) is not { } id || !Markers.TryGetValue(id, out var m)) return;
-                var vb = Nums(Attr(m, "viewBox") ?? "0 0 3 3");
+                if (attr is null || at is null || ClipRef(attr) is not { } id || !Markers.TryGetValue(id, out XElement? m)) return;
+                List<double> vb = Nums(Attr(m, "viewBox") ?? "0 0 3 3");
                 double mw = Num(Attr(m, "markerWidth"), 3), mh = Num(Attr(m, "markerHeight"), 3);
                 double refX = Num(Attr(m, "refX"), 0), refY = Num(Attr(m, "refY"), 0);
                 double scaleUnits = Attr(m, "markerUnits") == "userSpaceOnUse" ? 1 : st.StrokeWidth;
                 double kx = vb.Count == 4 ? mw / vb[2] : 1, ky = vb.Count == 4 ? mh / vb[3] : 1;
-                var k = Math.Min(kx, ky) * scaleUnits;
-                var orient = Attr(m, "orient") ?? "0";
+                double k = Math.Min(kx, ky) * scaleUnits;
+                string orient = Attr(m, "orient") ?? "0";
                 double angle = orient switch
                 {
                     "auto" => at.Value.A,
@@ -202,7 +203,7 @@ public static class PdfExporter
         {
             double x = Num(Attr(e, "x"), 0), y = Num(Attr(e, "y"), 0);
             bool preserve = e.Attributes().Any(a => a.Name.LocalName == "space" && a.Value == "preserve");
-            foreach (var node in e.Nodes())
+            foreach (XNode node in e.Nodes())
             {
                 if (node is XText t)
                 {
@@ -210,7 +211,7 @@ public static class PdfExporter
                 }
                 else if (node is XElement span && span.Name.LocalName == "tspan")
                 {
-                    var ss = st.With(span);
+                    Style ss = st.With(span);
                     if (Attr(span, "x") is { } sx) x = Num(sx, x);
                     if (Attr(span, "y") is { } sy) y = Num(sy, y);
                     x += Num(Attr(span, "dx"), 0);
@@ -225,11 +226,11 @@ public static class PdfExporter
             text = text.Replace("\r", "").Replace("\n", preserve ? " " : " ").Replace("\t", " ");
             if (!preserve) text = System.Text.RegularExpressions.Regex.Replace(text, " {2,}", " ").Trim();
             if (text.Length == 0) return;
-            var fill = Colour(st.Fill);
+            (double R, double G, double B)? fill = Colour(st.Fill);
             int font = Fonts.Pick(st.Family, st.Weight);
             FontsUsed.Add(font);
-            var bytes = Fonts.Encode(text);
-            var width = Fonts.Width(font, bytes) * st.FontSize / 1000;
+            byte[] bytes = Fonts.Encode(text);
+            double width = Fonts.Width(font, bytes) * st.FontSize / 1000;
             double startX = st.Anchor switch { "middle" => x - width / 2, "end" => x - width, _ => x };
             if (fill is { } f)
             {
@@ -238,7 +239,7 @@ public static class PdfExporter
                 // Undo the page's y flip so glyphs stand upright.
                 Out.Append($"BT /F{font} {F(st.FontSize)} Tf 1 0 0 -1 {F(startX)} {F(y)} Tm ");
                 Out.Append('(');
-                foreach (var b in bytes)
+                foreach (byte b in bytes)
                 {
                     if (b is (byte)'(' or (byte)')' or (byte)'\\') Out.Append('\\').Append((char)b);
                     else if (b < 32 || b > 126) Out.Append('\\').Append(Convert.ToString(b, 8).PadLeft(3, '0'));
@@ -283,16 +284,16 @@ public static class PdfExporter
                 }
                 case "line":
                 {
-                    var p = PathData.Parse($"M{F(Num(Attr(e, "x1"), 0))},{F(Num(Attr(e, "y1"), 0))} L{F(Num(Attr(e, "x2"), 0))},{F(Num(Attr(e, "y2"), 0))}");
+                    PathData p = PathData.Parse($"M{F(Num(Attr(e, "x1"), 0))},{F(Num(Attr(e, "y1"), 0))} L{F(Num(Attr(e, "x2"), 0))},{F(Num(Attr(e, "y2"), 0))}");
                     p.IsOpenLine = true;
                     return p;
                 }
                 case "polyline":
                 case "polygon":
                 {
-                    var n = Nums(Attr(e, "points") ?? "");
+                    List<double> n = Nums(Attr(e, "points") ?? "");
                     if (n.Count < 4) return null;
-                    var sb = new StringBuilder($"M{F(n[0])},{F(n[1])}");
+                    StringBuilder sb = new StringBuilder($"M{F(n[0])},{F(n[1])}");
                     for (int i = 2; i + 1 < n.Count; i += 2) sb.Append($" L{F(n[i])},{F(n[i + 1])}");
                     if (e.Name.LocalName == "polygon") sb.Append(" Z");
                     return PathData.Parse(sb.ToString());
@@ -313,9 +314,9 @@ public static class PdfExporter
 
         public static PathData Parse(string d)
         {
-            var p = new PathData();
-            var sb = new StringBuilder();
-            var tok = new PathTokens(d);
+            PathData p = new PathData();
+            StringBuilder sb = new StringBuilder();
+            PathTokens tok = new PathTokens(d);
             double cx = 0, cy = 0, sx = 0, sy = 0;     // current point, subpath start
             double lcx = 0, lcy = 0;                   // last control point (for S/T)
             char prev = ' ';
@@ -328,10 +329,10 @@ public static class PdfExporter
                 // Start tangent of the very first segment and end tangent of the latest one (for markers).
                 if (firstSeg)
                 {
-                    var (dx, dy) = curve ? Dir(fromX, fromY, c1x, c1y, c2x, c2y, toX, toY) : (toX - fromX, toY - fromY);
+                    (double dx, double dy) = curve ? Dir(fromX, fromY, c1x, c1y, c2x, c2y, toX, toY) : (toX - fromX, toY - fromY);
                     if (dx != 0 || dy != 0) { p.Start = (fromX, fromY, Math.Atan2(dy, dx) * 180 / Math.PI); firstSeg = false; }
                 }
-                var (ex, ey) = curve ? Dir(toX, toY, c2x, c2y, c1x, c1y, fromX, fromY) : (fromX - toX, fromY - toY);
+                (double ex, double ey) = curve ? Dir(toX, toY, c2x, c2y, c1x, c1y, fromX, fromY) : (fromX - toX, fromY - toY);
                 if (ex != 0 || ey != 0) { lastDirX = -ex; lastDirY = -ey; }
                 p.End = (toX, toY, Math.Atan2(lastDirY, lastDirX) * 180 / Math.PI);
                 if (curve) sb.Append($"{F(c1x)} {F(c1y)} {F(c2x)} {F(c2y)} {F(toX)} {F(toY)} c\n");
@@ -404,7 +405,7 @@ public static class PdfExporter
                         double rx = tok.Num(), ry = tok.Num(), rot = tok.Num();
                         bool large = tok.Flag(), sweep = tok.Flag();
                         double x = ox + tok.Num(), y = oy + tok.Num();
-                        foreach (var b in Arc(cx, cy, rx, ry, rot, large, sweep, x, y))
+                        foreach (double[] b in Arc(cx, cy, rx, ry, rot, large, sweep, x, y))
                             Seg(b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], true);
                         if (rx == 0 || ry == 0 || (cx == x && cy == y)) { if (cx != x || cy != y) Seg(cx, cy, 0, 0, 0, 0, x, y, false); }
                         cx = x; cy = y;
@@ -452,7 +453,7 @@ public static class PdfExporter
             double dx = (x1 - x2) / 2, dy = (y1 - y2) / 2;
             double x1p = cos * dx + sin * dy, y1p = -sin * dx + cos * dy;
             double lambda = x1p * x1p / (rx * rx) + y1p * y1p / (ry * ry);
-            if (lambda > 1) { var s = Math.Sqrt(lambda); rx *= s; ry *= s; }
+            if (lambda > 1) { double s = Math.Sqrt(lambda); rx *= s; ry *= s; }
             double num = rx * rx * ry * ry - rx * rx * y1p * y1p - ry * ry * x1p * x1p;
             double den = rx * rx * y1p * y1p + ry * ry * x1p * x1p;
             double coef = Math.Sqrt(Math.Max(0, num / den)) * (large == sweep ? -1 : 1);
@@ -460,7 +461,7 @@ public static class PdfExporter
             double cx = cos * cxp - sin * cyp + (x1 + x2) / 2, cy = sin * cxp + cos * cyp + (y1 + y2) / 2;
             static double Ang(double ux, double uy, double vx, double vy)
             {
-                var a = Math.Atan2(ux * vy - uy * vx, ux * vx + uy * vy);
+                double a = Math.Atan2(ux * vy - uy * vx, ux * vx + uy * vy);
                 return a;
             }
             double t1 = Ang(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
@@ -472,14 +473,14 @@ public static class PdfExporter
             (double, double) Pt(double t) { double ex = rx * Math.Cos(t), ey = ry * Math.Sin(t); return (cos * ex - sin * ey + cx, sin * ex + cos * ey + cy); }
             (double, double) Dv(double t) { double ex = -rx * Math.Sin(t), ey = ry * Math.Cos(t); return (cos * ex - sin * ey, sin * ex + cos * ey); }
             double t0 = t1;
-            var (px, py) = (x1, y1);
+            (double px, double py) = (x1, y1);
             for (int i = 0; i < n; i++)
             {
                 double ta = t0 + i * step, tb = ta + step;
-                var (ax, ay) = i == 0 ? (x1, y1) : Pt(ta);
-                var (bx, by) = i == n - 1 ? (x2, y2) : Pt(tb);
-                var (dax, day) = Dv(ta);
-                var (dbx, dby) = Dv(tb);
+                (double ax, double ay) = i == 0 ? (x1, y1) : Pt(ta);
+                (double bx, double by) = i == n - 1 ? (x2, y2) : Pt(tb);
+                (double dax, double day) = Dv(ta);
+                (double dbx, double dby) = Dv(tb);
                 yield return new[] { ax, ay, ax + k * dax, ay + k * day, bx - k * dbx, by - k * dby, bx, by };
             }
         }
@@ -514,7 +515,7 @@ public static class PdfExporter
                 else i = save;
             }
             if (i == start) { i++; return 0; } // junk: skip a character rather than loop forever
-            return double.TryParse(s.AsSpan(start, i - start), NumberStyles.Float, Inv, out var v) ? v : 0;
+            return double.TryParse(s.AsSpan(start, i - start), NumberStyles.Float, Inv, out double v) ? v : 0;
         }
     }
 
@@ -526,7 +527,7 @@ public static class PdfExporter
         public static Matrix Scale(double x, double y) => new(x, 0, 0, y, 0, 0);
         public static Matrix Rotate(double deg)
         {
-            var r = deg * Math.PI / 180;
+            double r = deg * Math.PI / 180;
             return new(Math.Cos(r), Math.Sin(r), -Math.Sin(r), Math.Cos(r), 0, 0);
         }
     }
@@ -538,7 +539,7 @@ public static class PdfExporter
     {
         foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(t, @"(\w+)\s*\(([^)]*)\)"))
         {
-            var a = Nums(m.Groups[2].Value);
+            List<double> a = Nums(m.Groups[2].Value);
             switch (m.Groups[1].Value)
             {
                 case "translate": yield return Matrix.Translate(a.ElementAtOrDefault(0), a.ElementAtOrDefault(1)); break;
@@ -563,12 +564,12 @@ public static class PdfExporter
 
     static string? Attr(XElement e, string name)
     {
-        var v = e.Attribute(name)?.Value;
+        string? v = e.Attribute(name)?.Value;
         if (v is null && e.Attribute("style")?.Value is { } style)
         {
-            foreach (var part in style.Split(';'))
+            foreach (string part in style.Split(';'))
             {
-                var kv = part.Split(':', 2);
+                string[] kv = part.Split(':', 2);
                 if (kv.Length == 2 && kv[0].Trim() == name) return kv[1].Trim();
             }
         }
@@ -576,19 +577,19 @@ public static class PdfExporter
     }
 
     static double Num(string? s, double fallback) =>
-        s is not null && double.TryParse(s.Trim().TrimEnd('%'), NumberStyles.Float, Inv, out var v) ? v : fallback;
+        s is not null && double.TryParse(s.Trim().TrimEnd('%'), NumberStyles.Float, Inv, out double v) ? v : fallback;
 
     static List<double> Nums(string s)
     {
-        var t = new PathTokens(s);
-        var list = new List<double>();
+        PathTokens t = new PathTokens(s);
+        List<double> list = new List<double>();
         while (t.More()) list.Add(t.Num());
         return list;
     }
 
     static string? ClipRef(string v)
     {
-        var m = System.Text.RegularExpressions.Regex.Match(v, @"url\(\s*#([^)\s]+)\s*\)");
+        Match m = System.Text.RegularExpressions.Regex.Match(v, @"url\(\s*#([^)\s]+)\s*\)");
         return m.Success ? m.Groups[1].Value : null;
     }
 
@@ -598,10 +599,10 @@ public static class PdfExporter
         px = 0;
         if (string.IsNullOrWhiteSpace(s)) return 0;
         s = s.Trim();
-        if (s.EndsWith("mm")) { var mm = Num(s[..^2], 0); px = mm * 96 / 25.4; return mm * PtPerMm; }
-        if (s.EndsWith("cm")) { var cm = Num(s[..^2], 0); px = cm * 960 / 25.4; return cm * 10 * PtPerMm; }
-        if (s.EndsWith("in")) { var inch = Num(s[..^2], 0); px = inch * 96; return inch * 72; }
-        if (s.EndsWith("pt")) { var pt = Num(s[..^2], 0); px = pt / PtPerPx; return pt; }
+        if (s.EndsWith("mm")) { double mm = Num(s[..^2], 0); px = mm * 96 / 25.4; return mm * PtPerMm; }
+        if (s.EndsWith("cm")) { double cm = Num(s[..^2], 0); px = cm * 960 / 25.4; return cm * 10 * PtPerMm; }
+        if (s.EndsWith("in")) { double inch = Num(s[..^2], 0); px = inch * 96; return inch * 72; }
+        if (s.EndsWith("pt")) { double pt = Num(s[..^2], 0); px = pt / PtPerPx; return pt; }
         if (s.EndsWith("%")) return 0;
         px = Num(s.Replace("px", ""), 0);
         return px * PtPerPx;
@@ -618,19 +619,19 @@ public static class PdfExporter
         if (string.IsNullOrWhiteSpace(c)) return null;
         c = c.Trim();
         if (c is "none" or "transparent" || c.StartsWith("url(")) return null;
-        if (Named.TryGetValue(c, out var hex)) c = hex;
+        if (Named.TryGetValue(c, out string? hex)) c = hex;
         if (c.StartsWith('#'))
         {
-            var h = c[1..];
+            string h = c[1..];
             if (h.Length is 3 or 4) h = string.Concat(h.Take(3).Select(ch => $"{ch}{ch}"));
-            if (h.Length >= 6 && int.TryParse(h[..6], NumberStyles.HexNumber, Inv, out var v))
+            if (h.Length >= 6 && int.TryParse(h[..6], NumberStyles.HexNumber, Inv, out int v))
                 return (((v >> 16) & 255) / 255.0, ((v >> 8) & 255) / 255.0, (v & 255) / 255.0);
             return null;
         }
-        var m = System.Text.RegularExpressions.Regex.Match(c, @"rgba?\(([^)]*)\)");
+        Match m = System.Text.RegularExpressions.Regex.Match(c, @"rgba?\(([^)]*)\)");
         if (m.Success)
         {
-            var n = m.Groups[1].Value.Split(',').Select(x => Num(x, 0)).ToArray();
+            double[] n = m.Groups[1].Value.Split(',').Select(x => Num(x, 0)).ToArray();
             if (n.Length >= 3) return (n[0] / 255, n[1] / 255, n[2] / 255);
         }
         return (0, 0, 0);
@@ -645,8 +646,8 @@ public static class PdfExporter
 
         public static int Pick(string family, string weight)
         {
-            var f = family.ToLowerInvariant();
-            bool bold = weight is "bold" or "bolder" || (int.TryParse(weight, out var w) && w >= 600);
+            string f = family.ToLowerInvariant();
+            bool bold = weight is "bold" or "bolder" || (int.TryParse(weight, out int w) && w >= 600);
             int baseFont = f.Contains("mono") || f.Contains("consolas") || f.Contains("courier") ? 5
                 : (f.Contains("serif") && !f.Contains("sans-serif")) || f.Contains("georgia") || f.Contains("times") ? 3
                 : 1;
@@ -660,11 +661,11 @@ public static class PdfExporter
         public static double Width(int font, byte[] bytes)
         {
             if (font >= 5) return bytes.Length * 600.0;
-            var table = font switch { 1 => Helvetica, 2 => HelveticaBold, 3 => Times, _ => TimesBold };
+            short[] table = font switch { 1 => Helvetica, 2 => HelveticaBold, 3 => Times, _ => TimesBold };
             double w = 0;
-            foreach (var b in bytes)
+            foreach (byte b in bytes)
             {
-                var v = b >= 32 ? table[b - 32] : (short)0;
+                short v = b >= 32 ? table[b - 32] : (short)0;
                 w += v > 0 ? v : 556;
             }
             return w;
@@ -694,9 +695,9 @@ public static class PdfExporter
         {
             for (int k = 0; k < charCount; k++)
             {
-                var ch = chars[charIndex + k];
+                char ch = chars[charIndex + k];
                 bytes[byteIndex + k] = ch < 0x80 || (ch >= 0xA0 && ch <= 0xFF) ? (byte)ch
-                    : High.TryGetValue(ch, out var b) ? b : (byte)'?';
+                    : High.TryGetValue(ch, out byte b) ? b : (byte)'?';
             }
             return charCount;
         }
@@ -714,15 +715,15 @@ public static class PdfExporter
 
     static byte[] Write(Renderer r, double wPt, double hPt, string title)
     {
-        var content = Encoding.ASCII.GetBytes(r.Out.ToString());
+        byte[] content = Encoding.ASCII.GetBytes(r.Out.ToString());
         byte[] packed;
-        using (var ms = new MemoryStream())
+        using (MemoryStream ms = new MemoryStream())
         {
-            using (var z = new ZLibStream(ms, CompressionLevel.Optimal, leaveOpen: true)) z.Write(content);
+            using (ZLibStream z = new ZLibStream(ms, CompressionLevel.Optimal, leaveOpen: true)) z.Write(content);
             packed = ms.ToArray();
         }
 
-        var objects = new List<byte[]>();
+        List<byte[]> objects = new List<byte[]>();
         int Add(string s) { objects.Add(Encoding.ASCII.GetBytes(s)); return objects.Count; }
         int AddRaw(byte[] b) { objects.Add(b); return objects.Count; }
 
@@ -730,34 +731,34 @@ public static class PdfExporter
         Add("<< /Type /Catalog /Pages 2 0 R >>");
         Add("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         Add(""); // page — filled in once resource object numbers are known
-        var head = Encoding.ASCII.GetBytes($"<< /Length {packed.Length} /Filter /FlateDecode >>\nstream\n");
-        var tail = Encoding.ASCII.GetBytes("\nendstream");
+        byte[] head = Encoding.ASCII.GetBytes($"<< /Length {packed.Length} /Filter /FlateDecode >>\nstream\n");
+        byte[] tail = Encoding.ASCII.GetBytes("\nendstream");
         AddRaw(head.Concat(packed).Concat(tail).ToArray());
 
-        var fontRefs = new StringBuilder();
-        foreach (var f in r.FontsUsed)
+        StringBuilder fontRefs = new StringBuilder();
+        foreach (int f in r.FontsUsed)
         {
-            var n = Add($"<< /Type /Font /Subtype /Type1 /BaseFont /{Fonts.BaseNames[f]} /Encoding /WinAnsiEncoding >>");
+            int n = Add($"<< /Type /Font /Subtype /Type1 /BaseFont /{Fonts.BaseNames[f]} /Encoding /WinAnsiEncoding >>");
             fontRefs.Append($"/F{f} {n} 0 R ");
         }
-        var gsRefs = new StringBuilder();
-        foreach (var (key, name) in r.Alpha)
+        StringBuilder gsRefs = new StringBuilder();
+        foreach (((double, double) key, string? name) in r.Alpha)
         {
-            var n = Add($"<< /Type /ExtGState /ca {F(key.Item1)} /CA {F(key.Item2)} >>");
+            int n = Add($"<< /Type /ExtGState /ca {F(key.Item1)} /CA {F(key.Item2)} >>");
             gsRefs.Append($"/{name} {n} 0 R ");
         }
-        var info = Add($"<< /Title {PdfString(title)} /Producer (BeDiagram) /CreationDate (D:{DateTime.UtcNow:yyyyMMddHHmmss}Z) >>");
+        int info = Add($"<< /Title {PdfString(title)} /Producer (BeDiagram) /CreationDate (D:{DateTime.UtcNow:yyyyMMddHHmmss}Z) >>");
 
-        var resources = "<< /ProcSet [/PDF /Text]" +
+        string resources = "<< /ProcSet [/PDF /Text]" +
             (fontRefs.Length > 0 ? $" /Font << {fontRefs}>>" : "") +
             (gsRefs.Length > 0 ? $" /ExtGState << {gsRefs}>>" : "") + " >>";
         objects[2] = Encoding.ASCII.GetBytes($"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {F(wPt)} {F(hPt)}] /Resources {resources} /Contents 4 0 R >>");
 
-        using var outStream = new MemoryStream();
-        void W(string s) { var b = Encoding.ASCII.GetBytes(s); outStream.Write(b); }
+        using MemoryStream outStream = new MemoryStream();
+        void W(string s) { byte[] b = Encoding.ASCII.GetBytes(s); outStream.Write(b); }
         W("%PDF-1.4\n");
         outStream.Write(new byte[] { (byte)'%', 0xE2, 0xE3, 0xCF, 0xD3, (byte)'\n' });
-        var offsets = new List<long>();
+        List<long> offsets = new List<long>();
         for (int k = 0; k < objects.Count; k++)
         {
             offsets.Add(outStream.Position);
@@ -765,17 +766,17 @@ public static class PdfExporter
             outStream.Write(objects[k]);
             W("\nendobj\n");
         }
-        var xref = outStream.Position;
+        long xref = outStream.Position;
         W($"xref\n0 {objects.Count + 1}\n0000000000 65535 f \n");
-        foreach (var o in offsets) W($"{o:D10} 00000 n \n");
+        foreach (long o in offsets) W($"{o:D10} 00000 n \n");
         W($"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R /Info {info} 0 R >>\nstartxref\n{xref}\n%%EOF\n");
         return outStream.ToArray();
     }
 
     static string PdfString(string s)
     {
-        var sb = new StringBuilder("(");
-        foreach (var b in Win1252.Instance.GetBytes(s ?? ""))
+        StringBuilder sb = new StringBuilder("(");
+        foreach (byte b in Win1252.Instance.GetBytes(s ?? ""))
         {
             if (b is (byte)'(' or (byte)')' or (byte)'\\') sb.Append('\\').Append((char)b);
             else if (b < 32 || b > 126) sb.Append('\\').Append(Convert.ToString(b, 8).PadLeft(3, '0'));

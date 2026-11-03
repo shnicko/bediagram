@@ -1,0 +1,26 @@
+<label>Linked diagram <span class="muted">(more detailed flow)</span></label>
+<div class="link-pick">
+    <select value="@(Current ?? "")" @onchange="Changed">
+        <option value="">None</option>
+        @if (Missing)
+        {
+            <option value="@Current">@Current (missing)</option>
+        }
+        @foreach (string nm in Names)
+        {
+            <option value="@nm">@nm</option>
+        }
+    </select>
+    @if (Has && !Missing)
+    {
+        <button class="small" title="Open the linked diagram (or click the link badge on the canvas)" @onclick="Open">@IconSvg("link", 14) Open</button>
+    }
+</div>
+@if (Missing)
+{
+    <p class="warn small-note">No saved diagram called “@Current” in @Store.Folder — it may have been renamed or deleted.</p>
+}
+else if (Names.Count == 0 && !Has)
+{
+    <p class="muted small-note">Save the detailed flow as its own diagram first, then pick it here.</p>
+}

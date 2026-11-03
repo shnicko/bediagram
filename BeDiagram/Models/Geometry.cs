@@ -29,24 +29,24 @@ public static class Geometry
         {
             case "pill":
             {
-                var r = h / 2;
+                double r = h / 2;
                 return $"M{F(x + r)},{F(y)} H{F(x + w - r)} A{F(r)},{F(r)} 0 0 1 {F(x + w - r)},{F(y + h)} H{F(x + r)} A{F(r)},{F(r)} 0 0 1 {F(x + r)},{F(y)} Z";
             }
             case "diamond":
                 return $"M{F(x + w / 2)},{F(y)} L{F(x + w)},{F(y + h / 2)} L{F(x + w / 2)},{F(y + h)} L{F(x)},{F(y + h / 2)} Z";
             case "parallelogram":
             {
-                var k = Math.Min(18, w / 6);
+                double k = Math.Min(18, w / 6);
                 return $"M{F(x + k)},{F(y)} H{F(x + w)} L{F(x + w - k)},{F(y + h)} H{F(x)} Z";
             }
             case "hexagon":
             {
-                var k = Math.Min(20, w / 5);
+                double k = Math.Min(20, w / 5);
                 return $"M{F(x + k)},{F(y)} H{F(x + w - k)} L{F(x + w)},{F(y + h / 2)} L{F(x + w - k)},{F(y + h)} H{F(x + k)} L{F(x)},{F(y + h / 2)} Z";
             }
             case "circle":
             {
-                var r = Math.Min(w, h) / 2; var cx = x + w / 2; var cy = y + h / 2;
+                double r = Math.Min(w, h) / 2; double cx = x + w / 2; double cy = y + h / 2;
                 return $"M{F(cx - r)},{F(cy)} A{F(r)},{F(r)} 0 1 1 {F(cx + r)},{F(cy)} A{F(r)},{F(r)} 0 1 1 {F(cx - r)},{F(cy)} Z";
             }
             case "seal":
@@ -56,7 +56,7 @@ public static class Geometry
                 return PolyPath(Outline(n, ShapeOf(n)));
             case "square-rounded":
             {
-                var s = Math.Min(w, h); var sx = x + (w - s) / 2; var sy = y + (h - s) / 2;
+                double s = Math.Min(w, h); double sx = x + (w - s) / 2; double sy = y + (h - s) / 2;
                 return RoundRect(sx, sy, s, s, s * 0.22);
             }
             case "rect-rounded":
@@ -70,15 +70,15 @@ public static class Geometry
     public static string SealPath(double cx, double cy, double r)
     {
         const int bumps = 16;
-        var step = 2 * Math.PI / bumps;
+        double step = 2 * Math.PI / bumps;
         // Chord points sit inside so that each bump's tip reaches r.
-        var r0 = r / (Math.Cos(step / 2) + Math.Sin(step / 2));
-        var bump = r0 * Math.Sin(step / 2);
-        var sb = new StringBuilder();
+        double r0 = r / (Math.Cos(step / 2) + Math.Sin(step / 2));
+        double bump = r0 * Math.Sin(step / 2);
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i <= bumps; i++)
         {
-            var a = -Math.PI / 2 + i * step;
-            var (px, py) = (cx + r0 * Math.Cos(a), cy + r0 * Math.Sin(a));
+            double a = -Math.PI / 2 + i * step;
+            (double px, double py) = (cx + r0 * Math.Cos(a), cy + r0 * Math.Sin(a));
             sb.Append(i == 0 ? $"M{F(px)},{F(py)}" : $" A{F(bump)},{F(bump)} 0 0 1 {F(px)},{F(py)}");
         }
         return sb.Append(" Z").ToString();
@@ -115,17 +115,17 @@ public static class Geometry
             case "seal":
             case "octagon":
             {
-                var r = Math.Min(w, h) / 2;
+                double r = Math.Min(w, h) / 2;
                 return (cx + r * d45, cy + r * d45);
             }
             case "square-rounded":
             {
-                var s = Math.Min(w, h); var k = s * 0.22 * (1 - d45);
+                double s = Math.Min(w, h); double k = s * 0.22 * (1 - d45);
                 return (cx + s / 2 - k, cy + s / 2 - k);
             }
             case "pill":
             {
-                var r = h / 2;
+                double r = h / 2;
                 return (x + w - r + r * d45, cy + r * d45);
             }
             case "diamond":
@@ -136,7 +136,7 @@ public static class Geometry
                 return (x + w - Math.Min(18, w / 6), y + h);
             case "hexagon":
             {
-                var k = Math.Min(20, w / 5);
+                double k = Math.Min(20, w / 5);
                 return (x + w - k / 2, y + h * 0.75);
             }
             case "rect-rounded":
@@ -149,7 +149,7 @@ public static class Geometry
     /// <summary>SVG markup for the link badge (white disc, coloured ring, Lucide "link" glyph). Used by canvas and export.</summary>
     public static string LinkBadgeSvg(IBox b, string colour)
     {
-        var (cx, cy) = LinkBadgeCentre(b);
+        (double cx, double cy) = LinkBadgeCentre(b);
         const double glyph = 12;
         return $"<circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(BadgeR)}\" fill=\"#ffffff\" stroke=\"{colour}\" stroke-width=\"1.4\"/>"
              + $"<g transform=\"translate({F(cx - glyph / 2)},{F(cy - glyph / 2)}) scale({F(glyph / 24)})\" fill=\"none\" stroke=\"{colour}\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get("link")}</g>";
@@ -163,18 +163,18 @@ public static class Geometry
 
     public static LabelLayout Layout(Node n, string label)
     {
-        var t = NodeTypes.Get(n.Type);
+        NodeTypeInfo t = NodeTypes.Get(n.Type);
         double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
         bool icon = Icons.Exists(n.Icon);
 
         if (n.Type == NodeTypes.Outcome)
         {
             // Glyph centred in the outline, label underneath. A triangle's visual centre is lower down.
-            var shape = ShapeOf(n);
-            var m = Math.Min(n.W, n.H);
-            var size = m * (shape == "triangle" ? 0.38 : shape == "seal" ? 0.44 : 0.48);
-            var gy = shape == "triangle" ? n.Y + n.H * 0.62 : cy;
-            var lines = Wrap(label, Math.Max(n.W * 1.7, 130));
+            string shape = ShapeOf(n);
+            double m = Math.Min(n.W, n.H);
+            double size = m * (shape == "triangle" ? 0.38 : shape == "seal" ? 0.44 : 0.48);
+            double gy = shape == "triangle" ? n.Y + n.H * 0.62 : cy;
+            List<string> lines = Wrap(label, Math.Max(n.W * 1.7, 130));
             return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, gy - size / 2, size);
         }
 
@@ -183,33 +183,33 @@ public static class Geometry
             if (icon)
             {
                 // Presentation style: icon centred in the circle, label underneath.
-                var size = Math.Min(n.W, n.H) * 0.46;
-                var lines = Wrap(label, Math.Max(n.W * 1.7, 130));
+                double size = Math.Min(n.W, n.H) * 0.46;
+                List<string> lines = Wrap(label, Math.Max(n.W * 1.7, 130));
                 return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, cy - size / 2, size);
             }
-            var inner = Wrap(label, n.W * 0.78);
+            List<string> inner = Wrap(label, n.W * 0.78);
             return new(inner, cx, cy - (inner.Count - 1) * LineHeight / 2 + 4, false, false, 0, 0, 0);
         }
 
         if (icon && (t.Shape == "diamond" || t.Shape == "hexagon"))
         {
             // Narrow-sided shapes: icon above the text.
-            var lines = Wrap(label, n.W * (t.Shape == "diamond" ? 0.55 : 0.7));
-            var block = 22 + lines.Count * LineHeight;
-            var top = cy - block / 2;
+            List<string> lines = Wrap(label, n.W * (t.Shape == "diamond" ? 0.55 : 0.7));
+            double block = 22 + lines.Count * LineHeight;
+            double top = cy - block / 2;
             return new(lines, cx, top + 22 + 12, false, true, cx - 10, top, 20);
         }
 
         if (icon)
         {
             // Icon on the left, text centred in the remaining space.
-            var left = n.X + (t.Shape == "check" ? 18 : t.Shape == "parallelogram" ? 22 : 14);
-            var lines = Wrap(label, n.X + n.W - (left + 26) - 10);
-            var textX = (left + 26 + n.X + n.W - 8) / 2;
+            double left = n.X + (t.Shape == "check" ? 18 : t.Shape == "parallelogram" ? 22 : 14);
+            List<string> lines = Wrap(label, n.X + n.W - (left + 26) - 10);
+            double textX = (left + 26 + n.X + n.W - 8) / 2;
             return new(lines, textX, cy - (lines.Count - 1) * LineHeight / 2 + 4, false, true, left, cy - 10, 20);
         }
 
-        var wrapped = Wrap(label, n.W * (t.Shape == "diamond" ? 0.62 : 0.86));
+        List<string> wrapped = Wrap(label, n.W * (t.Shape == "diamond" ? 0.62 : 0.86));
         return new(wrapped, cx, cy - (wrapped.Count - 1) * LineHeight / 2 + 4, false, false, 0, 0, 0);
     }
 
@@ -221,26 +221,26 @@ public static class Geometry
 
     public static TextBoxLayout Layout(TextBox t)
     {
-        var size = Math.Max(4, t.FontSize);
-        var lh = size * TextLook.LineSpacing;
-        var charW = size * TextLook.CharWidth(t.Font) * (t.Bold ? 1.06 : 1);
-        var lines = Wrap(t.Text, Math.Max(10, t.W - 2 * TextLook.PadX), charW);
-        var block = lines.Count * lh;
-        var top = t.VAlign switch
+        double size = Math.Max(4, t.FontSize);
+        double lh = size * TextLook.LineSpacing;
+        double charW = size * TextLook.CharWidth(t.Font) * (t.Bold ? 1.06 : 1);
+        List<string> lines = Wrap(t.Text, Math.Max(10, t.W - 2 * TextLook.PadX), charW);
+        double block = lines.Count * lh;
+        double top = t.VAlign switch
         {
             TextLook.Middle => t.Y + (t.H - block) / 2,
             TextLook.Bottom => t.Y + t.H - TextLook.PadY - block,
             _ => t.Y + TextLook.PadY,
         };
-        var (x, anchor) = t.Align switch
+        (double x, string? anchor) = t.Align switch
         {
             TextLook.Center => (t.X + t.W / 2, "middle"),
             TextLook.Right => (t.X + t.W - TextLook.PadX, "end"),
             _ => (t.X + TextLook.PadX, "start"),
         };
         // Baseline sits roughly 0.8 em below the top of the line box.
-        var first = top + (lh - size) / 2 + size * 0.8;
-        var placed = lines.Select((l, i) => new TextLine(l, x, first + i * lh)).ToList();
+        double first = top + (lh - size) / 2 + size * 0.8;
+        List<TextLine> placed = lines.Select((l, i) => new TextLine(l, x, first + i * lh)).ToList();
         return new TextBoxLayout(placed, anchor, lh, block + 2 * TextLook.PadY);
     }
 
@@ -254,14 +254,14 @@ public static class Geometry
     /// <summary>Bounding box of everything on the canvas (null when empty).</summary>
     public static (double X, double Y, double W, double H)? ContentBounds(Diagram d)
     {
-        var boxes = d.Nodes.Cast<IBox>().Concat(d.TextBoxes).Concat(d.Groups).ToList();
+        List<IBox> boxes = d.Nodes.Cast<IBox>().Concat(d.TextBoxes).Concat(d.Groups).ToList();
         if (boxes.Count == 0) return null;
         double minX = boxes.Min(b => b.X), minY = boxes.Min(b => b.Y);
         double maxX = boxes.Max(b => b.X + b.W), maxY = boxes.Max(b => b.Y + b.H + ExtraBelow(b));
         // Labels drawn under circles and outcomes can be wider than the shape.
-        foreach (var n in d.Nodes.Where(n => ExtraBelow(n) > 0))
+        foreach (Node n in d.Nodes.Where(n => ExtraBelow(n) > 0))
         {
-            var half = Math.Max(n.W * 1.7, 130) / 2;
+            double half = Math.Max(n.W * 1.7, 130) / 2;
             minX = Math.Min(minX, n.X + n.W / 2 - half);
             maxX = Math.Max(maxX, n.X + n.W / 2 + half);
         }
@@ -271,7 +271,7 @@ public static class Geometry
     /// <summary>Bounds that wrap a set of boxes plus padding (with room for a group's title bar).</summary>
     public static (double X, double Y, double W, double H) GroupBounds(IEnumerable<IBox> boxes)
     {
-        var list = boxes.ToList();
+        List<IBox> list = boxes.ToList();
         double minX = list.Min(b => b.X), minY = list.Min(b => b.Y);
         double maxX = list.Max(b => b.X + b.W), maxY = list.Max(b => b.Y + b.H + ExtraBelow(b));
         return (minX - Group.Pad, minY - Group.Pad - Group.Header, maxX - minX + Group.Pad * 2, maxY - minY + Group.Pad * 2 + Group.Header);
@@ -286,16 +286,16 @@ public static class Geometry
     /// <summary>Full connector geometry: path plus where (and at what angle) its label sits.</summary>
     public static EdgeGeom EdgeGeometry(IBox a, IBox b, string style, string labelOrient = LabelOrients.Horizontal, double labelPos = 0.5)
     {
-        var pts = Route(a, b, style);
-        var (x, y, seg) = PointAt(pts, labelPos);
+        List<(double X, double Y)> pts = Route(a, b, style);
+        (double x, double y, double seg) = PointAt(pts, labelPos);
         return new EdgeGeom(PathD(pts), x, y, LabelAngle(labelOrient, seg));
     }
 
     /// <summary>Connector geometry for a stored edge, honouring pinned sides and a dragged bend.</summary>
     public static EdgeGeom EdgeGeometry(IBox a, IBox b, Edge e)
     {
-        var r = Route(a, b, e);
-        var (x, y, seg) = PointAt(r.Points, e.LabelPos);
+        EdgeRoute r = Route(a, b, e);
+        (double x, double y, double seg) = PointAt(r.Points, e.LabelPos);
         return new EdgeGeom(PathD(r.Points), x, y, LabelAngle(e.LabelOrient, seg));
     }
 
@@ -321,7 +321,7 @@ public static class Geometry
         if (style == EdgeStyles.Straight) return StraightRoute(a, b, fromSide, toSide);
         if (fromSide is null && toSide is null)
         {
-            var (s1, s2) = AutoSides(a, b);
+            (string s1, string s2) = AutoSides(a, b);
             return ElbowRoute(a, b, s1, s2, bend, legacy: true);
         }
         if (fromSide is not null && toSide is not null) return ElbowRoute(a, b, fromSide, toSide, bend, legacy: false);
@@ -329,10 +329,10 @@ public static class Geometry
         // One end pinned: pick the other end's side that gives the shortest, simplest route.
         EdgeRoute? best = null;
         double bestScore = double.MaxValue;
-        foreach (var s in Sides.All)
+        foreach (string s in Sides.All)
         {
-            var r = ElbowRoute(a, b, fromSide ?? s, toSide ?? s, bend, legacy: false);
-            var score = Length(r.Points) + 25 * r.Points.Count;
+            EdgeRoute r = ElbowRoute(a, b, fromSide ?? s, toSide ?? s, bend, legacy: false);
+            double score = Length(r.Points) + 25 * r.Points.Count;
             if (score < bestScore) { bestScore = score; best = r; }
         }
         return best!;
@@ -353,10 +353,10 @@ public static class Geometry
         (double X, double Y) ca = (a.X + a.W / 2, a.Y + a.H / 2), cb = (b.X + b.W / 2, b.Y + b.H / 2);
         (double X, double Y)? p1 = fromSide is null ? null : SidePoint(a, fromSide);
         (double X, double Y)? p2 = toSide is null ? null : SidePoint(b, toSide);
-        var aimA = p2 ?? cb;
-        var aimB = p1 ?? ca;
-        var start = p1 ?? Boundary(a, aimA.X, aimA.Y);
-        var end = p2 ?? Boundary(b, aimB.X, aimB.Y);
+        (double X, double Y) aimA = p2 ?? cb;
+        (double X, double Y) aimB = p1 ?? ca;
+        (double X, double Y) start = p1 ?? Boundary(a, aimA.X, aimA.Y);
+        (double X, double Y) end = p2 ?? Boundary(b, aimB.X, aimB.Y);
         return new EdgeRoute(new() { start, end }, -1, fromSide, toSide);
     }
 
@@ -381,10 +381,10 @@ public static class Geometry
     /// </summary>
     static EdgeRoute ElbowRoute(IBox a, IBox b, string s1, string s2, double bend, bool legacy)
     {
-        var p1 = SidePoint(a, s1);
-        var p2 = SidePoint(b, s2);
-        var d1 = Sides.Dir(s1);
-        var d2 = Sides.Dir(s2);
+        (double X, double Y) p1 = SidePoint(a, s1);
+        (double X, double Y) p2 = SidePoint(b, s2);
+        (double X, double Y) d1 = Sides.Dir(s1);
+        (double X, double Y) d2 = Sides.Dir(s2);
         List<(double X, double Y)> pts;
         int idx;
 
@@ -407,8 +407,8 @@ public static class Geometry
             if (gap > 0 || legacy)
             {
                 // Z: out, across at half way, in.
-                var m1 = Add(p1, d1, gap / 2);
-                var m2 = Add(p2, d2, gap / 2);
+                (double X, double Y) m1 = Add(p1, d1, gap / 2);
+                (double X, double Y) m2 = Add(p2, d2, gap / 2);
                 pts = new() { p1, m1, m2, p2 };
                 idx = 1;
             }
@@ -416,13 +416,13 @@ public static class Geometry
             {
                 // Target is behind the start side: step out, cross over between (or around) the shapes, step back in.
                 (double X, double Y) n = (Math.Abs(d1.Y), Math.Abs(d1.X)); // perpendicular axis
-                var (aMin, aMax) = Span(a, n);
-                var (bMin, bMax) = Span(b, n);
+                (double aMin, double aMax) = Span(a, n);
+                (double bMin, double bMax) = Span(b, n);
                 double lane = aMax < bMin ? (aMax + bMin) / 2
                             : bMax < aMin ? (bMax + aMin) / 2
                             : Math.Max(aMax, bMax) + Stub;
-                var q1 = Add(p1, d1, Stub);
-                var q2 = Add(p2, d2, Stub);
+                (double X, double Y) q1 = Add(p1, d1, Stub);
+                (double X, double Y) q2 = Add(p2, d2, Stub);
                 double o1 = lane - Dot(q1, n), o2 = lane - Dot(q2, n);
                 pts = new() { p1, q1, Add(q1, n, o1), Add(q2, n, o2), q2, p2 };
                 idx = 2;
@@ -432,8 +432,8 @@ public static class Geometry
         {
             // U: out past whichever end sticks out further, across, back in.
             double level = Math.Max(Dot(p1, d1), Dot(p2, d1)) + Stub;
-            var q1 = Add(p1, d1, level - Dot(p1, d1));
-            var q2 = Add(p2, d2, level - Dot(p2, d2));
+            (double X, double Y) q1 = Add(p1, d1, level - Dot(p1, d1));
+            (double X, double Y) q2 = Add(p2, d2, level - Dot(p2, d2));
             pts = new() { p1, q1, q2, p2 };
             idx = 1;
         }
@@ -452,9 +452,9 @@ public static class Geometry
                 // Step out of the start side (half way to the target's box when there's room), run across, step into the end side.
                 double ahead = Span(b, d1).Min - Dot(p1, d1); // gap to the target box's near face
                 double out1 = ahead > 2 * Stub ? ahead / 2 : Stub;
-                var q1 = Add(p1, d1, out1);
-                var q2 = Add(p2, d2, Stub);
-                var x = Add(q1, d2, Dot(Sub(q2, q1), d2));
+                (double X, double Y) q1 = Add(p1, d1, out1);
+                (double X, double Y) q2 = Add(p2, d2, Stub);
+                (double X, double Y) x = Add(q1, d2, Dot(Sub(q2, q1), d2));
                 pts = new() { p1, q1, x, q2, p2 };
                 idx = 1;
             }
@@ -489,21 +489,21 @@ public static class Geometry
         double cx = box.X + box.W / 2, cy = box.Y + box.H / 2;
         double dx = tx - cx, dy = ty - cy;
         if (Math.Abs(dx) < 1e-6 && Math.Abs(dy) < 1e-6) return (cx, cy);
-        var shape = box is Node n ? ShapeOf(n) : "rect";
+        string shape = box is Node n ? ShapeOf(n) : "rect";
 
         if (shape is "circle" or "seal")
         {
-            var r = Math.Min(box.W, box.H) / 2;
-            var len = Math.Sqrt(dx * dx + dy * dy);
+            double r = Math.Min(box.W, box.H) / 2;
+            double len = Math.Sqrt(dx * dx + dy * dy);
             return (cx + dx / len * r, cy + dy / len * r);
         }
 
-        var poly = Outline(box, shape);
+        List<(double X, double Y)> poly = Outline(box, shape);
         double best = double.MaxValue;
         for (int i = 0; i < poly.Count; i++)
         {
-            var (p1x, p1y) = poly[i];
-            var (p2x, p2y) = poly[(i + 1) % poly.Count];
+            (double p1x, double p1y) = poly[i];
+            (double p2x, double p2y) = poly[(i + 1) % poly.Count];
             // Solve centre + t*(dx,dy) = p1 + u*(p2-p1)
             double ex = p2x - p1x, ey = p2y - p1y;
             double den = dx * ey - dy * ex;
@@ -523,7 +523,7 @@ public static class Geometry
             case "octagon":
             {
                 // Regular octagon (stop sign) centred in the box, flat sides touching it.
-                var r = Math.Min(w, h) / 2; var k = r * Math.Tan(Math.PI / 8);
+                double r = Math.Min(w, h) / 2; double k = r * Math.Tan(Math.PI / 8);
                 double cx = x + w / 2, cy = y + h / 2;
                 return new() { (cx - k, cy - r), (cx + k, cy - r), (cx + r, cy - k), (cx + r, cy + k),
                                (cx + k, cy + r), (cx - k, cy + r), (cx - r, cy + k), (cx - r, cy - k) };
@@ -532,19 +532,19 @@ public static class Geometry
                 return new() { (x + w / 2, y), (x + w, y + h), (x, y + h) };
             case "square-rounded":
             {
-                var s = Math.Min(w, h);
+                double s = Math.Min(w, h);
                 return new() { (x + (w - s) / 2, y + (h - s) / 2), (x + (w + s) / 2, y + (h - s) / 2), (x + (w + s) / 2, y + (h + s) / 2), (x + (w - s) / 2, y + (h + s) / 2) };
             }
             case "diamond":
                 return new() { (x + w / 2, y), (x + w, y + h / 2), (x + w / 2, y + h), (x, y + h / 2) };
             case "parallelogram":
             {
-                var k = Math.Min(18, w / 6);
+                double k = Math.Min(18, w / 6);
                 return new() { (x + k, y), (x + w, y), (x + w - k, y + h), (x, y + h) };
             }
             case "hexagon":
             {
-                var k = Math.Min(20, w / 5);
+                double k = Math.Min(20, w / 5);
                 return new() { (x + k, y), (x + w - k, y), (x + w, y + h / 2), (x + w - k, y + h), (x + k, y + h), (x, y + h / 2) };
             }
             default:
@@ -559,18 +559,18 @@ public static class Geometry
     public static (double X, double Y, double Angle) PointAt(List<(double X, double Y)> pts, double t)
     {
         t = Math.Clamp(t, 0, 1);
-        var lengths = new List<double>();
+        List<double> lengths = new List<double>();
         for (int i = 0; i < pts.Count - 1; i++)
             lengths.Add(Math.Sqrt(Math.Pow(pts[i + 1].X - pts[i].X, 2) + Math.Pow(pts[i + 1].Y - pts[i].Y, 2)));
-        var total = lengths.Sum();
+        double total = lengths.Sum();
         if (total < 1e-6) return (pts[0].X, pts[0].Y, 0);
-        var target = total * t;
+        double target = total * t;
         for (int i = 0; i < lengths.Count; i++)
         {
             if (target <= lengths[i] || i == lengths.Count - 1)
             {
-                var f = lengths[i] < 1e-6 ? 0 : Math.Min(1, target / lengths[i]);
-                var (ax, ay) = pts[i]; var (bx, by) = pts[i + 1];
+                double f = lengths[i] < 1e-6 ? 0 : Math.Min(1, target / lengths[i]);
+                (double ax, double ay) = pts[i]; (double bx, double by) = pts[i + 1];
                 return (ax + (bx - ax) * f, ay + (by - ay) * f, Math.Atan2(by - ay, bx - ax) * 180 / Math.PI);
             }
             target -= lengths[i];
@@ -598,12 +598,12 @@ public static class Geometry
     /// <summary>Very simple word wrap for SVG text, based on an average character width.</summary>
     public static List<string> Wrap(string text, double width, double charWidth = 7.2)
     {
-        var maxChars = Math.Max(4, (int)(width / charWidth));
-        var lines = new List<string>();
-        foreach (var para in (text ?? "").Replace("\r", "").Split('\n'))
+        int maxChars = Math.Max(4, (int)(width / charWidth));
+        List<string> lines = new List<string>();
+        foreach (string para in (text ?? "").Replace("\r", "").Split('\n'))
         {
-            var sb = new StringBuilder();
-            foreach (var word in para.Split(' '))
+            StringBuilder sb = new StringBuilder();
+            foreach (string word in para.Split(' '))
             {
                 if (sb.Length > 0 && sb.Length + 1 + word.Length > maxChars)
                 {

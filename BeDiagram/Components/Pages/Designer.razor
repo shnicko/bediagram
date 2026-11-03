@@ -1,6 +1,4 @@
 @page "/"
-@using BeDiagram.Models
-@using BeDiagram.Services
 @implements IAsyncDisposable
 
 <PageTitle>@(D.Name)@(Dirty ? " •" : "") — BeDiagram</PageTitle>
@@ -19,19 +17,18 @@
         {
             <div class="group trail" title="You opened this diagram from a link — click a name to go back up">
                 <button class="back" @onclick="GoBack" title="Back to @trail[^1]">← Back</button>
-                @for (int i = 0; i < trail.Count; i++)
+                @foreach (Crumb c in Crumbs)
                 {
-                    var level = i;
-                    <button class="link crumb" @onclick="() => GoUpTo(level)">@trail[level]</button><span class="crumb-sep">›</span>
+                    <button class="link crumb" @onclick="() => GoUpTo(c.Level)">@c.Name</button><span class="crumb-sep">›</span>
                 }
                 <span class="crumb-here">@D.Name</span>
             </div>
         }
         <div class="group menu-host">
-            <button @onclick="() => exportMenu = !exportMenu" title="Export next to the saved diagram">Export ▾</button>
+            <button @onclick="ToggleExportMenu" title="Export next to the saved diagram">Export ▾</button>
             @if (exportMenu)
             {
-                <div class="menu" @onclick="() => exportMenu = false">
+                <div class="menu" @onclick="CloseExportMenu">
                     <button @onclick="ExportSvg">SVG image@(D.Page.Enabled ? $" ({D.Page.Mm.W:0.#} × {D.Page.Mm.H:0.#} mm)" : "")</button>
                     <button @onclick="() => ExportPdf(false)" title="@PdfTip(false)">@PdfLabel()</button>
                     <button @onclick="() => ExportPdf(true)" title="@PdfTip(true)">PDF — current view</button>
@@ -45,9 +42,9 @@
         </div>
         <div class="group" title="Canvas size: open canvas or a fixed paper size">
             <span class="muted-label">Page</span>
-            <select class="page-select" value="@D.Page.Size" @onchange="e => SetPageSize(e.Value?.ToString())">
+            <select class="page-select" value="@D.Page.Size" @onchange="SetPageSize">
                 <option value="@PageSetup.None">Open canvas</option>
-                @foreach (var ps in PageSetup.Sizes)
+                @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
                 {
                     <option value="@ps.Key">@ps.Name</option>
                 }
@@ -56,8 +53,8 @@
             @if (D.Page.Enabled)
             {
                 <div class="seg">
-                    <button class="@(!PageIsLandscape ? "on" : "")" title="Portrait" @onclick="@(() => SetOrientation("portrait"))">@IconSvg("rectangle-vertical", 16)</button>
-                    <button class="@(PageIsLandscape ? "on" : "")" title="Landscape" @onclick="@(() => SetOrientation("landscape"))">@IconSvg("rectangle-horizontal", 16)</button>
+                    <button class="@(!PageIsLandscape ? "on" : "")" title="Portrait" @onclick="SetPortrait">@IconSvg("rectangle-vertical", 16)</button>
+                    <button class="@(PageIsLandscape ? "on" : "")" title="Landscape" @onclick="SetLandscape">@IconSvg("rectangle-horizontal", 16)</button>
                 </div>
             }
         </div>
@@ -90,37 +87,33 @@
     @* ───────────── Palette ───────────── *@
     <aside class="palette">
         <div class="section">Shapes</div>
-        @{ int idx = 0; }
-        @foreach (var t in NodeTypes.All.Where(t => t.Key != NodeTypes.Outcome))
+        @foreach (PaletteShape p in PaletteShapes)
         {
-            var key = t.Key;
-            var num = ++idx;
-            <div class="item" draggable="true" data-palette="@key"
-                 @ondragstart="() => paletteDrag = key"
-                 @onclick="() => QuickAdd(key)"
-                 title="Drag onto the canvas, click to add, or press @num">
+            <div class="item" draggable="true" data-palette="@p.Type.Key"
+                 @ondragstart="() => StartPaletteDrag(p.Type.Key)"
+                 @onclick="() => QuickAdd(p.Type.Key)"
+                 title="Drag onto the canvas, click to add, or press @p.Number">
                 <svg width="52" height="32" viewBox="-2 -2 52 32">
-                    <path d="@Geometry.ShapePath(new Node { Type = key, W = 48, H = 28 })" fill="@t.Fill" stroke="@t.Stroke" stroke-width="1.5" />
+                    <path d="@PaletteShapePath(p.Type.Key)" fill="@p.Type.Fill" stroke="@p.Type.Stroke" stroke-width="1.5" />
                 </svg>
-                <span>@t.Display</span>
-                <kbd>@num</kbd>
+                <span>@p.Type.Display</span>
+                <kbd>@p.Number</kbd>
             </div>
         }
         <div class="section">Outcomes</div>
-        @foreach (var o in Outcomes.All)
+        @foreach (OutcomeInfo o in Outcomes.All)
         {
-            var key = $"{NodeTypes.Outcome}:{o.Key}";
-            <div class="item" draggable="true" data-palette="@key"
-                 @ondragstart="() => paletteDrag = key"
-                 @onclick="() => QuickAdd(key)"
-                 title="@($"{o.Hint}. Drag onto the canvas or click to add.")">
+            <div class="item" draggable="true" data-palette="@OutcomePaletteKey(o)"
+                 @ondragstart="() => StartPaletteDrag(OutcomePaletteKey(o))"
+                 @onclick="() => QuickAdd(OutcomePaletteKey(o))"
+                 title="@OutcomePaletteTip(o)">
                 @OutcomeSwatch(o.Key, 30)
                 <span>@o.Display</span>
             </div>
         }
         <div class="section">Text &amp; groups</div>
         <div class="item" draggable="true" data-palette="text"
-             @ondragstart="@(() => paletteDrag = "text")"
+             @ondragstart="StartTextDrag"
              @onclick="AddTextQuick" title="Drag onto the canvas, click to add, or press T">
             <svg width="52" height="32" viewBox="-2 -2 52 32">
                 <rect x="4" y="2" width="40" height="24" rx="3" fill="#ffffff" stroke="#9aa3ad" stroke-width="1.2" stroke-dasharray="3 2" />
@@ -130,7 +123,7 @@
             <kbd>T</kbd>
         </div>
         <div class="item" draggable="true" data-palette="comment"
-             @ondragstart="@(() => paletteDrag = "comment")"
+             @ondragstart="StartCommentDrag"
              @onclick="AddCommentQuick" title="Drag onto the canvas, click to add, or press C">
             <svg width="52" height="32" viewBox="-2 -2 52 32">
                 <rect x="4" y="0" width="40" height="28" rx="3" fill="#fff7c2" stroke="#d9c255" stroke-width="1.5" />
@@ -140,7 +133,7 @@
             <kbd>C</kbd>
         </div>
         <div class="item" draggable="true" data-palette="group"
-             @ondragstart="@(() => paletteDrag = "group")"
+             @ondragstart="StartGroupDrag"
              @onclick="AddGroupQuick" title="Drag onto the canvas, or select items and press Ctrl+G">
             <svg width="52" height="32" viewBox="-2 -2 52 32">
                 <rect x="1" y="1" width="46" height="26" rx="4" fill="#eef3fb" stroke="#3b6fb6" stroke-width="1.5" />
@@ -158,15 +151,14 @@
 
     @* ───────────── Canvas ───────────── *@
     <main class="canvas" @ref="canvasEl"
-          @ondragover:preventDefault="true" @ondragover="() => { }"
+          @ondragover:preventDefault="true" @ondragover="DragOver"
           @ondrop="OnDrop">
         <svg class="surface @(mode == Mode.Pan ? "panning" : "") @(mode == Mode.Connect ? "connecting" : "")"
              @onpointerdown="BgDown" @onpointermove="PointerMove"
              @onpointerup="PointerUp" @onpointerleave="PointerUp"
              @ondblclick="BgDoubleClick">
             <defs>
-                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"
-                         patternTransform="@($"translate({F(PanX)},{F(PanY)}) scale({F(Zoom)})")">
+                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="@GridTransform">
                     <circle cx="1" cy="1" r="1" fill="#cfd5dc" />
                 </pattern>
                 <pattern id="grid-world" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -181,310 +173,259 @@
                 <marker id="arrow-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
                     <path d="M0,0 L10,5 L0,10 z" fill="#2563eb" />
                 </marker>
-                @((MarkupString)string.Concat(D.Edges.Append(D.DefaultLook)
-                    .Select(x => (LineLook.Colour(x.Color), x.Weight)).Distinct()
-                    .Select(m => LineLook.MarkerDef(m.Item1, m.Weight))))
+                @ArrowMarkerDefs
             </defs>
             <rect class="grid" width="100%" height="100%" fill="@(D.Page.Enabled ? "#e3e7ec" : "url(#grid)")" />
 
-            <g transform="@($"translate({F(PanX)},{F(PanY)}) scale({F(Zoom)})")">
+            <g transform="@GridTransform">
                 @* Page sheet (fixed paper size) *@
                 @if (D.Page.Enabled)
                 {
-                    var pw = D.Page.WidthPx; var ph = D.Page.HeightPx; var pm = D.Page.MarginPx;
                     <g class="page">
-                        <rect x="0" y="0" width="@F(pw)" height="@F(ph)" fill="#ffffff" filter="url(#page-shadow)" />
-                        <rect x="0" y="0" width="@F(pw)" height="@F(ph)" fill="url(#grid-world)" />
-                        @if (pm > 0)
+                        <rect x="0" y="0" width="@F(D.Page.WidthPx)" height="@F(D.Page.HeightPx)" fill="#ffffff" filter="url(#page-shadow)" />
+                        <rect x="0" y="0" width="@F(D.Page.WidthPx)" height="@F(D.Page.HeightPx)" fill="url(#grid-world)" />
+                        @if (D.Page.MarginPx > 0)
                         {
-                            <rect class="page-margin" x="@F(pm)" y="@F(pm)" width="@F(Math.Max(0, pw - 2 * pm))" height="@F(Math.Max(0, ph - 2 * pm))" />
+                            <rect class="page-margin" x="@F(D.Page.MarginPx)" y="@F(D.Page.MarginPx)" width="@F(PrintableW)" height="@F(PrintableH)" />
                         }
-                        <g><text class="page-caption" x="0" y="-8" style="@($"font-size:{F(12 / Zoom)}px")">@D.Page.Describe()</text></g>
+                        <g><text class="page-caption" x="0" y="-8" style="@PageCaptionStyle">@D.Page.Describe()</text></g>
                     </g>
                 }
 
                 @* Groups are the bottom layer *@
-                @foreach (var g in D.Groups)
+                @foreach (GroupView v in GroupViews())
                 {
-                    var gid = g.Id;
-                    var sw = Palette.Get(g.Color);
-                    var sel = Sel.Contains(gid);
-                    <g class="group @(sel ? "selected" : "")">
-                        <rect class="group-body" x="@F(g.X)" y="@F(g.Y)" width="@F(g.W)" height="@F(g.H)" rx="10"
-                              fill="@sw.Light" fill-opacity="0.6" stroke="@sw.Stroke" stroke-width="@(sel ? 2.5 : 1.5)"
-                              stroke-dasharray="@(sel ? "6 3" : null)"
-                              @onpointerdown="e => GroupBodyDown(e, gid)" @onpointerdown:stopPropagation="true" />
-                        <path class="group-header" d="@($"M{F(g.X)},{F(g.Y + Group.Header)} V{F(g.Y + 10)} Q{F(g.X)},{F(g.Y)} {F(g.X + 10)},{F(g.Y)} H{F(g.X + g.W - 10)} Q{F(g.X + g.W)},{F(g.Y)} {F(g.X + g.W)},{F(g.Y + 10)} V{F(g.Y + Group.Header)} Z")"
-                              fill="@sw.Stroke" fill-opacity="0.14"
-                              @onpointerdown="e => ItemDown(e, gid)" @onpointerdown:stopPropagation="true"
-                              @ondblclick="() => BeginEdit(gid)" @ondblclick:stopPropagation="true" />
-                        @if (EditId == gid)
+                    <g class="group @(v.Selected ? "selected" : "")">
+                        <rect class="group-body" x="@F(v.G.X)" y="@F(v.G.Y)" width="@F(v.G.W)" height="@F(v.G.H)" rx="10"
+                              fill="@v.Swatch.Light" fill-opacity="0.6" stroke="@v.Swatch.Stroke" stroke-width="@(v.Selected ? 2.5 : 1.5)"
+                              stroke-dasharray="@(v.Selected ? "6 3" : null)"
+                              @onpointerdown="e => GroupBodyDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
+                        <path class="group-header" d="@v.HeaderPath"
+                              fill="@v.Swatch.Stroke" fill-opacity="0.14"
+                              @onpointerdown="e => ItemDown(e, v.G.Id)" @onpointerdown:stopPropagation="true"
+                              @ondblclick="() => BeginEdit(v.G.Id)" @ondblclick:stopPropagation="true" />
+                        @if (EditId == v.G.Id)
                         {
-                            <foreignObject x="@F(g.X + 8)" y="@F(g.Y + 4)" width="@F(Math.Max(120, g.W - 16))" height="24">
-                                <input id="edit-box" class="inline-edit group-input" @bind="g.Title" @bind:event="oninput" @bind:after="MarkDirty"
+                            <foreignObject x="@F(v.G.X + 8)" y="@F(v.G.Y + 4)" width="@F(Math.Max(120, v.G.W - 16))" height="24">
+                                <input id="edit-box" class="inline-edit group-input" @bind="v.G.Title" @bind:event="oninput" @bind:after="MarkDirty"
                                        @onblur="EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true" />
                             </foreignObject>
                         }
                         else
                         {
-                            <g><text class="group-title" x="@F(g.X + 14)" y="@F(g.Y + 21)" fill="@sw.Stroke">@g.Title</text></g>
+                            <g><text class="group-title" x="@F(v.G.X + 14)" y="@F(v.G.Y + 21)" fill="@v.Swatch.Stroke">@v.G.Title</text></g>
                         }
-                        @foreach (var (px, py) in Ports(g))
+                        @foreach ((double px, double py) in Ports(v.G))
                         {
                             <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
-                                    @onpointerdown="e => PortDown(e, gid)" @onpointerdown:stopPropagation="true" />
+                                    @onpointerdown="e => PortDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
                         }
-                        @if (sel && Sel.Count == 1)
+                        @if (v.Selected && Sel.Count == 1)
                         {
-                            <rect class="resize" x="@F(g.X + g.W - 6)" y="@F(g.Y + g.H - 6)" width="12" height="12"
-                                  @onpointerdown="e => ResizeDown(e, gid)" @onpointerdown:stopPropagation="true" />
+                            <rect class="resize" x="@F(v.G.X + v.G.W - 6)" y="@F(v.G.Y + v.G.H - 6)" width="12" height="12"
+                                  @onpointerdown="e => ResizeDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
                         }
                     </g>
                 }
 
                 @* Text boxes sit underneath connectors and shapes *@
-                @foreach (var t in D.TextBoxes)
+                @foreach (TextBoxView v in TextBoxViews())
                 {
-                    var tid = t.Id;
-                    var ts = TextStyle.For(t);
-                    var sel = Sel.Contains(tid);
-                    var tlay = Geometry.Layout(t);
-                    var outline = Geometry.TextBoxPath(t, ts.Radius);
-                    <g class="textbox @(t.IsComment ? "comment" : "") @(sel ? "selected" : "")"
-                       @onpointerdown="e => ItemDown(e, tid)" @onpointerdown:stopPropagation="true"
-                       @ondblclick="() => BeginEdit(tid)" @ondblclick:stopPropagation="true">
+                    <g class="textbox @(v.T.IsComment ? "comment" : "") @(v.Selected ? "selected" : "")"
+                       @onpointerdown="e => ItemDown(e, v.T.Id)" @onpointerdown:stopPropagation="true"
+                       @ondblclick="() => BeginEdit(v.T.Id)" @ondblclick:stopPropagation="true">
                         @* Always-hittable body; only painted when the box has a fill *@
-                        <path d="@outline" fill="@(ts.Fill ?? "transparent")" stroke="none" />
-                        @if (ts.Stroke is null)
+                        <path d="@v.Outline" fill="@(v.Style.Fill ?? "transparent")" stroke="none" />
+                        @if (v.Style.Stroke is null)
                         {
-                            <path d="@outline" class="text-guide @(string.IsNullOrWhiteSpace(t.Text) ? "empty" : "")" />
+                            <path d="@v.Outline" class="text-guide @(string.IsNullOrWhiteSpace(v.T.Text) ? "empty" : "")" />
                         }
                         else
                         {
-                            <path d="@outline" fill="none" stroke="@ts.Stroke" stroke-width="@F(ts.StrokeWidth)"
-                                  stroke-dasharray="@ts.Dash" stroke-linecap="@ts.Cap" />
+                            <path d="@v.Outline" fill="none" stroke="@v.Style.Stroke" stroke-width="@F(v.Style.StrokeWidth)"
+                                  stroke-dasharray="@v.Style.Dash" stroke-linecap="@v.Style.Cap" />
                         }
-                        @if (t.IsComment)
+                        @if (v.T.IsComment)
                         {
-                            <path d="@Geometry.FoldPath(t)" fill="none" stroke="@ts.FoldColour" />
+                            <path d="@Geometry.FoldPath(v.T)" fill="none" stroke="@v.Style.FoldColour" />
                         }
-                        @if (sel)
+                        @if (v.Selected)
                         {
-                            <rect x="@F(t.X - 4)" y="@F(t.Y - 4)" width="@F(t.W + 8)" height="@F(t.H + 8)" rx="6" class="sel-outline" />
+                            <rect x="@F(v.T.X - 4)" y="@F(v.T.Y - 4)" width="@F(v.T.W + 8)" height="@F(v.T.H + 8)" rx="6" class="sel-outline" />
                         }
-                        @if (EditId == tid)
+                        @if (EditId == v.T.Id)
                         {
-                            <foreignObject x="@F(t.X)" y="@F(t.Y)" width="@F(t.W)" height="@F(Math.Max(t.H, tlay.ContentHeight))">
-                                <textarea id="edit-box" class="inline-edit multiline" style="@TextEditStyle(t, ts)"
-                                          @bind="t.Text" @bind:event="oninput" @bind:after="MarkDirty"
+                            <foreignObject x="@F(v.T.X)" y="@F(v.T.Y)" width="@F(v.T.W)" height="@F(Math.Max(v.T.H, v.Layout.ContentHeight))">
+                                <textarea id="edit-box" class="inline-edit multiline" style="@TextEditStyle(v.T, v.Style)"
+                                          @bind="v.T.Text" @bind:event="oninput" @bind:after="MarkDirty"
                                           @onblur="EndEdit" @onpointerdown:stopPropagation="true"></textarea>
                             </foreignObject>
                         }
                         else
                         {
                             <g>
-                                <text class="text-body" font-family="@ts.Family" font-size="@F(t.FontSize)" font-weight="@(t.Bold ? "600" : null)"
-                                      fill="@ts.TextColour" text-anchor="@tlay.Anchor">
-                                    @foreach (var line in tlay.Lines)
+                                <text class="text-body" font-family="@v.Style.Family" font-size="@F(v.T.FontSize)" font-weight="@(v.T.Bold ? "600" : null)"
+                                      fill="@v.Style.TextColour" text-anchor="@v.Layout.Anchor">
+                                    @foreach (Geometry.TextLine line in v.Layout.Lines)
                                     {
                                         <tspan x="@F(line.X)" y="@F(line.Y)">@line.Text</tspan>
                                     }
                                 </text>
                             </g>
                         }
-                        @foreach (var (px, py) in Ports(t))
+                        @foreach ((double px, double py) in Ports(v.T))
                         {
                             <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
-                                    @onpointerdown="e => PortDown(e, tid)" @onpointerdown:stopPropagation="true" />
+                                    @onpointerdown="e => PortDown(e, v.T.Id)" @onpointerdown:stopPropagation="true" />
                         }
-                        @if (sel && Sel.Count == 1)
+                        @if (v.Selected && Sel.Count == 1)
                         {
-                            <rect class="resize" x="@F(t.X + t.W - 6)" y="@F(t.Y + t.H - 6)" width="12" height="12"
-                                  @onpointerdown="e => ResizeDown(e, tid)" @onpointerdown:stopPropagation="true" />
+                            <rect class="resize" x="@F(v.T.X + v.T.W - 6)" y="@F(v.T.Y + v.T.H - 6)" width="12" height="12"
+                                  @onpointerdown="e => ResizeDown(e, v.T.Id)" @onpointerdown:stopPropagation="true" />
                         }
                     </g>
                 }
 
                 @* Connectors *@
-                @foreach (var e in D.Edges)
+                @foreach (EdgeView v in EdgeViews())
                 {
-                    var a = FindBox(e.From);
-                    var b = FindBox(e.To);
-                    if (a is null || b is null) continue;
-                    var eid = e.Id;
-                    var sel = SelEdge == eid;
-                    var geo = Geometry.EdgeGeometry(a, b, e);
-                    var lw = LineLook.Width(e.Weight);
-                    var lc = LineLook.Colour(e.Color);
-                    var marker = $"url(#{LineLook.MarkerId(lc, e.Weight)})";
-                    <g class="edge @(sel ? "selected" : "")"
-                       @onpointerdown="ev => EdgeDown(ev, eid)" @onpointerdown:stopPropagation="true"
-                       @ondblclick="() => BeginEdit(eid)" @ondblclick:stopPropagation="true">
-                        <path d="@geo.D" class="edge-hit" />
-                        @if (sel)
+                    <g class="edge @(v.Selected ? "selected" : "")"
+                       @onpointerdown="ev => EdgeDown(ev, v.E.Id)" @onpointerdown:stopPropagation="true"
+                       @ondblclick="() => BeginEdit(v.E.Id)" @ondblclick:stopPropagation="true">
+                        <path d="@v.Geo.D" class="edge-hit" />
+                        @if (v.Selected)
                         {
-                            <path d="@geo.D" class="edge-halo" stroke-width="@F(lw + 7)" />
+                            <path d="@v.Geo.D" class="edge-halo" stroke-width="@F(v.Width + 7)" />
                         }
-                        <path d="@geo.D" class="edge-line" stroke="@lc" stroke-width="@F(lw)"
-                              stroke-dasharray="@LineLook.Dash(e.Pattern, lw)" stroke-linecap="@LineLook.Cap(e.Pattern)"
-                              marker-end="@(e.Arrows == LineLook.ArrowNone ? null : marker)"
-                              marker-start="@(e.Arrows == LineLook.ArrowBoth ? marker : null)" />
+                        <path d="@v.Geo.D" class="edge-line" stroke="@v.Colour" stroke-width="@F(v.Width)"
+                              stroke-dasharray="@LineLook.Dash(v.E.Pattern, v.Width)" stroke-linecap="@LineLook.Cap(v.E.Pattern)"
+                              marker-end="@(v.E.Arrows == LineLook.ArrowNone ? null : v.Marker)"
+                              marker-start="@(v.E.Arrows == LineLook.ArrowBoth ? v.Marker : null)" />
                     </g>
                 }
 
                 @* Live connector while dragging from a port *@
-                @if (mode == Mode.Connect && FindBox(connectFrom) is { } from)
+                @if (LiveConnector() is { } live)
                 {
-                    var target = HitTest(curX, curY, connectFrom);
-                    var tempBox = target ?? new TextBox { X = curX, Y = curY, W = 0, H = 0 };
-                    <path d="@Geometry.EdgeGeometry(from, tempBox, D.DefaultConnector).D" class="edge-temp" marker-end="url(#arrow-sel)" />
-                    @if (target is not null)
+                    <path d="@live.Path" class="edge-temp" marker-end="url(#arrow-sel)" />
+                    @if (live.Target is { } target)
                     {
                         <rect x="@F(target.X - 4)" y="@F(target.Y - 4)" width="@F(target.W + 8)" height="@F(target.H + 8)" rx="8" class="drop-target" />
                     }
                 }
 
                 @* Shapes *@
-                @foreach (var n in D.Nodes)
+                @foreach (NodeView v in NodeViews())
                 {
-                    var nid = n.Id;
-                    var t = NodeTypes.Get(n.Type);
-                    var st = NodeStyle.For(n);
-                    var sel = Sel.Contains(nid);
-                    var label = string.IsNullOrWhiteSpace(n.Label) ? t.Display : n.Label;
-                    var lay = Geometry.Layout(n, label);
-                    var below = Geometry.ExtraBelow(n);
-                    <g class="node @(sel ? "selected" : "")"
-                       @onpointerdown="e => ItemDown(e, nid)" @onpointerdown:stopPropagation="true"
-                       @ondblclick="() => BeginEdit(nid)" @ondblclick:stopPropagation="true">
-                        @if (sel)
+                    <g class="node @(v.Selected ? "selected" : "")"
+                       @onpointerdown="e => ItemDown(e, v.N.Id)" @onpointerdown:stopPropagation="true"
+                       @ondblclick="() => BeginEdit(v.N.Id)" @ondblclick:stopPropagation="true">
+                        @if (v.Selected)
                         {
-                            <rect x="@F(n.X - 5)" y="@F(n.Y - 5)" width="@F(n.W + 10)" height="@F(n.H + 10 + below)" rx="8" class="sel-outline" />
+                            <rect x="@F(v.N.X - 5)" y="@F(v.N.Y - 5)" width="@F(v.N.W + 10)" height="@F(v.N.H + 10 + v.Below)" rx="8" class="sel-outline" />
                         }
-                        <path d="@Geometry.ShapePath(n)" fill="@st.Fill" stroke="@st.Stroke" stroke-width="1.6" />
-                        @if (t.Shape == "check")
+                        <path d="@Geometry.ShapePath(v.N)" fill="@v.Style.Fill" stroke="@v.Style.Stroke" stroke-width="1.6" />
+                        @if (v.Type.Shape == "check")
                         {
-                            <rect x="@F(n.X)" y="@F(n.Y)" width="6" height="@F(n.H)" fill="@(n.Filled ? "#ffffff" : st.Stroke)" fill-opacity="@(n.Filled ? "0.5" : "1")" />
+                            <rect x="@F(v.N.X)" y="@F(v.N.Y)" width="6" height="@F(v.N.H)" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" fill-opacity="@(v.N.Filled ? "0.5" : "1")" />
                         }
-                        @if (lay.HasIcon)
+                        @if (v.Layout.HasIcon)
                         {
-                            <g class="node-icon" transform="@($"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})")"
-                               fill="none" stroke="@st.IconColor" stroke-width="@F(Geometry.IconStroke(n))" stroke-linecap="round" stroke-linejoin="round">
-                                @((MarkupString)Icons.Get(Geometry.IconOf(n)))
+                            <g class="node-icon" transform="@NodeIconTransform(v.Layout)"
+                               fill="none" stroke="@v.Style.IconColor" stroke-width="@F(Geometry.IconStroke(v.N))" stroke-linecap="round" stroke-linejoin="round">
+                                @NodeIconMarkup(v.N)
                             </g>
                         }
-                        @if (EditId == nid)
+                        @if (EditId == v.N.Id)
                         {
-                            var (ex, ey, ew, eh) = lay.Below
-                                ? (n.X + n.W / 2 - 80, n.Y + n.H + 4, 160.0, 44.0)
-                                : (n.X + 8, n.Y + 6, n.W - 16, n.H - 12);
-                            <foreignObject x="@F(ex)" y="@F(ey)" width="@F(ew)" height="@F(eh)">
-                                <textarea id="edit-box" class="inline-edit" @bind="n.Label" @bind:event="oninput" @bind:after="MarkDirty"
+                            <foreignObject x="@F(NodeEditRect(v).X)" y="@F(NodeEditRect(v).Y)" width="@F(NodeEditRect(v).W)" height="@F(NodeEditRect(v).H)">
+                                <textarea id="edit-box" class="inline-edit" @bind="v.N.Label" @bind:event="oninput" @bind:after="MarkDirty"
                                           @onblur="EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true"></textarea>
                             </foreignObject>
                         }
                         else
                         {
                             <g>
-                                @if (lay.Below)
+                                @if (v.Layout.Below)
                                 {
-                                    var bw = lay.Lines.Max(l => l.Length) * 7.2 + 14;
-                                    <rect class="label-bg" x="@F(lay.TextX - bw / 2)" y="@F(lay.TextY - 14)" width="@F(bw)" height="@F(lay.Lines.Count * Geometry.LineHeight + 6)" rx="4" />
+                                    <rect class="label-bg" x="@F(LabelBackground(v.Layout).X)" y="@F(LabelBackground(v.Layout).Y)"
+                                          width="@F(LabelBackground(v.Layout).W)" height="@F(LabelBackground(v.Layout).H)" rx="4" />
                                 }
-                                <text class="node-label" x="@F(lay.TextX)" y="@F(lay.TextY)" fill="@(lay.Below ? "#1f2933" : st.Text)">
-                                    @for (int i = 0; i < lay.Lines.Count; i++)
+                                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? "#1f2933" : v.Style.Text)">
+                                    @foreach ((string text, string dy) in LabelLines(v.Layout))
                                     {
-                                        <tspan x="@F(lay.TextX)" dy="@(i == 0 ? "0" : "16")">@lay.Lines[i]</tspan>
+                                        <tspan x="@F(v.Layout.TextX)" dy="@dy">@text</tspan>
                                     }
                                 </text>
                             </g>
                         }
-                        @if (n.Properties.Count > 0 && n.Properties.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+                        @if (HasProperties(v.N))
                         {
-                            <circle cx="@F(n.X + n.W - 8)" cy="@F(n.Y + 8)" r="3.5" fill="@(n.Filled ? "#ffffff" : st.Stroke)" class="props-dot">
+                            <circle cx="@F(v.N.X + v.N.W - 8)" cy="@F(v.N.Y + 8)" r="3.5" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" class="props-dot">
                                 <title>Has properties</title>
                             </circle>
                         }
-                        @if (Geometry.HasLink(n))
+                        @if (Geometry.HasLink(v.N))
                         {
-                            @LinkBadge(n, st.Stroke, n.Link!)
+                            <LinkBadge Box="v.N" Colour="@v.Style.Stroke" Link="@(v.N.Link!)" OnFollow="FollowLink" />
                         }
-                        @foreach (var (px, py) in Ports(n))
+                        @foreach ((double px, double py) in Ports(v.N))
                         {
                             <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
-                                    @onpointerdown="e => PortDown(e, nid)" @onpointerdown:stopPropagation="true" />
+                                    @onpointerdown="e => PortDown(e, v.N.Id)" @onpointerdown:stopPropagation="true" />
                         }
                     </g>
                 }
 
                 @* Group link badges sit above the members so they're never hidden *@
-                @foreach (var g in D.Groups.Where(Geometry.HasLink))
+                @foreach (Group g in D.Groups.Where(Geometry.HasLink))
                 {
-                    @LinkBadge(g, Palette.Get(g.Color).Stroke, g.Link!)
+                    <LinkBadge Box="g" Colour="@Palette.Get(g.Color).Stroke" Link="@(g.Link!)" OnFollow="FollowLink" />
                 }
 
                 @* Connector labels sit above shapes so they're never hidden *@
-                @foreach (var e in D.Edges)
+                @foreach (EdgeLabelView v in EdgeLabelViews())
                 {
-                    if (string.IsNullOrWhiteSpace(e.Label) && EditId != e.Id) continue;
-                    var a = FindBox(e.From);
-                    var b = FindBox(e.To);
-                    if (a is null || b is null) continue;
-                    var geo = Geometry.EdgeGeometry(a, b, e);
-                    var eid = e.Id;
-                    var sel = SelEdge == eid;
-                    if (EditId == eid)
+                    @if (v.Editing)
                     {
-                        <foreignObject x="@F(geo.LabelX - 70)" y="@F(geo.LabelY - 14)" width="140" height="28">
-                            <input id="edit-box" class="inline-edit edge-input" @bind="e.Label" @bind:event="oninput" @bind:after="MarkDirty"
+                        <foreignObject x="@F(v.Geo.LabelX - 70)" y="@F(v.Geo.LabelY - 14)" width="140" height="28">
+                            <input id="edit-box" class="inline-edit edge-input" @bind="v.E.Label" @bind:event="oninput" @bind:after="MarkDirty"
                                    @onblur="EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true" />
                         </foreignObject>
                     }
                     else
                     {
-                        var w = Geometry.LabelWidth(e.Label);
-                        <g class="edge-label-wrap" transform="@($"translate({F(geo.LabelX)},{F(geo.LabelY)}) rotate({F(geo.LabelAngle)})")"
-                           @onpointerdown="ev => EdgeDown(ev, eid)" @onpointerdown:stopPropagation="true"
-                           @ondblclick="() => BeginEdit(eid)" @ondblclick:stopPropagation="true">
-                            <rect x="@F(-w / 2)" y="-10" width="@F(w)" height="20" rx="4" class="edge-label-bg @(sel ? "sel" : "")" />
-                            <text x="0" y="4" class="edge-label">@e.Label</text>
+                        <g class="edge-label-wrap" transform="@EdgeLabelTransform(v.Geo)"
+                           @onpointerdown="ev => EdgeDown(ev, v.E.Id)" @onpointerdown:stopPropagation="true"
+                           @ondblclick="() => BeginEdit(v.E.Id)" @ondblclick:stopPropagation="true">
+                            <rect x="@F(-v.Width / 2)" y="-10" width="@F(v.Width)" height="20" rx="4" class="edge-label-bg @(v.Selected ? "sel" : "")" />
+                            <text x="0" y="4" class="edge-label">@v.E.Label</text>
                         </g>
                     }
                 }
 
                 @* Handles on the selected connector: ends (move to another side) and the bend (drag sideways) *@
-                @if (SelectedEdgeObj is { } he && FindBox(he.From) is { } ha && FindBox(he.To) is { } hb && EditId != he.Id)
+                @if (SelectedEdgeHandles() is { } h)
                 {
-                    var hr = Geometry.Route(ha, hb, he);
-                    var heid = he.Id;
-                    @if (mode == Mode.EdgeEnd)
+                    @foreach (SideTarget s in h.Sides)
                     {
-                        var box = edgeDragFrom ? ha : hb;
-                        var cur = edgeDragFrom ? hr.FromSide : hr.ToSide;
-                        @foreach (var side in Sides.All)
-                        {
-                            var (sx, sy) = Geometry.SidePoint(box, side);
-                            <circle class="side-target @(side == cur ? "on" : "")" cx="@F(sx)" cy="@F(sy)" r="@F(7 / Zoom)" />
-                        }
+                        <circle class="side-target @(s.Current ? "on" : "")" cx="@F(s.X)" cy="@F(s.Y)" r="@F(7 / Zoom)" />
                     }
-                    @if (hr.BendIndex >= 0 && he.Style != EdgeStyles.Straight)
+                    @if (h.HasBend)
                     {
-                        var (bx, by) = hr.BendHandle;
-                        var bs = 12 / Zoom;
-                        <rect class="bend-handle @(hr.BendIsVertical ? "ew" : "ns")" x="@F(bx - bs / 2)" y="@F(by - bs / 2)" width="@F(bs)" height="@F(bs)" rx="@F(2 / Zoom)"
-                              @onpointerdown="ev => BendDown(ev, heid)" @onpointerdown:stopPropagation="true"
-                              @ondblclick="() => ResetBend(heid)" @ondblclick:stopPropagation="true">
+                        <rect class="bend-handle @(h.BendVertical ? "ew" : "ns")" x="@F(h.BendX - BendHandleSize / 2)" y="@F(h.BendY - BendHandleSize / 2)"
+                              width="@F(BendHandleSize)" height="@F(BendHandleSize)" rx="@F(2 / Zoom)"
+                              @onpointerdown="ev => BendDown(ev, h.EdgeId)" @onpointerdown:stopPropagation="true"
+                              @ondblclick="() => ResetBend(h.EdgeId)" @ondblclick:stopPropagation="true">
                             <title>Drag to move this segment · double-click to reset</title>
                         </rect>
                     }
-                    var (p0x, p0y) = hr.Points[0];
-                    var (p1x, p1y) = hr.Points[^1];
-                    <circle class="edge-handle" cx="@F(p0x)" cy="@F(p0y)" r="@F(6 / Zoom)"
-                            @onpointerdown="ev => EdgeEndDown(ev, heid, true)" @onpointerdown:stopPropagation="true">
+                    <circle class="edge-handle" cx="@F(h.StartX)" cy="@F(h.StartY)" r="@F(6 / Zoom)"
+                            @onpointerdown="ev => EdgeEndDown(ev, h.EdgeId, true)" @onpointerdown:stopPropagation="true">
                         <title>Drag to another side of the shape</title>
                     </circle>
-                    <circle class="edge-handle" cx="@F(p1x)" cy="@F(p1y)" r="@F(6 / Zoom)"
-                            @onpointerdown="ev => EdgeEndDown(ev, heid, false)" @onpointerdown:stopPropagation="true">
+                    <circle class="edge-handle" cx="@F(h.EndX)" cy="@F(h.EndY)" r="@F(6 / Zoom)"
+                            @onpointerdown="ev => EdgeEndDown(ev, h.EdgeId, false)" @onpointerdown:stopPropagation="true">
                         <title>Drag to another side of the shape</title>
                     </circle>
                 }
@@ -510,12 +451,12 @@
     <aside class="panel">
         @if (SelectedNode is { } sn)
         {
-            <h3>@(sn.Type == NodeTypes.Outcome ? $"Outcome · {Outcomes.Get(sn.Outcome).Display}" : NodeTypes.Get(sn.Type).Display)</h3>
+            <h3>@NodePanelTitle(sn)</h3>
             <label>Label</label>
             <textarea id="prop-label" rows="2" @bind="sn.Label" @bind:event="oninput" @bind:after="MarkDirty" @onfocus="Checkpoint"></textarea>
             <label>Type</label>
             <select value="@sn.Type" @onchange="e => ChangeType(sn, e.Value?.ToString())">
-                @foreach (var t in NodeTypes.All)
+                @foreach (NodeTypeInfo t in NodeTypes.All)
                 {
                     <option value="@t.Key">@t.Display</option>
                 }
@@ -527,9 +468,8 @@
             <label>Colour</label>
             <div class="swatches">
                 <button class="swatch default @(sn.Color is null ? "on" : "")" title="Type default" @onclick="() => SetNodeColour(sn, null)">∅</button>
-                @foreach (var (key, swc) in Palette.All)
+                @foreach ((string k, Palette.Swatch swc) in Palette.All)
                 {
-                    var k = key;
                     <button class="swatch @(sn.Color == k ? "on" : "")" style="background:@(sn.Filled ? swc.Solid : swc.Light);border-color:@swc.Stroke" title="@k"
                             @onclick="() => SetNodeColour(sn, k)"></button>
                 }
@@ -540,11 +480,10 @@
             {
                 <label>Outcome</label>
                 <div class="outcome-picker">
-                    @foreach (var o in Outcomes.All)
+                    @foreach (OutcomeInfo o in Outcomes.All)
                     {
-                        var ok = o.Key;
-                        <button class="@(Outcomes.Get(sn.Outcome).Key == ok ? "on" : "")" title="@o.Hint" @onclick="() => SetOutcome(sn, ok)">
-                            @OutcomeSwatch(ok, 26)<span>@o.Display</span>
+                        <button class="@(Outcomes.Get(sn.Outcome).Key == o.Key ? "on" : "")" title="@o.Hint" @onclick="() => SetOutcome(sn, o.Key)">
+                            @OutcomeSwatch(o.Key, 26)<span>@o.Display</span>
                         </button>
                     }
                 </div>
@@ -566,15 +505,12 @@
             </div>
             <input class="icon-search" placeholder="Search icons…" @bind="iconFilter" @bind:event="oninput" />
             <div class="icon-picker">
-                @foreach (var (cat, names) in Icons.Categories)
+                @foreach ((string cat, List<string> names) in FilteredIcons())
                 {
-                    var shown = names.Where(nm => string.IsNullOrWhiteSpace(iconFilter) || nm.Contains(iconFilter.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
-                    if (shown.Count == 0) continue;
                     <div class="icon-cat">@cat</div>
                     <div class="icon-grid">
-                        @foreach (var nm in shown)
+                        @foreach (string iconName in names)
                         {
-                            var iconName = nm;
                             <button class="icon-btn @(sn.Icon == iconName ? "on" : "")" title="@iconName" @onclick="() => SetIcon(sn, iconName)">@IconSvg(iconName, 18)</button>
                         }
                     </div>
@@ -582,7 +518,7 @@
             </div>
             }
 
-            @LinkPicker(sn.Link, v => SetNodeLink(sn, v))
+            <LinkPicker Current="@sn.Link" Exclude="@LinkExclude" OnChange="link => SetNodeLink(sn, link)" OnFollow="FollowLink" />
 
             @if (FindGroup(sn.GroupId) is { } ng)
             {
@@ -591,14 +527,12 @@
 
             <label>Properties <span class="muted">(for future rule building)</span></label>
             <div class="props">
-                @foreach (var k in sn.Properties.Keys.ToList())
+                @foreach (string key in sn.Properties.Keys.ToList())
                 {
-                    var key = k;
                     <div class="prop">
                         <input value="@key" placeholder="name" @onfocus="Checkpoint" @onchange="e => RenameProp(sn, key, e.Value?.ToString())" />
-                        <input value="@sn.Properties[key]" placeholder="value" @onfocus="Checkpoint"
-                               @oninput="e => { sn.Properties[key] = e.Value?.ToString() ?? string.Empty; MarkDirty(); }" />
-                        <button class="icon" title="Remove" @onclick="() => { Checkpoint(); sn.Properties.Remove(key); }">✕</button>
+                        <input value="@sn.Properties[key]" placeholder="value" @onfocus="Checkpoint" @oninput="e => SetPropValue(sn, key, e)" />
+                        <button class="icon" title="Remove" @onclick="() => RemoveProp(sn, key)">✕</button>
                     </div>
                 }
                 <button class="small" @onclick="() => AddProp(sn)">+ Add property</button>
@@ -624,9 +558,8 @@
 
             <h4>Text</h4>
             <div class="seg wide three">
-                @foreach (var (key, name) in TextLook.Fonts)
+                @foreach ((string k, string name) in TextLook.Fonts)
                 {
-                    var k = key;
                     <button class="@(st.Font == k ? "on" : "")" style="font-family:@TextLook.Family(k)" @onclick="() => SetTextLook(st, x => x.Font = k)">@name</button>
                 }
             </div>
@@ -634,7 +567,7 @@
                 <div>
                     <label>Size</label>
                     <select value="@F(st.FontSize)" @onchange="e => SetFontSize(st, e.Value)">
-                        @foreach (var sz in TextLook.Sizes.Append(st.FontSize).Distinct().OrderBy(v => v))
+                        @foreach (double sz in FontSizeChoices(st))
                         {
                             <option value="@F(sz)">@F(sz)</option>
                         }
@@ -647,25 +580,22 @@
             </div>
             <label>Alignment</label>
             <div class="seg wide three">
-                @foreach (var (key, name) in new[] { (TextLook.Left, "Left"), (TextLook.Center, "Centre"), (TextLook.Right, "Right") })
+                @foreach ((string k, string name) in HAligns)
                 {
-                    var k = key;
                     <button class="@(st.Align == k ? "on" : "")" @onclick="() => SetTextLook(st, x => x.Align = k)">@name</button>
                 }
             </div>
             <div class="seg wide three" style="margin-top:6px">
-                @foreach (var (key, name) in new[] { (TextLook.Top, "Top"), (TextLook.Middle, "Middle"), (TextLook.Bottom, "Bottom") })
+                @foreach ((string k, string name) in VAligns)
                 {
-                    var k = key;
                     <button class="@(st.VAlign == k ? "on" : "")" @onclick="() => SetTextLook(st, x => x.VAlign = k)">@name</button>
                 }
             </div>
             <label>Text colour</label>
             <div class="swatches">
                 <button class="swatch line @(st.TextColor is null ? "on" : "")" title="Default" @onclick="() => SetTextLook(st, x => x.TextColor = null)"><span style="background:@TextStyle.DefaultText"></span></button>
-                @foreach (var key in TextPalette.Strokes)
+                @foreach (string k in TextPalette.Strokes)
                 {
-                    var k = key;
                     <button class="swatch line @(st.TextColor == k ? "on" : "")" title="@k" @onclick="() => SetTextLook(st, x => x.TextColor = k)"><span style="background:@TextPalette.StrokeOf(k, TextStyle.DefaultText)"></span></button>
                 }
             </div>
@@ -674,19 +604,16 @@
             <label>Background</label>
             <div class="swatches">
                 <button class="swatch default @(st.Fill is null ? "on" : "")" title="None (transparent)" @onclick="() => SetTextLook(st, x => x.Fill = null)">∅</button>
-                @foreach (var key in TextPalette.Fills)
+                @foreach (string k in TextPalette.Fills)
                 {
-                    var k = key;
-                    var (fc, sc) = TextPalette.All[k];
-                    <button class="swatch @(st.Fill == k ? "on" : "")" style="background:@fc;border-color:@sc" title="@k" @onclick="() => SetTextLook(st, x => x.Fill = k)"></button>
+                    <button class="swatch @(st.Fill == k ? "on" : "")" style="background:@TextPalette.All[k].Fill;border-color:@TextPalette.All[k].Stroke" title="@k" @onclick="() => SetTextLook(st, x => x.Fill = k)"></button>
                 }
             </div>
             <label>Border</label>
             <div class="seg wide patterns">
                 <button class="@(st.Border == TextLook.NoBorder ? "on" : "")" title="No border" @onclick="() => SetTextLook(st, x => x.Border = TextLook.NoBorder)">None</button>
-                @foreach (var (key, name) in LineLook.Patterns)
+                @foreach ((string k, string name) in LineLook.Patterns)
                 {
-                    var k = key;
                     <button class="@(st.Border == k ? "on" : "")" title="@name" @onclick="() => SetTextLook(st, x => x.Border = k)">@LinePreview(st.BorderWeight, k, LineLook.ArrowNone)</button>
                 }
             </div>
@@ -694,18 +621,16 @@
             {
                 <label>Border weight</label>
                 <div class="seg wide stacked">
-                    @foreach (var (key, name) in LineLook.Weights)
+                    @foreach ((string k, string name) in LineLook.Weights)
                     {
-                        var k = key;
                         <button class="@(st.BorderWeight == k ? "on" : "")" title="@name" @onclick="() => SetTextLook(st, x => x.BorderWeight = k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
                     }
                 </div>
                 <label>Border colour</label>
                 <div class="swatches">
                     <button class="swatch line @(st.BorderColor is null ? "on" : "")" title="Default grey" @onclick="() => SetTextLook(st, x => x.BorderColor = null)"><span style="background:@TextStyle.DefaultBorder"></span></button>
-                    @foreach (var key in TextPalette.Strokes)
+                    @foreach (string k in TextPalette.Strokes)
                     {
-                        var k = key;
                         <button class="swatch line @(st.BorderColor == k ? "on" : "")" title="@k" @onclick="() => SetTextLook(st, x => x.BorderColor = k)"><span style="background:@TextPalette.StrokeOf(k, TextStyle.DefaultBorder)"></span></button>
                     }
                 </div>
@@ -751,34 +676,30 @@
 
             <label>Weight</label>
             <div class="seg wide stacked">
-                @foreach (var (key, name) in LineLook.Weights)
+                @foreach ((string k, string name) in LineLook.Weights)
                 {
-                    var k = key;
                     <button class="@(se.Weight == k ? "on" : "")" title="@name" @onclick="() => SetEdgeLook(se, x => x.Weight = k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
                 }
             </div>
             <label>Line type</label>
             <div class="seg wide patterns">
-                @foreach (var (key, name) in LineLook.Patterns)
+                @foreach ((string k, string name) in LineLook.Patterns)
                 {
-                    var k = key;
                     <button class="@(se.Pattern == k ? "on" : "")" title="@name" @onclick="() => SetEdgeLook(se, x => x.Pattern = k)">@LinePreview(se.Weight, k, LineLook.ArrowNone)</button>
                 }
             </div>
             <label>Colour</label>
             <div class="swatches">
                 <button class="swatch line @(se.Color is null ? "on" : "")" title="Default grey" @onclick="() => SetEdgeLook(se, x => x.Color = null)"><span style="background:@LineLook.DefaultColor"></span></button>
-                @foreach (var (key, swc) in Palette.All)
+                @foreach ((string k, Palette.Swatch swc) in Palette.All)
                 {
-                    var k = key;
                     <button class="swatch line @(se.Color == k ? "on" : "")" title="@k" @onclick="() => SetEdgeLook(se, x => x.Color = k)"><span style="background:@swc.Stroke"></span></button>
                 }
             </div>
             <label>Arrowheads</label>
             <div class="seg wide stacked">
-                @foreach (var (key, name) in LineLook.ArrowModes)
+                @foreach ((string k, string name) in LineLook.ArrowModes)
                 {
-                    var k = key;
                     <button class="@(se.Arrows == k ? "on" : "")" title="@name" @onclick="() => SetEdgeLook(se, x => x.Arrows = k)">@LinePreview(LineLook.Regular, LineLook.Solid, k) @name</button>
                 }
             </div>
@@ -786,10 +707,9 @@
             <label>Label <span class="muted">(or double-click the line)</span></label>
             <input id="prop-edge" @bind="se.Label" @bind:event="oninput" @bind:after="MarkDirty" @onfocus="Checkpoint" placeholder="Type a label…" />
             <div class="chips">
-                @foreach (var l in new[] { "Yes", "No", "Pass", "Fail", "" })
+                @foreach (string lab in EdgeLabelChips)
                 {
-                    var lab = l;
-                    <button class="chip" @onclick="() => { Checkpoint(); se.Label = lab; MarkDirty(); }">@(lab == "" ? "Clear" : lab)</button>
+                    <button class="chip" @onclick="() => SetEdgeLabel(se, lab)">@(lab == "" ? "Clear" : lab)</button>
                 }
             </div>
 
@@ -818,27 +738,25 @@
         }
         else if (SelectedGroup is { } sg)
         {
-            var count = Members(sg).Count();
             <h3>Group</h3>
             <label>Title</label>
             <input @bind="sg.Title" @bind:event="oninput" @bind:after="MarkDirty" @onfocus="Checkpoint" />
             <label>Colour</label>
             <div class="swatches">
-                @foreach (var (key, swc) in Palette.All)
+                @foreach ((string k, Palette.Swatch swc) in Palette.All)
                 {
-                    var k = key;
                     <button class="swatch @(sg.Color == k ? "on" : "")" style="background:@swc.Light;border-color:@swc.Stroke" title="@k"
                             @onclick="() => SetGroupColour(sg, k)"></button>
                 }
             </div>
-            <p class="muted">@count item@(count == 1 ? "" : "s") inside · drag items in or out to change membership</p>
-            @LinkPicker(sg.Link, v => SetGroupLink(sg, v))
+            <p class="muted">@MemberCount(sg) item@(MemberCount(sg) == 1 ? "" : "s") inside · drag items in or out to change membership</p>
+            <LinkPicker Current="@sg.Link" Exclude="@LinkExclude" OnChange="link => SetGroupLink(sg, link)" OnFollow="FollowLink" />
             <label>Align items within the group</label>
-            @AlignBar(op => AlignInGroup(sg, op), count > 0)
+            <AlignBar Enabled="@(MemberCount(sg) > 0)" OnAlign="op => AlignInGroup(sg, op)" />
             <div class="actions">
-                <button disabled="@(count == 0)" @onclick="() => AlignInGroup(sg, AlignOp.Row)">Arrange in a row</button>
-                <button disabled="@(count == 0)" @onclick="() => AlignInGroup(sg, AlignOp.Column)">Arrange in a column</button>
-                <button disabled="@(count == 0)" @onclick="() => { Change(); FitGroup(sg); }">Fit to contents</button>
+                <button disabled="@(MemberCount(sg) == 0)" @onclick="() => AlignInGroup(sg, AlignOp.Row)">Arrange in a row</button>
+                <button disabled="@(MemberCount(sg) == 0)" @onclick="() => AlignInGroup(sg, AlignOp.Column)">Arrange in a column</button>
+                <button disabled="@(MemberCount(sg) == 0)" @onclick="() => FitGroupToContents(sg)">Fit to contents</button>
             </div>
             <p class="muted">Connect a group like any shape: drag from its ● port, or select it with another item and press J.</p>
             <div class="actions">
@@ -850,7 +768,7 @@
         {
             <h3>@Sel.Count items selected</h3>
             <label>Align</label>
-            @AlignBar(AlignSelection, true)
+            <AlignBar OnAlign="AlignSelection" />
             <div class="actions">
                 <button @onclick="() => AlignSelection(AlignOp.Row)">Row</button>
                 <button @onclick="() => AlignSelection(AlignOp.Column)">Column</button>
@@ -870,13 +788,13 @@
         {
             <h3>Diagram</h3>
             <label>Name</label>
-            <input value="@D.Name" @onchange="e => { D.Name = DiagramStore.SafeName(e.Value?.ToString() ?? string.Empty); MarkDirty(); }" />
-            <p class="muted">@D.Nodes.Count shapes · @D.Edges.Count connectors · @D.TextBoxes.Count(t => !t.IsComment) text boxes · @D.TextBoxes.Count(t => t.IsComment) comments · @D.Groups.Count groups</p>
+            <input value="@D.Name" @onchange="RenameDiagram" />
+            <p class="muted">@DiagramSummary</p>
 
             <h4>Page</h4>
-            <select value="@D.Page.Size" @onchange="e => SetPageSize(e.Value?.ToString())">
+            <select value="@D.Page.Size" @onchange="SetPageSize">
                 <option value="@PageSetup.None">Open canvas (no fixed size)</option>
-                @foreach (var ps in PageSetup.Sizes)
+                @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
                 {
                     <option value="@ps.Key">@ps.Name — @ps.W.ToString("0.#") × @ps.H.ToString("0.#") mm</option>
                 }
@@ -885,8 +803,8 @@
             @if (D.Page.Enabled)
             {
                 <div class="seg wide" style="margin-top:8px">
-                    <button class="@(!PageIsLandscape ? "on" : "")" @onclick="@(() => SetOrientation("portrait"))">@IconSvg("rectangle-vertical", 16) Portrait</button>
-                    <button class="@(PageIsLandscape ? "on" : "")" @onclick="@(() => SetOrientation("landscape"))">@IconSvg("rectangle-horizontal", 16) Landscape</button>
+                    <button class="@(!PageIsLandscape ? "on" : "")" @onclick="SetPortrait">@IconSvg("rectangle-vertical", 16) Portrait</button>
+                    <button class="@(PageIsLandscape ? "on" : "")" @onclick="SetLandscape">@IconSvg("rectangle-horizontal", 16) Landscape</button>
                 </div>
                 @if (D.Page.Size == PageSetup.Custom)
                 {
@@ -899,11 +817,10 @@
                     <div><label>Margin (mm)</label><input type="number" min="0" step="1" @bind="D.Page.MarginMm" @bind:after="PageChanged" @onfocus="Checkpoint" /></div>
                     <div><label>Size</label><div class="page-size">@D.Page.Mm.W.ToString("0.#") × @D.Page.Mm.H.ToString("0.#") mm</div></div>
                 </div>
-                <label class="check"><input type="checkbox" checked="@D.Page.FitOnExport" @onchange="e => { Change(); D.Page.FitOnExport = e.Value is true; }" /> Scale down to fit the margins on export</label>
-                var outside = OutsidePage();
-                @if (outside.Count > 0)
+                <label class="check"><input type="checkbox" checked="@D.Page.FitOnExport" @onchange="SetFitOnExport" /> Scale down to fit the margins on export</label>
+                @if (OffPageCount > 0)
                 {
-                    <p class="warn">@outside.Count item@(outside.Count == 1 ? " is" : "s are") off the page. <button class="link" @onclick="SelectOutsidePage">Select</button></p>
+                    <p class="warn">@OffPageCount item@(OffPageCount == 1 ? " is" : "s are") off the page. <button class="link" @onclick="SelectOutsidePage">Select</button></p>
                 }
                 @if (ContentTooBigForPage())
                 {
@@ -943,9 +860,9 @@
     <footer class="status">
         <span>Saved to: @Store.Folder</span>
         <span>@D.Page.Describe()</span>
-        @if (D.Page.Enabled && OutsidePage().Count is > 0 and var off)
+        @if (D.Page.Enabled && OffPageCount > 0)
         {
-            <span class="status-warn">⚠ @off item@(off == 1 ? "" : "s") off the page</span>
+            <span class="status-warn">⚠ @OffPageCount item@(OffPageCount == 1 ? "" : "s") off the page</span>
         }
         @if (!string.IsNullOrEmpty(toast))
         {
@@ -961,25 +878,23 @@
         <div class="modal" @onclick:stopPropagation="true">
             <h3>Open diagram</h3>
             @if (Dirty) { <p class="warn">You have unsaved changes — opening another diagram will discard them.</p> }
-            @{ var files = Store.List(); }
-            @if (files.Count == 0)
+            @if (openFiles.Count == 0)
             {
                 <p class="muted">No saved diagrams yet in @Store.Folder</p>
             }
             <ul class="files">
-                @foreach (var f in files)
+                @foreach ((string name, DateTime modified) in openFiles)
                 {
-                    var name = f.Name;
                     <li>
                         <button class="link" @onclick="() => Open(name)">@name</button>
-                        <span class="muted">@f.Modified.ToString("dd MMM yyyy HH:mm")</span>
+                        <span class="muted">@modified.ToString("dd MMM yyyy HH:mm")</span>
                         @if (confirmDelete == name)
                         {
                             <button class="danger small" @onclick="() => DeleteFile(name)">Confirm delete</button>
                         }
                         else
                         {
-                            <button class="icon" title="Delete file" @onclick="() => confirmDelete = name">🗑</button>
+                            <button class="icon" title="Delete file" @onclick="() => AskDelete(name)">🗑</button>
                         }
                     </li>
                 }
@@ -995,11 +910,11 @@ else if (dialog == Dialog.SaveAs)
             <h3>Save diagram as</h3>
             <label>Name</label>
             <input id="saveas-name" @bind="saveAsName" @bind:event="oninput" @onkeydown="SaveAsKey" />
-            @if (Store.Exists(saveAsName) && DiagramStore.SafeName(saveAsName) != (hasFile ? D.Name : null))
+            @if (SaveAsWillOverwrite)
             {
                 <p class="warn">A diagram with this name exists and will be overwritten.</p>
             }
-            <p class="muted">@System.IO.Path.Combine(Store.Folder, DiagramStore.SafeName(saveAsName) + DiagramStore.Extension)</p>
+            <p class="muted">@SaveAsPath</p>
             <div class="actions">
                 <button @onclick="CloseDialog">Cancel</button>
                 <button class="primary" @onclick="ConfirmSaveAs">Save</button>
@@ -1036,97 +951,8 @@ else if (dialog == Dialog.ConfirmNew)
             <p>"@D.Name" has changes that haven't been saved.</p>
             <div class="actions">
                 <button @onclick="CloseDialog">Cancel</button>
-                <button class="danger" @onclick="() => { Reset(); CloseDialog(); }">Discard and start new</button>
+                <button class="danger" @onclick="DiscardAndNew">Discard and start new</button>
             </div>
         </div>
     </div>
-}
-
-@code {
-    static readonly (AlignOp Op, string Icon, string Tip)[] AlignButtons =
-    {
-        (AlignOp.Left, "align-start-vertical", "Align left"),
-        (AlignOp.CenterX, "align-center-vertical", "Align centres (vertical line)"),
-        (AlignOp.Right, "align-end-vertical", "Align right"),
-        (AlignOp.Top, "align-start-horizontal", "Align top"),
-        (AlignOp.Middle, "align-center-horizontal", "Align middles (horizontal line)"),
-        (AlignOp.Bottom, "align-end-horizontal", "Align bottom"),
-        (AlignOp.DistributeH, "align-horizontal-distribute-center", "Distribute horizontally"),
-        (AlignOp.DistributeV, "align-vertical-distribute-center", "Distribute vertically"),
-    };
-
-    /// <summary>The clickable link badge on a shape or group (opens the linked diagram).</summary>
-    RenderFragment LinkBadge(IBox box, string colour, string link) => __builder =>
-    {
-        var found = Store.Exists(link);
-        <g class="link-badge @(found ? "" : "missing")"
-           @onpointerdown:stopPropagation="true" @ondblclick:stopPropagation="true"
-           @onclick="() => FollowLink(link)" @onclick:stopPropagation="true">
-            <title>@(found ? $"More detail: open “{link}”" : $"Linked diagram “{link}” not found")</title>
-            @((MarkupString)Geometry.LinkBadgeSvg(box, colour))
-        </g>
-    };
-
-    /// <summary>Panel section: pick the saved diagram that holds the more detailed flow.</summary>
-    RenderFragment LinkPicker(string? current, Action<string?> set) => __builder =>
-    {
-        var names = Store.List().Select(f => f.Name).Where(nm => !(hasFile && nm == D.Name)).ToList();
-        var has = !string.IsNullOrWhiteSpace(current);
-        var missing = has && !Store.Exists(current!);
-        <label>Linked diagram <span class="muted">(more detailed flow)</span></label>
-        <div class="link-pick">
-            <select value="@(current ?? "")" @onchange="e => set(string.IsNullOrEmpty(e.Value?.ToString()) ? null : e.Value!.ToString())">
-                <option value="">None</option>
-                @if (missing)
-                {
-                    <option value="@current">@current (missing)</option>
-                }
-                @foreach (var nm in names)
-                {
-                    <option value="@nm">@nm</option>
-                }
-            </select>
-            @if (has && !missing)
-            {
-                <button class="small" title="Open the linked diagram (or click the link badge on the canvas)" @onclick="() => FollowLink(current)">@IconSvg("link", 14) Open</button>
-            }
-        </div>
-        @if (missing)
-        {
-            <p class="warn small-note">No saved diagram called “@current” in @Store.Folder — it may have been renamed or deleted.</p>
-        }
-        else if (names.Count == 0 && !has)
-        {
-            <p class="muted small-note">Save the detailed flow as its own diagram first, then pick it here.</p>
-        }
-    };
-
-    RenderFragment AlignBar(Action<AlignOp> act, bool enabled) => __builder =>
-    {
-        <div class="alignbar">
-            @foreach (var (op, icon, tip) in AlignButtons)
-            {
-                var o = op;
-                <button class="icon-btn" title="@tip" disabled="@(!enabled)" @onclick="() => act(o)">@IconSvg(icon, 18)</button>
-            }
-        </div>
-    };
-
-    /// <summary>Inline editor styled like the box itself, so editing looks the same as the finished text.</summary>
-    static string TextEditStyle(TextBox t, TextStyle s) =>
-        $"font-family:{s.Family};font-size:{F(t.FontSize)}px;line-height:{F(t.FontSize * TextLook.LineSpacing)}px;" +
-        $"font-weight:{(t.Bold ? "600" : "400")};color:{s.TextColour};text-align:{t.Align};padding:{F(TextLook.PadY)}px {F(TextLook.PadX)}px;";
-
-    /// <summary>Small solid outcome symbol for the palette and the panel (same geometry as the canvas).</summary>
-    static MarkupString OutcomeSwatch(string outcome, int size)
-    {
-        var n = new Node { Type = NodeTypes.Outcome, Outcome = outcome, Filled = true, W = 24, H = 24 };
-        var st = NodeStyle.For(n);
-        var lay = Geometry.Layout(n, "");
-        return new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"-1 -1 26 26\"><path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\"/>"
-                 + $"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g></svg>");
-    }
-
-    static MarkupString IconSvg(string name, int size) =>
-        new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(name)}</svg>");
 }
