@@ -495,8 +495,13 @@ public partial class Designer
         SelectOnly(n.Id);
     }
 
-    /// <summary>Palette click or number key: place the next step below the selection, joined to it.</summary>
-    void QuickAdd(string type)
+    /// <summary>Palette click or number key: place the next step below the selection, joined to it when Auto-join is on.</summary>
+    void QuickAdd(string type) => QuickAdd(type, join: AutoConnect);
+
+    /// <summary>The panel's "+ Next step" button: always joined to the selection (that's what the button is for).</summary>
+    void AddNextStep() => QuickAdd(NodeTypes.Process, join: true);
+
+    void QuickAdd(string type, bool join)
     {
         IBox? src = JoinSource();
         NodeTypeInfo t = NodeTypes.Get(ParsePaletteKey(type).Type);
@@ -516,7 +521,7 @@ public partial class Designer
             while (D.Nodes.Any(o => Geometry.Contains(o, cx, cy))) cy += 100;
         }
         // A step added from a shape inside a group stays in that group.
-        AddNodeAt(type, cx, cy, join: src is not null, groupId: (src as IGroupable)?.GroupId);
+        AddNodeAt(type, cx, cy, join: join && src is not null, groupId: (src as IGroupable)?.GroupId);
     }
 
     /// <summary>Adds a text box (or a comment) with its top-left at (x, y), optionally joined/pinned to an item.</summary>

@@ -145,7 +145,7 @@
             <kbd>G</kbd>
         </div>
         <div class="hint">
-            Select an item, then press a number to add the next step joined to it.
+            Select an item, then press a number to add the next step below it (joined to it when Auto-join is on).
         </div>
     </aside>
 
@@ -538,7 +538,7 @@
                 <button class="small" @onclick="() => AddProp(sn)">+ Add property</button>
             </div>
             <div class="actions">
-                <button @onclick="() => QuickAdd(NodeTypes.Process)">+ Next step</button>
+                <button @onclick="AddNextStep">+ Next step</button>
                 <button @onclick="AddCommentQuick">+ Comment</button>
                 <button class="danger" @onclick="DeleteSelection">Delete</button>
             </div>
@@ -650,7 +650,7 @@
             <div class="actions">
                 @if (!st.IsComment)
                 {
-                    <button @onclick="() => QuickAdd(NodeTypes.Process)">+ Next step</button>
+                    <button @onclick="AddNextStep">+ Next step</button>
                     <button @onclick="AddCommentQuick">+ Comment</button>
                 }
                 <button class="danger" @onclick="DeleteSelection">Delete</button>
@@ -838,8 +838,8 @@
             }
             <h4>Shortcuts</h4>
             <table class="keys">
-                <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Add shape (joined to selection)</td></tr>
-                <tr><td><kbd>T</kbd></td><td>Add text box (joined to selection)</td></tr>
+                <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Add shape (joined to selection when Auto-join is on)</td></tr>
+                <tr><td><kbd>T</kbd></td><td>Add text box (joined to selection when Auto-join is on)</td></tr>
                 <tr><td><kbd>C</kbd></td><td>Add comment (pinned to selection)</td></tr>
                 <tr><td><kbd>Ctrl</kbd>+<kbd>G</kbd></td><td>Group selection (<kbd>Shift</kbd> to ungroup)</td></tr>
                 <tr><td><kbd>J</kbd></td><td>Join selected items in order</td></tr>
