@@ -328,7 +328,12 @@ public partial class Designer
 
     // ───────────── Alignment ─────────────
 
-    /// <summary>Aligns/arranges items. Inside a group the group's interior is the reference; otherwise the selection bounds.</summary>
+    /// <summary>
+    /// Aligns/arranges items. Inside a group the group's interior is the reference; otherwise the selection bounds.
+    /// Left/centre/right/top/middle/bottom line up the shape outlines only — a label drawn under a circle or outcome
+    /// is ignored, so a circle and a box aligned to the bottom share the same bottom edge.
+    /// Distribute and column still leave room for those labels so they don't run into the next item.
+    /// </summary>
     void Align(AlignOp op, List<IBox> items, Group? within)
     {
         if (items.Count == 0 || (within is null && items.Count < 2)) return;
@@ -337,12 +342,14 @@ public partial class Designer
         if (within is not null)
         {
             L = within.X + Group.Pad; R = within.X + within.W - Group.Pad;
-            T = within.Y + Group.Header + Group.Pad; B = within.Y + within.H - Group.Pad;
+            T = within.Y + Group.Header + Group.Pad;
+            // Leave room inside the group for the tallest label hanging below an outline.
+            B = within.Y + within.H - Group.Pad - items.Max(Geometry.ExtraBelow);
         }
         else
         {
             L = items.Min(b => b.X); R = items.Max(b => b.X + b.W);
-            T = items.Min(b => b.Y); B = items.Max(b => b.Y + b.H + Geometry.ExtraBelow(b));
+            T = items.Min(b => b.Y); B = items.Max(b => b.Y + b.H);
         }
         const double gap = 40;
 
@@ -352,8 +359,8 @@ public partial class Designer
             case AlignOp.CenterX: foreach (IBox b in items) MoveBox(b, (L + R) / 2 - b.W / 2, b.Y); break;
             case AlignOp.Right: foreach (IBox b in items) MoveBox(b, R - b.W, b.Y); break;
             case AlignOp.Top: foreach (IBox b in items) MoveBox(b, b.X, T); break;
-            case AlignOp.Middle: foreach (IBox b in items) MoveBox(b, b.X, (T + B) / 2 - (b.H + Geometry.ExtraBelow(b)) / 2); break;
-            case AlignOp.Bottom: foreach (IBox b in items) MoveBox(b, b.X, B - b.H - Geometry.ExtraBelow(b)); break;
+            case AlignOp.Middle: foreach (IBox b in items) MoveBox(b, b.X, (T + B) / 2 - b.H / 2); break;
+            case AlignOp.Bottom: foreach (IBox b in items) MoveBox(b, b.X, B - b.H); break;
             case AlignOp.DistributeH:
             {
                 List<IBox> sorted = items.OrderBy(b => b.X + b.W / 2).ToList();
@@ -366,8 +373,10 @@ public partial class Designer
             }
             case AlignOp.DistributeV:
             {
+                // First outline top stays at T, last outline bottom at B; gaps are measured from the bottom of each
+                // item's label (if any) to the top of the next outline.
                 List<IBox> sorted = items.OrderBy(b => b.Y + b.H / 2).ToList();
-                double space = (B - T) - sorted.Sum(b => b.H + Geometry.ExtraBelow(b));
+                double space = (B - T) - sorted.Sum(b => b.H) - sorted.Take(sorted.Count - 1).Sum(Geometry.ExtraBelow);
                 double g = sorted.Count > 1 ? space / (sorted.Count - 1) : 0;
                 if (g < 20) g = gap;
                 double y = sorted.Count > 1 ? T : (T + B) / 2 - sorted[0].H / 2;
