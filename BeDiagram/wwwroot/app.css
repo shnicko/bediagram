@@ -101,6 +101,7 @@ kbd {
 
 .node { cursor: move; }
 .node-label { font-size: 13px; text-anchor: middle; fill: var(--text); pointer-events: none; }
+.node-desc { font-size: 11px; text-anchor: middle; fill: #55606e; pointer-events: none; }
 .sel-outline { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 3; }
 .port { fill: #fff; stroke: var(--accent); stroke-width: 1.5; opacity: 0; cursor: crosshair; transition: opacity .1s; }
 .node:hover .port, .node.selected .port, .connecting .port { opacity: 1; }

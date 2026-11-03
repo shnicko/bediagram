@@ -336,6 +336,10 @@
                                 @NodeIconMarkup(v.N)
                             </g>
                         }
+                        @if (v.TextBack is { } back)
+                        {
+                            <rect class="label-bg" x="@F(back.X)" y="@F(back.Y)" width="@F(back.W)" height="@F(back.H)" rx="4" />
+                        }
                         @if (EditId == v.N.Id)
                         {
                             <foreignObject x="@F(NodeEditRect(v).X)" y="@F(NodeEditRect(v).Y)" width="@F(NodeEditRect(v).W)" height="@F(NodeEditRect(v).H)">
@@ -346,15 +350,21 @@
                         else
                         {
                             <g>
-                                @if (v.Layout.Below)
-                                {
-                                    <rect class="label-bg" x="@F(LabelBackground(v.Layout).X)" y="@F(LabelBackground(v.Layout).Y)"
-                                          width="@F(LabelBackground(v.Layout).W)" height="@F(LabelBackground(v.Layout).H)" rx="4" />
-                                }
                                 <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? "#1f2933" : v.Style.Text)">
                                     @foreach ((string text, string dy) in LabelLines(v.Layout))
                                     {
                                         <tspan x="@F(v.Layout.TextX)" dy="@dy">@text</tspan>
+                                    }
+                                </text>
+                            </g>
+                        }
+                        @if (v.Layout.Desc.Count > 0)
+                        {
+                            <g>
+                                <text class="node-desc" x="@F(v.Layout.DescX)" y="@F(v.Layout.DescY)">
+                                    @foreach ((string text, string dy) in DescLines(v.Layout))
+                                    {
+                                        <tspan x="@F(v.Layout.DescX)" dy="@dy">@text</tspan>
                                     }
                                 </text>
                             </g>
@@ -454,6 +464,10 @@
             <h3>@NodePanelTitle(sn)</h3>
             <label>Label</label>
             <textarea id="prop-label" rows="2" @bind="sn.Label" @bind:event="oninput" @bind:after="MarkDirty" @onfocus="Checkpoint"></textarea>
+            <label>Description <span class="muted">(smaller text under the label)</span></label>
+            <textarea id="prop-desc" rows="3" placeholder="Optional — e.g. who does this step and how" @bind="sn.Description" @bind:event="oninput" @bind:after="() => OutsideTextChanged(sn)" @onfocus="Checkpoint"></textarea>
+            <label>Text width <span class="muted">(px — @TextWidthHint(sn))</span></label>
+            <input type="number" min="40" step="10" placeholder="@TextWidthPlaceholder(sn)" @bind="sn.TextWidth" @bind:after="() => OutsideTextChanged(sn)" @onfocus="Checkpoint" />
             <label>Type</label>
             <select value="@sn.Type" @onchange="e => ChangeType(sn, e.Value?.ToString())">
                 @foreach (NodeTypeInfo t in NodeTypes.All)

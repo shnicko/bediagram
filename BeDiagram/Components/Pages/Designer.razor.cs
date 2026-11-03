@@ -947,6 +947,7 @@ public partial class Designer
                     {
                         Type = n.Type, Label = n.Label, X = n.X + 30, Y = n.Y + 30, W = n.W, H = n.H,
                         Icon = n.Icon, Color = n.Color, Filled = n.Filled, Outcome = n.Outcome, GroupId = NewGroup(n.GroupId),
+                        Description = n.Description, TextWidth = n.TextWidth,
                         Properties = new(n.Properties),
                     };
                     D.Nodes.Add(nn); map[n.Id] = nn.Id; break;
@@ -1139,6 +1140,13 @@ public partial class Designer
         n.X = SnapV(cx) - t.W / 2; n.Y = SnapV(cy) - t.H / 2;
         if (t.Key == NodeTypes.Circle && n.Icon is null) n.Icon = "layers";
         foreach ((string k, string v) in DefaultProps(t.Key)) n.Properties.TryAdd(k, v);
+    }
+
+    /// <summary>Description or text width edited: the text under the shape changed size, so its group may need to grow.</summary>
+    void OutsideTextChanged(Node n)
+    {
+        MarkDirty();
+        if (FindGroup(n.GroupId) is { } g) GrowGroup(g);
     }
 
     void SetNodeColour(Node n, string? colour) { Change(); n.Color = colour; }
@@ -1587,7 +1595,8 @@ public partial class Designer
     public record TextBoxView(TextBox T, TextStyle Style, bool Selected, Geometry.TextBoxLayout Layout, string Outline);
     public record EdgeView(Edge E, bool Selected, Geometry.EdgeGeom Geo, double Width, string Colour, string Marker);
     public record EdgeLabelView(Edge E, bool Selected, bool Editing, Geometry.EdgeGeom Geo, double Width);
-    public record NodeView(Node N, NodeTypeInfo Type, NodeStyle Style, bool Selected, Geometry.LabelLayout Layout, double Below);
+    /// <param name="TextBack">White backing behind text drawn outside the shape (label below / description), if any.</param>
+    public record NodeView(Node N, NodeTypeInfo Type, NodeStyle Style, bool Selected, Geometry.LabelLayout Layout, double Below, Rect? TextBack);
     public record ConnectPreview(string Path, IBox? Target);
     public record SideTarget(double X, double Y, bool Current);
     public record EdgeHandleView(string EdgeId, List<SideTarget> Sides, bool HasBend, double BendX, double BendY, bool BendVertical,
@@ -1635,6 +1644,16 @@ public partial class Designer
     /// <summary>A node's label lines with the tspan line offset (first line 0, then one line height each).</summary>
     static IEnumerable<(string Text, string Dy)> LabelLines(Geometry.LabelLayout lay) =>
         lay.Lines.Select((line, i) => (line, i == 0 ? "0" : F(Geometry.LineHeight)));
+
+    /// <summary>Description lines with the tspan line offset.</summary>
+    static IEnumerable<(string Text, string Dy)> DescLines(Geometry.LabelLayout lay) =>
+        lay.Desc.Select((line, i) => (line, i == 0 ? "0" : F(Geometry.DescLineHeight)));
+
+    /// <summary>What the text width applies to for this shape, for the panel hint.</summary>
+    static string TextWidthHint(Node n) =>
+        Geometry.LabelBelow(n) ? "label and description under the shape" : "description under the shape";
+
+    static string TextWidthPlaceholder(Node n) => $"Auto ({F(Geometry.DefaultTextWidth(n))})";
 
     static string NodePanelTitle(Node n) =>
         n.Type == NodeTypes.Outcome ? $"Outcome · {Outcomes.Get(n.Outcome).Display}" : NodeTypes.Get(n.Type).Display;
@@ -1696,9 +1715,9 @@ public partial class Designer
     IEnumerable<NodeView> NodeViews() =>
         D.Nodes.Select(n =>
         {
-            NodeTypeInfo t = NodeTypes.Get(n.Type);
-            string label = string.IsNullOrWhiteSpace(n.Label) ? t.Display : n.Label;
-            return new NodeView(n, t, NodeStyle.For(n), Sel.Contains(n.Id), Geometry.Layout(n, label), Geometry.ExtraBelow(n));
+            Geometry.LabelLayout lay = Geometry.Layout(n);
+            Rect? back = Geometry.OutsideTextBox(n, lay) is { } r ? new Rect(r.X, r.Y, r.W, r.H) : null;
+            return new NodeView(n, NodeTypes.Get(n.Type), NodeStyle.For(n), Sel.Contains(n.Id), lay, Geometry.ExtraBelow(n), back);
         });
 
     /// <summary>Where the inline label editor sits: under the shape for labels drawn below, otherwise inside it.</summary>
@@ -1706,12 +1725,6 @@ public partial class Designer
         ? new Rect(v.N.X + v.N.W / 2 - 80, v.N.Y + v.N.H + 4, 160, 44)
         : new Rect(v.N.X + 8, v.N.Y + 6, v.N.W - 16, v.N.H - 12);
 
-    /// <summary>White backing behind a label drawn below a shape.</summary>
-    static Rect LabelBackground(Geometry.LabelLayout lay)
-    {
-        double w = lay.Lines.Max(l => l.Length) * 7.2 + 14;
-        return new Rect(lay.TextX - w / 2, lay.TextY - 14, w, lay.Lines.Count * Geometry.LineHeight + 6);
-    }
 
     static bool HasProperties(Node n) => n.Properties.Values.Any(v => !string.IsNullOrWhiteSpace(v));
 

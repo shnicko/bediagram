@@ -90,6 +90,19 @@ public class Node : IGroupable
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Outcome { get; set; }
     public Dictionary<string, string> Properties { get; set; } = new();
+    /// <summary>Optional longer note drawn in smaller text under the label. For shapes with the label inside,
+    /// it sits under the shape. A blank description is stored as null (left out of the file).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description
+    {
+        get => description;
+        set => description = string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+    string? description;
+    /// <summary>Wrap width (px) for text drawn outside the shape: a label under a circle or outcome, and the description.
+    /// Null = automatic (see <see cref="Geometry.TextWidth"/>).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? TextWidth { get; set; }
     /// <summary>Name of another saved diagram (without extension) holding this step's more detailed flow. Shows a link badge.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Link { get; set; }
