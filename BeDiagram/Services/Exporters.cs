@@ -129,18 +129,22 @@ public static class Exporters
             sb.Append($"<path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"1.6\"/>\n");
             if (t.Shape == "check")
                 sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
-            Geometry.LabelLayout lay = Geometry.Layout(n, string.IsNullOrWhiteSpace(n.Label) ? t.Display : n.Label);
+            Geometry.LabelLayout lay = Geometry.Layout(n);
             if (lay.HasIcon)
                 sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(Geometry.IconStroke(n))}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g>\n");
-            if (lay.Below)
-            {
-                double bw = lay.Lines.Max(l => l.Length) * 7.2 + 14;
-                sb.Append($"<rect x=\"{F(lay.TextX - bw / 2)}\" y=\"{F(lay.TextY - 14)}\" width=\"{F(bw)}\" height=\"{F(lay.Lines.Count * Geometry.LineHeight + 6)}\" rx=\"4\" fill=\"#ffffff\" fill-opacity=\"0.92\"/>");
-            }
+            if (Geometry.OutsideTextBox(n, lay) is { } back)
+                sb.Append($"<rect x=\"{F(back.X)}\" y=\"{F(back.Y)}\" width=\"{F(back.W)}\" height=\"{F(back.H)}\" rx=\"4\" fill=\"#ffffff\" fill-opacity=\"0.92\"/>");
             sb.Append($"<text x=\"{F(lay.TextX)}\" y=\"{F(lay.TextY)}\" font-size=\"13\" text-anchor=\"middle\" fill=\"{(lay.Below ? "#1f2933" : st.Text)}\">");
             for (int i = 0; i < lay.Lines.Count; i++)
                 sb.Append($"<tspan x=\"{F(lay.TextX)}\" dy=\"{(i == 0 ? "0" : "16")}\">{E(lay.Lines[i])}</tspan>");
             sb.Append("</text>\n");
+            if (lay.Desc.Count > 0)
+            {
+                sb.Append($"<text x=\"{F(lay.DescX)}\" y=\"{F(lay.DescY)}\" font-size=\"{F(Geometry.DescFontSize)}\" text-anchor=\"middle\" fill=\"#55606e\">");
+                for (int i = 0; i < lay.Desc.Count; i++)
+                    sb.Append($"<tspan x=\"{F(lay.DescX)}\" dy=\"{(i == 0 ? "0" : F(Geometry.DescLineHeight))}\">{E(lay.Desc[i])}</tspan>");
+                sb.Append("</text>\n");
+            }
             if (Geometry.HasLink(n)) sb.Append(Geometry.LinkBadgeSvg(n, st.Stroke)).Append('\n');
         }
         // Group link badges sit above the members so they're never hidden.
@@ -204,7 +208,9 @@ public static class Exporters
         {
             string id = $"N{++i}";
             ids[n.Id] = id;
-            string text = string.IsNullOrWhiteSpace(n.Label) ? NodeTypes.Get(n.Type).Display : n.Label;
+            string text = Geometry.LabelText(n);
+            // Mermaid can't draw text outside a shape, so the description goes on its own line inside the label.
+            string desc = n.Description is { } dsc ? "<br/>" + dsc.Replace("\"", "'").Replace("\r", "").Trim().Replace("\n", " ") : "";
             if (n.Type == NodeTypes.Outcome)
             {
                 // Mermaid has no seal/octagon: a symbol in the label plus the closest classic shape and a solid fill.
@@ -217,12 +223,12 @@ public static class Exporters
                     Outcomes.Hold => ("⏸", "(", ")"),
                     _ => ("✓", "((", "))"),
                 };
-                sb.Append($"    {id}{open}{Q($"{sym} {text}")}{close}\n");
+                sb.Append($"    {id}{open}{Q($"{sym} {text}")[..^1]}{desc}\"{close}\n");
                 NodeStyle ost = NodeStyle.For(n);
                 styles.Append($"    style {id} fill:{ost.Fill},stroke:{ost.Stroke},color:{(n.Filled ? ost.IconColor : "#1f2933")}\n");
                 continue;
             }
-            string label = Q(text);
+            string label = Q(text)[..^1] + desc + "\"";
             string shape = NodeTypes.Get(n.Type).Shape switch
             {
                 "pill" => $"([{label}])",

@@ -155,13 +155,79 @@ public static class Geometry
              + $"<g transform=\"translate({F(cx - glyph / 2)},{F(cy - glyph / 2)}) scale({F(glyph / 24)})\" fill=\"none\" stroke=\"{colour}\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get("link")}</g>";
     }
 
-    /// <summary>Where a node's label and icon go. Shared by the canvas and the SVG export.</summary>
+    /// <summary>Where a node's label, icon and description go. Shared by the canvas and the SVG export.</summary>
     public record LabelLayout(List<string> Lines, double TextX, double TextY, bool Below,
-                              bool HasIcon, double IconX, double IconY, double IconSize);
+                              bool HasIcon, double IconX, double IconY, double IconSize)
+    {
+        /// <summary>Description lines (smaller text). Empty when there is no description.</summary>
+        public List<string> Desc { get; init; } = new();
+        /// <summary>Centre of the description lines (the shape's centre).</summary>
+        public double DescX { get; init; }
+        /// <summary>Baseline of the first description line.</summary>
+        public double DescY { get; init; }
+    }
 
     public const double LineHeight = 16;
+    public const double DescFontSize = 11;
+    public const double DescLineHeight = 14;
+    /// <summary>Average character width of the 11px description text (for wrapping).</summary>
+    const double DescCharWidth = 6.1;
+
+    /// <summary>The label shown for a node: its own label, or the type name when it has none.</summary>
+    public static string LabelText(Node n) => string.IsNullOrWhiteSpace(n.Label) ? NodeTypes.Get(n.Type).Display : n.Label;
+
+    /// <summary>
+    /// Wrap width for text drawn outside the shape (a label under a circle/outcome, and the description).
+    /// The node's own <see cref="Node.TextWidth"/> when set, otherwise a little wider than the shape.
+    /// </summary>
+    public static double TextWidth(Node n) =>
+        n.TextWidth is > 0 ? n.TextWidth.Value : DefaultTextWidth(n);
+
+    public static double DefaultTextWidth(Node n) => LabelBelow(n) ? Math.Max(n.W * 1.7, 130) : Math.Max(n.W, 160);
+
+    public static LabelLayout Layout(Node n) => Layout(n, LabelText(n));
 
     public static LabelLayout Layout(Node n, string label)
+    {
+        LabelLayout lay = LayoutLabel(n, label);
+        if (n.Description is not { } desc) return lay;
+        // Under the label when the label is below the shape; otherwise just under the shape.
+        List<string> lines = Wrap(desc, TextWidth(n), DescCharWidth);
+        double firstBaseline = lay.Below
+            ? lay.TextY + (lay.Lines.Count - 1) * LineHeight + 4 + DescLineHeight
+            : n.Y + n.H + 6 + DescLineHeight;
+        return lay with { Desc = lines, DescX = n.X + n.W / 2, DescY = firstBaseline };
+    }
+
+    /// <summary>
+    /// The white backing behind text drawn outside the shape (label below and/or description), or null when nothing
+    /// is drawn outside. One rectangle covers both so they read as one block.
+    /// </summary>
+    public static (double X, double Y, double W, double H)? OutsideTextBox(Node n, LabelLayout lay)
+    {
+        if (!lay.Below && lay.Desc.Count == 0) return null;
+        double cx = n.X + n.W / 2;
+        double w = 0, top, bottom;
+        if (lay.Below)
+        {
+            w = lay.Lines.Max(l => l.Length) * 7.2 + 14;
+            top = lay.TextY - 14;
+            bottom = top + lay.Lines.Count * LineHeight + 6;
+        }
+        else
+        {
+            top = n.Y + n.H + 4;
+            bottom = top;
+        }
+        if (lay.Desc.Count > 0)
+        {
+            w = Math.Max(w, lay.Desc.Max(l => l.Length) * DescCharWidth + 14);
+            bottom = lay.DescY + (lay.Desc.Count - 1) * DescLineHeight + 5;
+        }
+        return (cx - w / 2, top, w, bottom - top);
+    }
+
+    static LabelLayout LayoutLabel(Node n, string label)
     {
         NodeTypeInfo t = NodeTypes.Get(n.Type);
         double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
@@ -174,7 +240,7 @@ public static class Geometry
             double m = Math.Min(n.W, n.H);
             double size = m * (shape == "triangle" ? 0.38 : shape == "seal" ? 0.44 : 0.48);
             double gy = shape == "triangle" ? n.Y + n.H * 0.62 : cy;
-            List<string> lines = Wrap(label, Math.Max(n.W * 1.7, 130));
+            List<string> lines = Wrap(label, TextWidth(n));
             return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, gy - size / 2, size);
         }
 
@@ -184,7 +250,7 @@ public static class Geometry
             {
                 // Presentation style: icon centred in the circle, label underneath.
                 double size = Math.Min(n.W, n.H) * 0.46;
-                List<string> lines = Wrap(label, Math.Max(n.W * 1.7, 130));
+                List<string> lines = Wrap(label, TextWidth(n));
                 return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, cy - size / 2, size);
             }
             List<string> inner = Wrap(label, n.W * 0.78);
@@ -258,12 +324,12 @@ public static class Geometry
         if (boxes.Count == 0) return null;
         double minX = boxes.Min(b => b.X), minY = boxes.Min(b => b.Y);
         double maxX = boxes.Max(b => b.X + b.W), maxY = boxes.Max(b => b.Y + b.H + ExtraBelow(b));
-        // Labels drawn under circles and outcomes can be wider than the shape.
-        foreach (Node n in d.Nodes.Where(n => ExtraBelow(n) > 0))
+        // Labels under circles/outcomes and descriptions can be wider than the shape.
+        foreach (Node n in d.Nodes)
         {
-            double half = Math.Max(n.W * 1.7, 130) / 2;
-            minX = Math.Min(minX, n.X + n.W / 2 - half);
-            maxX = Math.Max(maxX, n.X + n.W / 2 + half);
+            if (OutsideTextBox(n, Layout(n)) is not { } r) continue;
+            minX = Math.Min(minX, r.X);
+            maxX = Math.Max(maxX, r.X + r.W);
         }
         return (minX, minY, maxX - minX, maxY - minY);
     }
@@ -277,9 +343,16 @@ public static class Geometry
         return (minX - Group.Pad, minY - Group.Pad - Group.Header, maxX - minX + Group.Pad * 2, maxY - minY + Group.Pad * 2 + Group.Header);
     }
 
-    /// <summary>Space taken under a box by an external label (circle with icon).</summary>
-    public static double ExtraBelow(IBox b) =>
-        b is Node n && LabelBelow(n) ? 34 : 0;
+    /// <summary>
+    /// Space taken under a box by text drawn outside it: the label under a circle/outcome and the description.
+    /// A one-line label under a circle takes 34px (as before descriptions existed); more lines take more.
+    /// </summary>
+    public static double ExtraBelow(IBox b)
+    {
+        if (b is not Node n || (!LabelBelow(n) && n.Description is null)) return 0;
+        LabelLayout lay = Layout(n);
+        return OutsideTextBox(n, lay) is { } r ? r.Y + r.H - (n.Y + n.H) + 8 : 0;
+    }
 
     public record EdgeGeom(string D, double LabelX, double LabelY, double LabelAngle);
 
