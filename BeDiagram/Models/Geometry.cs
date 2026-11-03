@@ -334,14 +334,64 @@ public static class Geometry
         return (minX, minY, maxX - minX, maxY - minY);
     }
 
-    /// <summary>Bounds that wrap a set of boxes plus padding (with room for a group's title bar).</summary>
-    public static (double X, double Y, double W, double H) GroupBounds(IEnumerable<IBox> boxes)
+    /// <summary>Bounds that wrap a set of boxes plus padding, with room for a title bar at the top (a new group).</summary>
+    public static (double X, double Y, double W, double H) GroupBounds(IEnumerable<IBox> boxes) =>
+        GroupBounds(boxes, Group.Header, 0);
+
+    /// <summary>Bounds that wrap a set of boxes plus padding, with room for this group's title where it sits inside.</summary>
+    public static (double X, double Y, double W, double H) GroupBounds(IEnumerable<IBox> boxes, Group g) =>
+        GroupBounds(boxes, GroupInsetTop(g), GroupInsetBottom(g));
+
+    static (double X, double Y, double W, double H) GroupBounds(IEnumerable<IBox> boxes, double insetTop, double insetBottom)
     {
         List<IBox> list = boxes.ToList();
         double minX = list.Min(b => b.X), minY = list.Min(b => b.Y);
         double maxX = list.Max(b => b.X + b.W), maxY = list.Max(b => b.Y + b.H + ExtraBelow(b));
-        return (minX - Group.Pad, minY - Group.Pad - Group.Header, maxX - minX + Group.Pad * 2, maxY - minY + Group.Pad * 2 + Group.Header);
+        return (minX - Group.Pad, minY - Group.Pad - insetTop, maxX - minX + Group.Pad * 2, maxY - minY + Group.Pad * 2 + insetTop + insetBottom);
     }
+
+    // ───────────── Group title (top / bottom, band / plain text) ─────────────
+
+    static bool TitleBelowBox(Group g) => g.HeaderPos == GroupLook.Bottom && g.HeaderStyle == GroupLook.Text;
+
+    /// <summary>Space the title takes inside the top of the group.</summary>
+    public static double GroupInsetTop(Group g) => g.HeaderPos == GroupLook.Bottom ? 0 : Group.Header;
+
+    /// <summary>Space the title takes inside the bottom of the group (a band at the bottom).</summary>
+    public static double GroupInsetBottom(Group g) => g.HeaderPos == GroupLook.Bottom && g.HeaderStyle == GroupLook.Band ? Group.Header : 0;
+
+    /// <summary>The title area: the band (top or bottom), the top strip for a plain title, or the strip under the box.
+    /// Used to draw the band, as the drag handle, and for the inline title editor.</summary>
+    public static (double X, double Y, double W, double H) GroupTitleArea(Group g)
+    {
+        if (TitleBelowBox(g)) return (g.X, g.Y + g.H + 2, g.W, Group.Header - 4);
+        if (g.HeaderPos == GroupLook.Bottom) return (g.X, g.Y + g.H - Group.Header, g.W, Group.Header);
+        return (g.X, g.Y, g.W, Group.Header);
+    }
+
+    /// <summary>Title baseline and anchor: left in a band or top strip, centred under the box.</summary>
+    public static (double X, double Y, string Anchor) GroupTitlePos(Group g)
+    {
+        (double x, double y, double w, double h) = GroupTitleArea(g);
+        return TitleBelowBox(g) ? (x + w / 2, y + 17, "middle") : (x + 14, y + 21, "start");
+    }
+
+    /// <summary>The tinted band behind the title (rounded on the outside corners), or null for a plain-text title.</summary>
+    public static string? GroupBandPath(Group g)
+    {
+        if (g.HeaderStyle != GroupLook.Band) return null;
+        double x = g.X, w = g.W, r = 10;
+        if (g.HeaderPos == GroupLook.Bottom)
+        {
+            double y0 = g.Y + g.H - Group.Header, y1 = g.Y + g.H;
+            return $"M{F(x)},{F(y0)} V{F(y1 - r)} Q{F(x)},{F(y1)} {F(x + r)},{F(y1)} H{F(x + w - r)} Q{F(x + w)},{F(y1)} {F(x + w)},{F(y1 - r)} V{F(y0)} Z";
+        }
+        double y = g.Y;
+        return $"M{F(x)},{F(y + Group.Header)} V{F(y + r)} Q{F(x)},{F(y)} {F(x + r)},{F(y)} H{F(x + w - r)} Q{F(x + w)},{F(y)} {F(x + w)},{F(y + r)} V{F(y + Group.Header)} Z";
+    }
+
+    /// <summary>Fill opacity of the group body (0 = no fill; the body stays clickable).</summary>
+    public static double GroupFillOpacity(Group g) => g.Filled ? 0.6 : 0;
 
     /// <summary>
     /// Space taken under a box by text drawn outside it: the label under a circle/outcome and the description.
@@ -349,6 +399,7 @@ public static class Geometry
     /// </summary>
     public static double ExtraBelow(IBox b)
     {
+        if (b is Group g) return TitleBelowBox(g) ? Group.Header : 0;
         if (b is not Node n || (!LabelBelow(n) && n.Description is null)) return 0;
         LabelLayout lay = Layout(n);
         return OutsideTextBox(n, lay) is { } r ? r.Y + r.H - (n.Y + n.H) + 8 : 0;
