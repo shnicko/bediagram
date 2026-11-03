@@ -141,7 +141,11 @@ public static class Exporters
             for (int i = 0; i < lay.Lines.Count; i++)
                 sb.Append($"<tspan x=\"{F(lay.TextX)}\" dy=\"{(i == 0 ? "0" : "16")}\">{E(lay.Lines[i])}</tspan>");
             sb.Append("</text>\n");
+            if (Geometry.HasLink(n)) sb.Append(Geometry.LinkBadgeSvg(n, st.Stroke)).Append('\n');
         }
+        // Group link badges sit above the members so they're never hidden.
+        foreach (var g in d.Groups.Where(Geometry.HasLink))
+            sb.Append(Geometry.LinkBadgeSvg(g, Palette.Get(g.Color).Stroke)).Append('\n');
         sb.Append(labels);
         sb.Append(closeContent);
         sb.Append("</svg>\n");
@@ -264,6 +268,10 @@ public static class Exporters
             if (!ids.TryGetValue(e.From, out var a) || !ids.TryGetValue(e.To, out var b)) continue;
             sb.Append($"    {a} {MermaidLink(e)} {b}\n");
         }
+        // Mermaid has no notion of a linked sub-diagram; keep the links as comments so they aren't lost.
+        foreach (var (id, link) in d.Nodes.Select(n => (n.Id, n.Link)).Concat(d.Groups.Select(g => (g.Id, g.Link))))
+            if (!string.IsNullOrWhiteSpace(link) && ids.TryGetValue(id, out var mid))
+                sb.Append($"    %% {mid} links to diagram {Q(link)}\n");
         sb.Append(styles);
         return sb.ToString();
     }

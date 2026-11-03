@@ -15,6 +15,18 @@
             <button @onclick="Save" title="Save (Ctrl+S)">Save</button>
             <button @onclick="ShowSaveAs" title="Save as (Ctrl+Shift+S)">Save as…</button>
         </div>
+        @if (trail.Count > 0)
+        {
+            <div class="group trail" title="You opened this diagram from a link — click a name to go back up">
+                <button class="back" @onclick="GoBack" title="Back to @trail[^1]">← Back</button>
+                @for (int i = 0; i < trail.Count; i++)
+                {
+                    var level = i;
+                    <button class="link crumb" @onclick="() => GoUpTo(level)">@trail[level]</button><span class="crumb-sep">›</span>
+                }
+                <span class="crumb-here">@D.Name</span>
+            </div>
+        }
         <div class="group menu-host">
             <button @onclick="() => exportMenu = !exportMenu" title="Export next to the saved diagram">Export ▾</button>
             @if (exportMenu)
@@ -393,12 +405,22 @@
                                 <title>Has properties</title>
                             </circle>
                         }
+                        @if (Geometry.HasLink(n))
+                        {
+                            @LinkBadge(n, st.Stroke, n.Link!)
+                        }
                         @foreach (var (px, py) in Ports(n))
                         {
                             <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
                                     @onpointerdown="e => PortDown(e, nid)" @onpointerdown:stopPropagation="true" />
                         }
                     </g>
+                }
+
+                @* Group link badges sit above the members so they're never hidden *@
+                @foreach (var g in D.Groups.Where(Geometry.HasLink))
+                {
+                    @LinkBadge(g, Palette.Get(g.Color).Stroke, g.Link!)
                 }
 
                 @* Connector labels sit above shapes so they're never hidden *@
@@ -559,6 +581,8 @@
                 }
             </div>
             }
+
+            @LinkPicker(sn.Link, v => SetNodeLink(sn, v))
 
             @if (FindGroup(sn.GroupId) is { } ng)
             {
@@ -808,6 +832,7 @@
                 }
             </div>
             <p class="muted">@count item@(count == 1 ? "" : "s") inside · drag items in or out to change membership</p>
+            @LinkPicker(sg.Link, v => SetGroupLink(sg, v))
             <label>Align items within the group</label>
             @AlignBar(op => AlignInGroup(sg, op), count > 0)
             <div class="actions">
@@ -982,6 +1007,27 @@ else if (dialog == Dialog.SaveAs)
         </div>
     </div>
 }
+else if (dialog == Dialog.ConfirmLeave && pendingNav is { } nav)
+{
+    <div class="modal-bg" @onclick="CancelLeave">
+        <div class="modal" @onclick:stopPropagation="true">
+            <h3>Save changes before leaving?</h3>
+            <p>"@D.Name" has changes that haven't been saved. You're about to open "@nav.Target".</p>
+            @if (!hasFile)
+            {
+                <p class="muted">This diagram has never been saved, so you won't be able to come back to it with Back. Cancel and use Save as… first to keep it.</p>
+            }
+            <div class="actions">
+                <button @onclick="CancelLeave">Cancel</button>
+                <button class="danger" @onclick="() => ConfirmLeave(false)">Discard and open</button>
+                @if (hasFile)
+                {
+                    <button class="primary" @onclick="() => ConfirmLeave(true)">Save and open</button>
+                }
+            </div>
+        </div>
+    </div>
+}
 else if (dialog == Dialog.ConfirmNew)
 {
     <div class="modal-bg" @onclick="CloseDialog">
@@ -1007,6 +1053,52 @@ else if (dialog == Dialog.ConfirmNew)
         (AlignOp.Bottom, "align-end-horizontal", "Align bottom"),
         (AlignOp.DistributeH, "align-horizontal-distribute-center", "Distribute horizontally"),
         (AlignOp.DistributeV, "align-vertical-distribute-center", "Distribute vertically"),
+    };
+
+    /// <summary>The clickable link badge on a shape or group (opens the linked diagram).</summary>
+    RenderFragment LinkBadge(IBox box, string colour, string link) => __builder =>
+    {
+        var found = Store.Exists(link);
+        <g class="link-badge @(found ? "" : "missing")"
+           @onpointerdown:stopPropagation="true" @ondblclick:stopPropagation="true"
+           @onclick="() => FollowLink(link)" @onclick:stopPropagation="true">
+            <title>@(found ? $"More detail: open “{link}”" : $"Linked diagram “{link}” not found")</title>
+            @((MarkupString)Geometry.LinkBadgeSvg(box, colour))
+        </g>
+    };
+
+    /// <summary>Panel section: pick the saved diagram that holds the more detailed flow.</summary>
+    RenderFragment LinkPicker(string? current, Action<string?> set) => __builder =>
+    {
+        var names = Store.List().Select(f => f.Name).Where(nm => !(hasFile && nm == D.Name)).ToList();
+        var has = !string.IsNullOrWhiteSpace(current);
+        var missing = has && !Store.Exists(current!);
+        <label>Linked diagram <span class="muted">(more detailed flow)</span></label>
+        <div class="link-pick">
+            <select value="@(current ?? "")" @onchange="e => set(string.IsNullOrEmpty(e.Value?.ToString()) ? null : e.Value!.ToString())">
+                <option value="">None</option>
+                @if (missing)
+                {
+                    <option value="@current">@current (missing)</option>
+                }
+                @foreach (var nm in names)
+                {
+                    <option value="@nm">@nm</option>
+                }
+            </select>
+            @if (has && !missing)
+            {
+                <button class="small" title="Open the linked diagram (or click the link badge on the canvas)" @onclick="() => FollowLink(current)">@IconSvg("link", 14) Open</button>
+            }
+        </div>
+        @if (missing)
+        {
+            <p class="warn small-note">No saved diagram called “@current” in @Store.Folder — it may have been renamed or deleted.</p>
+        }
+        else if (names.Count == 0 && !has)
+        {
+            <p class="muted small-note">Save the detailed flow as its own diagram first, then pick it here.</p>
+        }
     };
 
     RenderFragment AlignBar(Action<AlignOp> act, bool enabled) => __builder =>
