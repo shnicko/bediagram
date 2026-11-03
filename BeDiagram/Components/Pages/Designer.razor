@@ -196,24 +196,33 @@
                 @foreach (GroupView v in GroupViews())
                 {
                     <g class="group @(v.Selected ? "selected" : "")">
+                        @if (v.Selected)
+                        {
+                            <rect class="sel-outline" x="@F(GroupSelectionRect(v.G).X)" y="@F(GroupSelectionRect(v.G).Y)"
+                                  width="@F(GroupSelectionRect(v.G).W)" height="@F(GroupSelectionRect(v.G).H)" rx="13" />
+                        }
                         <rect class="group-body" x="@F(v.G.X)" y="@F(v.G.Y)" width="@F(v.G.W)" height="@F(v.G.H)" rx="10"
-                              fill="@v.Swatch.Light" fill-opacity="0.6" stroke="@v.Swatch.Stroke" stroke-width="@(v.Selected ? 2.5 : 1.5)"
-                              stroke-dasharray="@(v.Selected ? "6 3" : null)"
+                              fill="@v.Swatch.Light" fill-opacity="@F(v.FillOpacity)" stroke="@v.Swatch.Stroke" stroke-width="@(v.Selected ? 2.5 : 1.5)"
+                              stroke-dasharray="@v.Dash"
                               @onpointerdown="e => GroupBodyDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
-                        <path class="group-header" d="@v.HeaderPath"
-                              fill="@v.Swatch.Stroke" fill-opacity="0.14"
+                        @if (v.BandPath is { } band)
+                        {
+                            <path d="@band" fill="@v.Swatch.Stroke" fill-opacity="0.14" pointer-events="none" />
+                        }
+                        @* Title area: the drag handle (double-click to rename) *@
+                        <rect class="group-header" x="@F(v.TitleArea.X)" y="@F(v.TitleArea.Y)" width="@F(v.TitleArea.W)" height="@F(v.TitleArea.H)" fill="transparent"
                               @onpointerdown="e => ItemDown(e, v.G.Id)" @onpointerdown:stopPropagation="true"
                               @ondblclick="() => BeginEdit(v.G.Id)" @ondblclick:stopPropagation="true" />
                         @if (EditId == v.G.Id)
                         {
-                            <foreignObject x="@F(v.G.X + 8)" y="@F(v.G.Y + 4)" width="@F(Math.Max(120, v.G.W - 16))" height="24">
+                            <foreignObject x="@F(GroupTitleEditRect(v).X)" y="@F(GroupTitleEditRect(v).Y)" width="@F(GroupTitleEditRect(v).W)" height="24">
                                 <input id="edit-box" class="inline-edit group-input" @bind="v.G.Title" @bind:event="oninput" @bind:after="MarkDirty"
                                        @onblur="EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true" />
                             </foreignObject>
                         }
                         else
                         {
-                            <g><text class="group-title" x="@F(v.G.X + 14)" y="@F(v.G.Y + 21)" fill="@v.Swatch.Stroke">@v.G.Title</text></g>
+                            <g><text class="group-title" x="@F(v.TitleX)" y="@F(v.TitleY)" text-anchor="@v.TitleAnchor" fill="@v.Swatch.Stroke">@v.G.Title</text></g>
                         }
                         @foreach ((double px, double py) in Ports(v.G))
                         {
@@ -761,6 +770,27 @@
                 {
                     <button class="swatch @(sg.Color == k ? "on" : "")" style="background:@swc.Light;border-color:@swc.Stroke" title="@k"
                             @onclick="() => SetGroupColour(sg, k)"></button>
+                }
+            </div>
+            <label class="check"><input type="checkbox" checked="@sg.Filled" @onchange="e => SetGroupFilled(sg, e.Value is true)" /> Tinted background</label>
+            <label>Border</label>
+            <div class="seg wide patterns">
+                @foreach ((string k, string name) in LineLook.Patterns)
+                {
+                    <button class="@(sg.Border == k ? "on" : "")" title="@name" @onclick="() => SetGroupBorder(sg, k)">@LinePreview(LineLook.Regular, k, LineLook.ArrowNone)</button>
+                }
+            </div>
+            <label>Title position and style</label>
+            <div class="seg wide">
+                @foreach ((string k, string name) in GroupLook.Positions)
+                {
+                    <button class="@(sg.HeaderPos == k ? "on" : "")" @onclick="() => SetGroupTitleLook(sg, k, null)">@name</button>
+                }
+            </div>
+            <div class="seg wide" style="margin-top:6px">
+                @foreach ((string k, string name) in GroupLook.Styles)
+                {
+                    <button class="@(sg.HeaderStyle == k ? "on" : "")" title="@GroupStyleTip(k)" @onclick="() => SetGroupTitleLook(sg, null, k)">@name</button>
                 }
             </div>
             <p class="muted">@MemberCount(sg) item@(MemberCount(sg) == 1 ? "" : "s") inside · drag items in or out to change membership</p>

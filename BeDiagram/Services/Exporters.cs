@@ -90,9 +90,13 @@ public static class Exporters
         foreach (Group g in d.Groups)
         {
             Palette.Swatch sw = Palette.Get(g.Color);
-            sb.Append($"<rect x=\"{F(g.X)}\" y=\"{F(g.Y)}\" width=\"{F(g.W)}\" height=\"{F(g.H)}\" rx=\"10\" fill=\"{sw.Light}\" fill-opacity=\"0.6\" stroke=\"{sw.Stroke}\" stroke-width=\"1.5\"/>\n");
-            sb.Append($"<path d=\"M{F(g.X)},{F(g.Y + Group.Header)} V{F(g.Y + 10)} Q{F(g.X)},{F(g.Y)} {F(g.X + 10)},{F(g.Y)} H{F(g.X + g.W - 10)} Q{F(g.X + g.W)},{F(g.Y)} {F(g.X + g.W)},{F(g.Y + 10)} V{F(g.Y + Group.Header)} Z\" fill=\"{sw.Stroke}\" fill-opacity=\"0.14\"/>\n");
-            sb.Append($"<text x=\"{F(g.X + 14)}\" y=\"{F(g.Y + 21)}\" font-size=\"13\" font-weight=\"600\" fill=\"{sw.Stroke}\">{E(g.Title)}</text>\n");
+            string fill = g.Filled ? $"fill=\"{sw.Light}\" fill-opacity=\"{F(Geometry.GroupFillOpacity(g))}\"" : "fill=\"none\"";
+            string? dash = LineLook.Dash(g.Border, 1.5);
+            sb.Append($"<rect x=\"{F(g.X)}\" y=\"{F(g.Y)}\" width=\"{F(g.W)}\" height=\"{F(g.H)}\" rx=\"10\" {fill} stroke=\"{sw.Stroke}\" stroke-width=\"1.5\"{(dash is null ? "" : $" stroke-dasharray=\"{dash}\"")}/>\n");
+            if (Geometry.GroupBandPath(g) is { } band)
+                sb.Append($"<path d=\"{band}\" fill=\"{sw.Stroke}\" fill-opacity=\"0.14\"/>\n");
+            (double tx, double ty, string anchor) = Geometry.GroupTitlePos(g);
+            sb.Append($"<text x=\"{F(tx)}\" y=\"{F(ty)}\" font-size=\"13\" font-weight=\"600\" text-anchor=\"{anchor}\" fill=\"{sw.Stroke}\">{E(g.Title)}</text>\n");
         }
 
         foreach (TextBox t in d.TextBoxes)
@@ -268,6 +272,11 @@ public static class Exporters
             foreach (IGroupable m in d.Nodes.Cast<IGroupable>().Concat(d.TextBoxes).Where(m => m.GroupId == g.Id))
                 sb.Append($"        {ids[m.Id]}\n");
             sb.Append("    end\n");
+            // Carry the group's look across where Mermaid can show it (no fill, broken outline).
+            List<string> look = new List<string>();
+            if (!g.Filled) look.Add("fill:none");
+            if (g.Border != LineLook.Solid) look.Add("stroke-dasharray:5 5");
+            if (look.Count > 0) styles.Append($"    style {gid} {string.Join(",", look)}\n");
         }
         foreach (Edge e in d.Edges)
         {

@@ -265,7 +265,7 @@ public partial class Designer
     {
         List<IBox> members = Members(g).Cast<IBox>().ToList();
         if (members.Count == 0) return;
-        (double x, double y, double w, double h) = Geometry.GroupBounds(members);
+        (double x, double y, double w, double h) = Geometry.GroupBounds(members, g);
         double right = Math.Max(g.X + g.W, x + w), bottom = Math.Max(g.Y + g.H, y + h);
         g.X = Math.Min(g.X, x); g.Y = Math.Min(g.Y, y);
         g.W = right - g.X; g.H = bottom - g.Y;
@@ -276,7 +276,7 @@ public partial class Designer
     {
         List<IBox> members = Members(g).Cast<IBox>().ToList();
         if (members.Count == 0) return;
-        (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(members);
+        (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(members, g);
     }
 
     string NextGroupColour()
@@ -342,9 +342,9 @@ public partial class Designer
         if (within is not null)
         {
             L = within.X + Group.Pad; R = within.X + within.W - Group.Pad;
-            T = within.Y + Group.Header + Group.Pad;
-            // Leave room inside the group for the tallest label hanging below an outline.
-            B = within.Y + within.H - Group.Pad - items.Max(Geometry.ExtraBelow);
+            T = within.Y + Geometry.GroupInsetTop(within) + Group.Pad;
+            // Leave room inside the group for a bottom title band and for the tallest label hanging below an outline.
+            B = within.Y + within.H - Group.Pad - Geometry.GroupInsetBottom(within) - items.Max(Geometry.ExtraBelow);
         }
         else
         {
@@ -1163,6 +1163,23 @@ public partial class Designer
     void SetIcon(Node n, string? icon) { Change(); n.Icon = icon; }
     void SetGroupColour(Group g, string colour) { Change(); g.Color = colour; }
 
+    static string GroupStyleTip(string style) => style == GroupLook.Band
+        ? "Title on a tinted strip inside the group"
+        : "Plain bold title — inside at the top, or centred under the box when the title is at the bottom";
+
+    void SetGroupFilled(Group g, bool filled) { Change(); g.Filled = filled; }
+
+    void SetGroupBorder(Group g, string pattern) { Change(); g.Border = pattern; }
+
+    /// <summary>Moving or restyling the title changes the room it takes inside the group, so the group grows if needed.</summary>
+    void SetGroupTitleLook(Group g, string? pos, string? style)
+    {
+        Change();
+        if (pos is not null) g.HeaderPos = pos;
+        if (style is not null) g.HeaderStyle = style;
+        GrowGroup(g);
+    }
+
     // ───────────── Text boxes ─────────────
 
     void SetTextLook(TextBox t, Action<TextBox> change) { Change(); change(t); }
@@ -1591,7 +1608,10 @@ public partial class Designer
 
     public record PaletteShape(NodeTypeInfo Type, int Number);
     public record Crumb(int Level, string Name);
-    public record GroupView(Group G, Palette.Swatch Swatch, bool Selected, string HeaderPath);
+    /// <param name="BandPath">Tinted title band, or null for a plain-text title.</param>
+    /// <param name="TitleArea">Where the title sits (drag handle and inline editor).</param>
+    public record GroupView(Group G, Palette.Swatch Swatch, bool Selected, string? BandPath, Rect TitleArea,
+                            double TitleX, double TitleY, string TitleAnchor, double FillOpacity, string? Dash);
     public record TextBoxView(TextBox T, TextStyle Style, bool Selected, Geometry.TextBoxLayout Layout, string Outline);
     public record EdgeView(Edge E, bool Selected, Geometry.EdgeGeom Geo, double Width, string Colour, string Marker);
     public record EdgeLabelView(Edge E, bool Selected, bool Editing, Geometry.EdgeGeom Geo, double Width);
@@ -1677,10 +1697,22 @@ public partial class Designer
         .Select(m => LineLook.MarkerDef(m.Colour, m.Weight)));
 
     IEnumerable<GroupView> GroupViews() =>
-        D.Groups.Select(g => new GroupView(g, Palette.Get(g.Color), Sel.Contains(g.Id), GroupHeaderPath(g)));
+        D.Groups.Select(g =>
+        {
+            (double ax, double ay, double aw, double ah) = Geometry.GroupTitleArea(g);
+            (double tx, double ty, string anchor) = Geometry.GroupTitlePos(g);
+            double width = Sel.Contains(g.Id) ? 2.5 : 1.5;
+            return new GroupView(g, Palette.Get(g.Color), Sel.Contains(g.Id), Geometry.GroupBandPath(g), new Rect(ax, ay, aw, ah),
+                                 tx, ty, anchor, Geometry.GroupFillOpacity(g), LineLook.Dash(g.Border, width));
+        });
 
-    static string GroupHeaderPath(Group g) =>
-        $"M{F(g.X)},{F(g.Y + Group.Header)} V{F(g.Y + 10)} Q{F(g.X)},{F(g.Y)} {F(g.X + 10)},{F(g.Y)} H{F(g.X + g.W - 10)} Q{F(g.X + g.W)},{F(g.Y)} {F(g.X + g.W)},{F(g.Y + 10)} V{F(g.Y + Group.Header)} Z";
+    /// <summary>Selection outline drawn just outside a group (and around a title shown under it).</summary>
+    static Rect GroupSelectionRect(Group g) =>
+        new Rect(g.X - 5, g.Y - 5, g.W + 10, g.H + 10 + Geometry.ExtraBelow(g));
+
+    /// <summary>Inline title editor: inside the title area, at least 120px wide.</summary>
+    static Rect GroupTitleEditRect(GroupView v) =>
+        new Rect(v.TitleArea.X + 8, v.TitleArea.Y + (v.TitleArea.H - 24) / 2, Math.Max(120, v.TitleArea.W - 16), 24);
 
     IEnumerable<TextBoxView> TextBoxViews() =>
         D.TextBoxes.Select(t =>

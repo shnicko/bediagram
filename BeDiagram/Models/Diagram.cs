@@ -392,6 +392,27 @@ public class Group : IBox
     /// <summary>Name of another saved diagram (without extension) holding this group's more detailed flow. Shows a link badge.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Link { get; set; }
+    /// <summary>Tinted background (true) or no fill, just the outline (false).</summary>
+    public bool Filled { get; set; } = true;
+    /// <summary>Outline pattern: a <see cref="LineLook"/> pattern key ("solid", "dashed", "dotted", ...).</summary>
+    public string Border { get; set; } = LineLook.Solid;
+    /// <summary>Where the title goes: "top" or "bottom" (see <see cref="GroupLook"/>).</summary>
+    public string HeaderPos { get; set; } = GroupLook.Top;
+    /// <summary>"band" = title on a tinted strip inside the group; "text" = plain bold title
+    /// (inside at the top, or centred under the box when the title is at the bottom).</summary>
+    public string HeaderStyle { get; set; } = GroupLook.Band;
+}
+
+/// <summary>Group title placement and style keys.</summary>
+public static class GroupLook
+{
+    public const string Top = "top";
+    public const string Bottom = "bottom";
+    public const string Band = "band";
+    public const string Text = "text";
+
+    public static readonly (string Key, string Name)[] Positions = { (Top, "Top"), (Bottom, "Bottom") };
+    public static readonly (string Key, string Name)[] Styles = { (Band, "Band"), (Text, "Plain text") };
 }
 
 public record NodeTypeInfo(string Key, string Display, string Shape, string Fill, string Stroke, double W, double H);
