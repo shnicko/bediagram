@@ -126,7 +126,10 @@ BeDiagram/                   the web app project
   Services/Exporters.cs        SVG and Mermaid export (SVG optionally of the current view)
   Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
   Services/Export/             export strategies (see below)
-  Components/Pages/Designer.razor(.cs)   the editor UI and interaction logic
+  Editing/DiagramEditor.cs     the diagram being edited: selection, undo, and every editing action (no UI code)
+  Editing/IEditorView.cs       what the editor needs from the screen (toast, view centre, start text editing)
+  Models/NodeFactory.cs        new shapes with their default size, look and properties
+  Components/Pages/Designer.razor(.cs)   the editor page: canvas, panel, dialogs, files, export; passes input to the editor
   Components/Pages/Gestures/   mouse gestures (State pattern, see below)
   Components/Pages/Commands/   editor commands and keyboard shortcuts (Command pattern, see below)
   Components/Pages/Views/      view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
@@ -153,6 +156,17 @@ Export is split into two families of strategies, put together by one context cla
 `PngExportFormat` uses one more small strategy, `IPngRasterizer`, for turning SVG into pixels; `BrowserPngRasterizer` does it in the browser (`wwwroot/js/export.js`). A server-side rasteriser could be swapped in without touching the format.
 
 To add an export format or area: write a class implementing the interface and register it in `Program.cs` — the menu picks it up; the Designer doesn't change. Menu order = registration order.
+
+### Editor and page: DiagramEditor
+
+The diagram and everything you can do to it live in **`DiagramEditor`** (`Editing/`): the open `Diagram`, the selection, inline-edit state, undo / redo (whole-diagram snapshots, i.e. the Memento pattern), and every editing action. That covers adding, joining, grouping, aligning, duplicating, deleting, nudging, restyling and the panel setters. It has no Blazor, browser or file code.
+
+The **Designer** page (`Designer.razor` + partial classes) is the view. It owns pan / zoom, the gesture in progress, dialogs, toasts, files, linked-diagram navigation and export. It turns mouse, keyboard and panel input into editor calls:
+- the markup calls the editor directly (`Editor.SetNodeColour(...)`, `Editor.Checkpoint`), and reads the diagram as `D`;
+- gestures (`IEditorContext`) and commands (`ICommandContext`) reach the editor through the Designer, which also adds the view-only parts (panning, zoom, save);
+- the editor talks back through **`IEditorView`** (show a toast, the view centre, focus the inline text box), which the Designer implements in `Designer.EditorView.cs`.
+
+New shapes come from **`NodeFactory`** (`Models/`), the one place that knows a fresh node's size, label, icon, fill and default properties.
 
 ### Shape outlines: Strategy pattern
 
@@ -205,7 +219,7 @@ Shared behaviour sits in two base classes. `DragGesture` keeps the start point a
 
 To add a gesture: write a class (usually derived from `UndoableDragGesture`) and create it from a pointer-down handler. The other gestures don't change.
 
-To add a shape type: add an entry to `NodeTypes.All` (and optionally default properties in `DefaultProps` in `Designer.razor.cs`).
+To add a shape type: add an entry to `NodeTypes.All` (and optionally default properties in `NodeFactory.DefaultProperties`).
 
 ## Known limits / next steps
 

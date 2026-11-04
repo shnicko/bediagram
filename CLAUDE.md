@@ -31,7 +31,13 @@ BeDiagram/
   Models/Shapes/         shape outlines (Strategy pattern, BeDiagram.Models.Shapes): IShapeOutline, ShapeOutline base,
                          one class per outline (Rect, Check, RoundedRect, Pill, Diamond, Parallelogram, Hexagon, Circle,
                          Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (lookup by shape key)
+  Models/NodeFactory.cs  new nodes: size, label, icon, fill and default properties per type (palette keys incl. "outcome:pass")
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
+  Editing/DiagramEditor.cs   the editor model, no UI (BeDiagram.Editing): open Diagram, Selection / SelectedEdgeId /
+                             EditingId, Dirty, AutoConnect / Snap, undo / redo (snapshots), and every editing action
+                             (create, join, group, align, duplicate, delete, nudge, panel setters)
+  Editing/IEditorView.cs     what the editor needs from the screen: ShowToast, ViewCentre, EditStarted
+  Editing/AlignOp.cs         align / distribute / row / column operations
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
   Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
   Services/ExportView.cs     the window onto the drawing that a current-view export uses
@@ -39,7 +45,9 @@ BeDiagram/
   Services/Export/           export strategies: IExportFormat (Svg/Png/Pdf/Mermaid), IExportArea (WholeDrawing/CurrentView),
                              ExportService (context: lists menu choices, renders + saves), IPngRasterizer (BrowserPngRasterizer)
   Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs) — markup only
-  Components/Pages/Designer.razor.cs   editor state + interaction logic + render helpers (view records the markup reads)
+  Components/Pages/Designer.razor.cs   the page: view state (pan/zoom), pointer handlers → gestures, palette drop, page size,
+                                       files, linked-diagram navigation, export, render helpers (view records the markup reads)
+  Components/Pages/Designer.EditorView.cs      Designer's IEditorView implementation (what the editor needs from the screen)
   Components/Pages/Designer.EditorContext.cs   Designer's IEditorContext implementation (what gestures may use)
   Components/Pages/Gestures/           mouse gestures (State pattern): IGesture, DragGesture / UndoableDragGesture bases,
                                        Move, Resize, Connect, Marquee, Pan, EdgeEnd, Bend
@@ -50,7 +58,6 @@ BeDiagram/
   Components/Pages/Designer.CommandContext.cs  Designer's ICommandContext implementation
   Components/Shared/*.razor(.cs)       small child components: AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas)
   Components/UiSvg.cs                  IconSvg / OutcomeSwatch helpers (imported with `@using static` in _Imports.razor)
-  Components/AlignOp.cs                align / distribute / row / column operations
   wwwroot/js/designer.js     keyboard shortcuts, wheel zoom/pan, canvas size, focus, drag data
   wwwroot/js/export.js       PNG export: draws the SVG export onto a canvas, returns the bytes (streamed to .NET)
   wwwroot/app.css            all styling
@@ -87,8 +94,14 @@ tools/Check-OneTypePerFile.ps1   one-type-per-file check (Windows PowerShell 5.1
   `Models/Shapes/`, reached through `Geometry.OutlineOf(n)`: path, connector clipping (`Boundary`), badge position,
   label / icon layout hints, side stripe, Mermaid syntax. Don't add `switch`es or `== "diamond"` tests on shape
   keys elsewhere. A new per-shape behaviour is a new `IShapeOutline` member (with a default in `ShapeOutline`).
-- **Undo.** Every model change goes through `Change()` (snapshot + dirty) or, for drags, a snapshot taken at
-  gesture start and pushed on pointer-up (`UndoableDragGesture` does this). Panel inputs call `Checkpoint` on focus.
+- **Editing lives in `DiagramEditor`, the page is the view.** Anything that changes the diagram, the selection or the
+  undo stack is a public method on `DiagramEditor` (no Blazor types in it — take plain values, not `ChangeEventArgs`).
+  The Designer keeps only view concerns (pan/zoom, gestures, dialogs, toasts, files, export, render helpers) and passes
+  input to `Editor`. The markup calls `Editor.X(...)` directly and reads the diagram as `D`. If the editor needs
+  something from the screen, add it to `IEditorView` (implemented in `Designer.EditorView.cs`). New node defaults
+  go in `NodeFactory`.
+- **Undo.** Every model change goes through `Editor.Change()` (snapshot + dirty) or, for drags, a snapshot taken at
+  gesture start and pushed on pointer-up (`UndoableDragGesture` does this). Panel inputs call `Editor.Checkpoint` on focus.
 - **Gestures use the State pattern.** A drag is an `IGesture` object held in `gesture` (null when idle). New drags are
   new gesture classes created from a pointer-down handler. Don't add mode enums or `switch` statements on gesture type
   in the Designer. Gestures reach the editor only through `IEditorContext`: if a gesture needs more, add it to that
@@ -99,7 +112,7 @@ tools/Check-OneTypePerFile.ps1   one-type-per-file check (Windows PowerShell 5.1
   in the Designer. Toolbar and panel buttons for the same action run the command (`Run(XxxCmd)`, `CanRun` for
   disabled, `Tip` for the tooltip). Commands reach the editor only through `ICommandContext`. A new shortcut key
   must also be added to the key list in `designer.js`. Commands don't do their own undo: the editor actions they
-  call already use `Change()`.
+  call already use `Editor.Change()`.
 - **Text boxes** replace the old comments: one `TextBox` class, `IsComment` flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in `Geometry.Layout(TextBox)`, drawn with SVG text in both renderers.
 - **Groups** don't nest. Membership is `GroupId` on nodes/text boxes; moving a group moves its members (`MoveBox`).
 - **PDF is drawn from the SVG export**, so it has no geometry of its own. If a new visual feature uses an SVG

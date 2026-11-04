@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using BeDiagram.Models;
 using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Services;
@@ -8,6 +7,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using BeDiagram.Components.Pages.Views;
+using BeDiagram.Editing;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
@@ -16,37 +16,36 @@ namespace BeDiagram.Components.Pages;
 
 public partial class Designer
 {
+    public Designer()
+    {
+        Editor = new DiagramEditor(this);
+    }
+
     [Inject] DiagramStore Store { get; set; } = default!;
     [Inject] ExportService Exports { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
     enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave }
 
-    // Document state
-    Diagram D = new();
-    bool Dirty;
+    /// <summary>
+    /// The diagram and everything done to it (selection, undo, editing actions) live in the editor; this page shows
+    /// it, turns mouse / keyboard / panel input into editor calls, and handles files, dialogs and export.
+    /// </summary>
+    readonly DiagramEditor Editor;
+
+    /// <summary>Short name for the open diagram — the markup reads it a lot.</summary>
+    Diagram D => Editor.Diagram;
+
     bool hasFile;
 
     // View state
     double PanX = 40, PanY = 40, Zoom = 1;
     double canvasLeft, canvasTop, canvasW = 1000, canvasH = 700;
-    bool AutoConnect = true;
-    bool Snap = true;
-
-    // Selection (ordered, so "join" follows the order items were picked)
-    readonly List<string> Sel = new();
-    string? SelEdge;
-    string? EditId;
 
     // Gesture state (State pattern — see Gestures/IGesture.cs): the drag in progress, null when the pointer is idle.
     IGesture? gesture;
     string? paletteDrag;
     bool skipRender;
-
-    // Undo
-    readonly List<string> undo = new();
-    readonly List<string> redo = new();
-    const int MaxUndo = 100;
 
     // UI
     Dialog dialog;
@@ -63,8 +62,6 @@ public partial class Designer
     ElementReference canvasEl;
     IJSObjectReference? module;
     DotNetObjectReference<Designer>? selfRef;
-
-    static readonly JsonSerializerOptions SnapshotJson = new();
 
     static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
@@ -100,57 +97,7 @@ public partial class Designer
         selfRef?.Dispose();
     }
 
-    // ───────────── Lookups ─────────────
-
-    IBox? FindBox(string? id) =>
-        id is null ? null
-        : (IBox?)D.Nodes.FirstOrDefault(n => n.Id == id)
-          ?? (IBox?)D.TextBoxes.FirstOrDefault(c => c.Id == id)
-          ?? D.Groups.FirstOrDefault(g => g.Id == id);
-
-    Group? FindGroup(string? id) => id is null ? null : D.Groups.FirstOrDefault(g => g.Id == id);
-
-    IEnumerable<IGroupable> Members(Group g) =>
-        D.Nodes.Where(n => n.GroupId == g.Id).Cast<IGroupable>().Concat(D.TextBoxes.Where(c => c.GroupId == g.Id));
-
-    Node? SelectedNode => Sel.Count == 1 ? D.Nodes.FirstOrDefault(n => n.Id == Sel[0]) : null;
-    TextBox? SelectedText => Sel.Count == 1 ? D.TextBoxes.FirstOrDefault(c => c.Id == Sel[0]) : null;
-    Group? SelectedGroup => Sel.Count == 1 ? FindGroup(Sel[0]) : null;
-    Edge? SelectedEdgeObj => SelEdge is null ? null : D.Edges.FirstOrDefault(e => e.Id == SelEdge);
-
-    string LabelOf(string id) => FindBox(id) switch
-    {
-        Node n => string.IsNullOrWhiteSpace(n.Label) ? NodeTypes.Get(n.Type).Display : n.Label,
-        TextBox t => t.IsComment ? "Comment" : $"Text “{TextPreview(t.Text)}”",
-        Group g => $"Group “{g.Title}”",
-        _ => "?",
-    };
-
-    static string TextPreview(string text)
-    {
-        string first = (text ?? "").Replace("\r", "").Split('\n')[0].Trim();
-        return first.Length == 0 ? "…" : first.Length > 24 ? first[..24] + "…" : first;
-    }
-
-    /// <summary>Top-most item under a world point: shapes first, then text boxes, then groups.</summary>
-    IBox? HitTest(double x, double y, string? exclude = null)
-    {
-        for (int i = D.Nodes.Count - 1; i >= 0; i--)
-            if (D.Nodes[i].Id != exclude && Geometry.Contains(D.Nodes[i], x, y)) return D.Nodes[i];
-        for (int i = D.TextBoxes.Count - 1; i >= 0; i--)
-            if (D.TextBoxes[i].Id != exclude && Geometry.Contains(D.TextBoxes[i], x, y)) return D.TextBoxes[i];
-        string? ownGroup = (FindBox(exclude) as IGroupable)?.GroupId;
-        for (int i = D.Groups.Count - 1; i >= 0; i--)
-            if (D.Groups[i].Id != exclude && D.Groups[i].Id != ownGroup && Geometry.Contains(D.Groups[i], x, y)) return D.Groups[i];
-        return null;
-    }
-
-    Group? GroupAt(double x, double y)
-    {
-        for (int i = D.Groups.Count - 1; i >= 0; i--)
-            if (Geometry.Contains(D.Groups[i], x, y)) return D.Groups[i];
-        return null;
-    }
+    // ───────────── Canvas coordinates ─────────────
 
     static IEnumerable<(double, double)> Ports(IBox n)
     {
@@ -165,407 +112,6 @@ public partial class Designer
 
     (double X, double Y) ViewCentre() => ((canvasW / 2 - PanX) / Zoom, (canvasH / 2 - PanY) / Zoom);
 
-    double SnapV(double v) => Snap ? Math.Round(v / 10) * 10 : v;
-
-    /// <summary>Selected ids plus the members of any selected groups (so groups move as a unit).</summary>
-    List<IBox> WithMembers(IEnumerable<string> ids)
-    {
-        List<IBox> result = new List<IBox>();
-        HashSet<string> seen = new HashSet<string>();
-        foreach (string id in ids)
-        {
-            IBox? b = FindBox(id);
-            if (b is null) continue;
-            if (seen.Add(b.Id)) result.Add(b);
-            if (b is Group g)
-                foreach (IGroupable m in Members(g))
-                    if (seen.Add(m.Id)) result.Add(m);
-        }
-        return result;
-    }
-
-    // ───────────── Undo / dirty ─────────────
-
-    string Snapshot() => JsonSerializer.Serialize(D, SnapshotJson);
-
-    void PushUndo(string snap)
-    {
-        if (undo.Count > 0 && undo[^1] == snap) return;
-        undo.Add(snap);
-        if (undo.Count > MaxUndo) undo.RemoveAt(0);
-        redo.Clear();
-    }
-
-    void Checkpoint() => PushUndo(Snapshot());
-
-    void Change() { Checkpoint(); Dirty = true; }
-
-    void MarkDirty() => Dirty = true;
-
-    void Restore(string snap)
-    {
-        string name = D.Name;
-        D = JsonSerializer.Deserialize<Diagram>(snap, SnapshotJson) ?? new Diagram();
-        D.Name = name;
-        Sel.RemoveAll(id => FindBox(id) is null);
-        if (SelEdge is not null && SelectedEdgeObj is null) SelEdge = null;
-        EditId = null;
-        Dirty = true;
-    }
-
-    void Undo()
-    {
-        if (undo.Count == 0) return;
-        string current = Snapshot();
-        string prev = undo[^1];
-        undo.RemoveAt(undo.Count - 1);
-        // Skip no-op checkpoints (e.g. a field was focused but not changed).
-        if (prev == current && undo.Count > 0) { prev = undo[^1]; undo.RemoveAt(undo.Count - 1); }
-        redo.Add(current);
-        Restore(prev);
-    }
-
-    void Redo()
-    {
-        if (redo.Count == 0) return;
-        undo.Add(Snapshot());
-        string next = redo[^1];
-        redo.RemoveAt(redo.Count - 1);
-        Restore(next);
-    }
-
-    // ───────────── Groups ─────────────
-
-    /// <summary>
-    /// After a drag: a loose item joins the group under its centre; a member moves to another group only when
-    /// dropped inside that group, otherwise it stays in its own group (which grows to fit, like nudging with
-    /// the arrow keys). Leaving a group is done with Ungroup or "remove from group" in the panel.
-    /// </summary>
-    void UpdateMembership(IEnumerable<IGroupable> items)
-    {
-        HashSet<Group> touched = new HashSet<Group>();
-        foreach (IGroupable it in items)
-        {
-            Group? old = FindGroup(it.GroupId);
-            Group? g = GroupAt(it.X + it.W / 2, it.Y + it.H / 2) ?? old;
-            it.GroupId = g?.Id;
-            if (g is not null) touched.Add(g);
-            if (old is not null && old != g) touched.Add(old);
-        }
-        foreach (Group g in touched) GrowGroup(g);
-    }
-
-    /// <summary>Expands a group (never shrinks it) so all members fit inside with padding.</summary>
-    void GrowGroup(Group g)
-    {
-        List<IBox> members = Members(g).Cast<IBox>().ToList();
-        if (members.Count == 0) return;
-        (double x, double y, double w, double h) = Geometry.GroupBounds(members, g);
-        double right = Math.Max(g.X + g.W, x + w), bottom = Math.Max(g.Y + g.H, y + h);
-        g.X = Math.Min(g.X, x); g.Y = Math.Min(g.Y, y);
-        g.W = right - g.X; g.H = bottom - g.Y;
-    }
-
-    /// <summary>Shrink-wraps a group around its members.</summary>
-    void FitGroup(Group g)
-    {
-        List<IBox> members = Members(g).Cast<IBox>().ToList();
-        if (members.Count == 0) return;
-        (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(members, g);
-    }
-
-    string NextGroupColour()
-    {
-        HashSet<string> used = D.Groups.Select(g => g.Color).ToHashSet();
-        return Palette.All.Keys.FirstOrDefault(k => !used.Contains(k)) ?? Palette.All.Keys.ElementAt(D.Groups.Count % Palette.All.Count);
-    }
-
-    void GroupSelection()
-    {
-        List<IGroupable> items = Sel.Select(FindBox).OfType<IGroupable>().ToList();
-        if (items.Count == 0) { ShowToast("Select shapes or text boxes to group"); return; }
-        Change();
-        Group g = new Group { Title = "Group", Color = NextGroupColour() };
-        (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(items);
-        D.Groups.Add(g);
-        foreach (IGroupable it in items) it.GroupId = g.Id;
-        SelectOnly(g.Id);
-        BeginEdit(g.Id, checkpoint: false);
-    }
-
-    void Ungroup(Group g)
-    {
-        Change();
-        foreach (IGroupable m in Members(g)) m.GroupId = null;
-        D.Edges.RemoveAll(e => e.From == g.Id || e.To == g.Id);
-        D.Groups.Remove(g);
-        ClearSelection();
-    }
-
-    void RemoveFromGroup(IGroupable item)
-    {
-        if (FindGroup(item.GroupId) is not { } g) return;
-        Change();
-        item.GroupId = null;
-        // Move it just outside the group so it doesn't look like it's still inside.
-        item.X = SnapV(g.X + g.W + 40);
-        FitGroup(g);
-    }
-
-    /// <summary>Moves a box; a group carries its members with it.</summary>
-    void MoveBox(IBox b, double x, double y)
-    {
-        double dx = x - b.X, dy = y - b.Y;
-        b.X = x; b.Y = y;
-        if (b is Group g)
-            foreach (IGroupable m in Members(g)) { m.X += dx; m.Y += dy; }
-    }
-
-    // ───────────── Alignment ─────────────
-
-    /// <summary>
-    /// Aligns/arranges items. Inside a group the group's interior is the reference; otherwise the selection bounds.
-    /// Left/centre/right/top/middle/bottom line up the shape outlines only — a label drawn under a circle or outcome
-    /// is ignored, so a circle and a box aligned to the bottom share the same bottom edge.
-    /// Distribute and column still leave room for those labels so they don't run into the next item.
-    /// </summary>
-    void Align(AlignOp op, List<IBox> items, Group? within)
-    {
-        if (items.Count == 0 || (within is null && items.Count < 2)) return;
-        Change();
-        double L, T, R, B;
-        if (within is not null)
-        {
-            L = within.X + Group.Pad; R = within.X + within.W - Group.Pad;
-            T = within.Y + Geometry.GroupInsetTop(within) + Group.Pad;
-            // Leave room inside the group for a bottom title band and for the tallest label hanging below an outline.
-            B = within.Y + within.H - Group.Pad - Geometry.GroupInsetBottom(within) - items.Max(Geometry.ExtraBelow);
-        }
-        else
-        {
-            L = items.Min(b => b.X); R = items.Max(b => b.X + b.W);
-            T = items.Min(b => b.Y); B = items.Max(b => b.Y + b.H);
-        }
-        const double gap = 40;
-
-        switch (op)
-        {
-            case AlignOp.Left: foreach (IBox b in items) MoveBox(b, L, b.Y); break;
-            case AlignOp.CenterX: foreach (IBox b in items) MoveBox(b, (L + R) / 2 - b.W / 2, b.Y); break;
-            case AlignOp.Right: foreach (IBox b in items) MoveBox(b, R - b.W, b.Y); break;
-            case AlignOp.Top: foreach (IBox b in items) MoveBox(b, b.X, T); break;
-            case AlignOp.Middle: foreach (IBox b in items) MoveBox(b, b.X, (T + B) / 2 - b.H / 2); break;
-            case AlignOp.Bottom: foreach (IBox b in items) MoveBox(b, b.X, B - b.H); break;
-            case AlignOp.DistributeH:
-            {
-                List<IBox> sorted = items.OrderBy(b => b.X + b.W / 2).ToList();
-                double space = (R - L) - sorted.Sum(b => b.W);
-                double g = sorted.Count > 1 ? space / (sorted.Count - 1) : 0;
-                if (g < 20) g = gap;
-                double x = sorted.Count > 1 ? L : (L + R) / 2 - sorted[0].W / 2;
-                foreach (IBox b in sorted) { MoveBox(b, x, b.Y); x += b.W + g; }
-                break;
-            }
-            case AlignOp.DistributeV:
-            {
-                // First outline top stays at T, last outline bottom at B; gaps are measured from the bottom of each
-                // item's label (if any) to the top of the next outline.
-                List<IBox> sorted = items.OrderBy(b => b.Y + b.H / 2).ToList();
-                double space = (B - T) - sorted.Sum(b => b.H) - sorted.Take(sorted.Count - 1).Sum(Geometry.ExtraBelow);
-                double g = sorted.Count > 1 ? space / (sorted.Count - 1) : 0;
-                if (g < 20) g = gap;
-                double y = sorted.Count > 1 ? T : (T + B) / 2 - sorted[0].H / 2;
-                foreach (IBox b in sorted) { MoveBox(b, b.X, y); y += b.H + Geometry.ExtraBelow(b) + g; }
-                break;
-            }
-            case AlignOp.Row:
-            {
-                List<IBox> sorted = items.OrderBy(b => b.X).ToList();
-                double tallest = sorted.Max(b => b.H);
-                double mid = within is not null ? T + tallest / 2 : (T + B) / 2;
-                double x = L;
-                foreach (IBox b in sorted) { MoveBox(b, SnapV(x), mid - b.H / 2); x += b.W + gap; }
-                break;
-            }
-            case AlignOp.Column:
-            {
-                List<IBox> sorted = items.OrderBy(b => b.Y).ToList();
-                double widest = sorted.Max(b => b.W);
-                double mid = within is not null ? L + widest / 2 : (L + R) / 2;
-                double y = T;
-                foreach (IBox b in sorted) { MoveBox(b, mid - b.W / 2, SnapV(y)); y += b.H + Geometry.ExtraBelow(b) + gap; }
-                break;
-            }
-        }
-
-        if (within is not null)
-        {
-            if (op is AlignOp.Row or AlignOp.Column) FitGroup(within); else GrowGroup(within);
-        }
-        else
-        {
-            foreach (Group g in D.Groups.Where(g => items.OfType<IGroupable>().Any(i => i.GroupId == g.Id)).ToList())
-                GrowGroup(g);
-        }
-    }
-
-    void AlignSelection(AlignOp op) => Align(op, Sel.Select(FindBox).Where(b => b is not null).Cast<IBox>().ToList(), null);
-
-    void AlignInGroup(Group g, AlignOp op) => Align(op, Members(g).Cast<IBox>().ToList(), g);
-
-    // ───────────── Creating items ─────────────
-
-    static Dictionary<string, string> DefaultProps(string type) => type switch
-    {
-        NodeTypes.Check => new() { ["ruleId"] = "", ["ifcEntity"] = "", ["property"] = "", ["operator"] = "", ["value"] = "" },
-        NodeTypes.Decision => new() { ["condition"] = "" },
-        NodeTypes.Data => new() { ["source"] = "" },
-        NodeTypes.Status => new() { ["bcfStatus"] = "" },
-        NodeTypes.Action => new() { ["owner"] = "" },
-        _ => new(),
-    };
-
-    /// <summary>Palette keys are a node type, or "outcome:&lt;variant&gt;" for an outcome.</summary>
-    static (string Type, string? Outcome) ParsePaletteKey(string key) =>
-        key.StartsWith(NodeTypes.Outcome + ":") ? (NodeTypes.Outcome, key[(NodeTypes.Outcome.Length + 1)..]) : (key, null);
-
-    Node CreateNode(string key, double cx, double cy)
-    {
-        (string type, string? outcome) = ParsePaletteKey(key);
-        NodeTypeInfo t = NodeTypes.Get(type);
-        bool isOutcome = t.Key == NodeTypes.Outcome;
-        Node n = new Node
-        {
-            Type = t.Key,
-            Outcome = isOutcome ? Outcomes.Get(outcome).Key : null,
-            Filled = isOutcome,
-            Label = t.Key == NodeTypes.Circle ? "Label" : isOutcome ? Outcomes.Get(outcome).Display : t.Display,
-            Icon = t.Key == NodeTypes.Circle ? "layers" : null,
-            W = t.W,
-            H = t.H,
-            X = SnapV(cx) - t.W / 2,
-            Y = SnapV(cy) - t.H / 2,
-            Properties = DefaultProps(t.Key),
-        };
-        D.Nodes.Add(n);
-        return n;
-    }
-
-    bool AddEdge(string from, string to, string label = "")
-    {
-        if (from == to) return false;
-        if (D.Edges.Any(e => (e.From == from && e.To == to))) return false;
-        IBox? a = FindBox(from); IBox? b = FindBox(to);
-        if (a is null || b is null) return false;
-        // Two comments pinned to each other is meaningless; any other pairing (text ↔ shape, text ↔ text) is fine.
-        bool aNote = a is TextBox { IsComment: true }, bNote = b is TextBox { IsComment: true };
-        if (aNote && bNote) return false;
-        // A group connecting to its own member is meaningless.
-        if (a is Group ga && (b as IGroupable)?.GroupId == ga.Id) return false;
-        if (b is Group gb && (a as IGroupable)?.GroupId == gb.Id) return false;
-        Edge edge = new Edge { From = from, To = to, Label = label };
-        edge.CopyLookFrom(D.DefaultLook);
-        edge.Style = D.DefaultConnector;
-        if (aNote || bNote) TextBox.ApplyPinLook(edge);
-        D.Edges.Add(edge);
-        return true;
-    }
-
-    /// <summary>The item new shapes are auto-joined to: the most recently selected shape, group or (non-comment) text box.</summary>
-    IBox? JoinSource()
-    {
-        if (Sel.Count == 0) return null;
-        IBox? b = FindBox(Sel[^1]);
-        return b is Node or Group or TextBox { IsComment: false } ? b : null;
-    }
-
-    void AddNodeAt(string type, double cx, double cy, bool join, string? groupId = null)
-    {
-        Change();
-        IBox? src = join ? JoinSource() : null;
-        Node n = CreateNode(type, cx, cy);
-        if (src is not null) AddEdge(src.Id, n.Id);
-        if (groupId is not null && FindGroup(groupId) is { } g) { n.GroupId = g.Id; GrowGroup(g); }
-        else UpdateMembership(new[] { n });
-        SelectOnly(n.Id);
-    }
-
-    /// <summary>Palette click or number key: place the next step below the selection, joined to it when Auto-join is on.</summary>
-    void QuickAdd(string type) => QuickAdd(type, join: AutoConnect);
-
-    /// <summary>The panel's "+ Next step" button: always joined to the selection (that's what the button is for).</summary>
-    void AddNextStep() => QuickAdd(NodeTypes.Process, join: true);
-
-    void QuickAdd(string type, bool join)
-    {
-        IBox? src = JoinSource();
-        NodeTypeInfo t = NodeTypes.Get(ParsePaletteKey(type).Type);
-        double cx, cy;
-        if (src is not null)
-        {
-            cx = src.X + src.W / 2;
-            cy = src.Y + src.H + Geometry.ExtraBelow(src) + 70 + t.H / 2;
-            // Step sideways until the spot is free (e.g. second branch of a decision).
-            int guard = 0;
-            while (D.Nodes.Any(o => Geometry.Intersects(o, cx - t.W / 2 - 10, cy - t.H / 2 - 10, cx + t.W / 2 + 10, cy + t.H / 2 + 10)) && guard++ < 20)
-                cx += t.W + 40;
-        }
-        else
-        {
-            (cx, cy) = ViewCentre();
-            while (D.Nodes.Any(o => Geometry.Contains(o, cx, cy))) cy += 100;
-        }
-        // A step added from a shape inside a group stays in that group.
-        AddNodeAt(type, cx, cy, join: join && src is not null, groupId: (src as IGroupable)?.GroupId);
-    }
-
-    /// <summary>Adds a text box (or a comment) with its top-left at (x, y), optionally joined/pinned to an item.</summary>
-    void AddTextAt(double x, double y, string? joinTo, bool comment)
-    {
-        Change();
-        TextBox t = comment ? TextBox.NewComment() : new TextBox();
-        t.X = SnapV(x); t.Y = SnapV(y);
-        D.TextBoxes.Add(t);
-        // Comments point at what they annotate; plain text continues the flow from the selection.
-        if (joinTo is not null) { if (comment) AddEdge(t.Id, joinTo); else AddEdge(joinTo, t.Id); }
-        UpdateMembership(new[] { t });
-        SelectOnly(t.Id);
-        BeginEdit(t.Id, checkpoint: false);
-    }
-
-    void AddCommentQuick()
-    {
-        IBox? src = Sel.Count > 0 ? FindBox(Sel[^1]) : null;
-        if (src is TextBox { IsComment: true }) src = null;
-        if (src is not null) AddTextAt(src.X + src.W + 50, src.Y - 30, src.Id, comment: true);
-        else { (double cx, double cy) = ViewCentre(); AddTextAt(cx - 100, cy - 55, null, comment: true); }
-    }
-
-    void AddTextQuick()
-    {
-        IBox? src = JoinSource();
-        TextBox t = new TextBox();
-        if (src is not null && AutoConnect)
-            AddTextAt(src.X + src.W / 2 - t.W / 2, src.Y + src.H + Geometry.ExtraBelow(src) + 60, src.Id, comment: false);
-        else { (double cx, double cy) = ViewCentre(); AddTextAt(cx - t.W / 2, cy - t.H / 2, null, comment: false); }
-    }
-
-    void AddGroupAt(double cx, double cy)
-    {
-        Change();
-        Group g = new Group { Color = NextGroupColour() };
-        g.X = SnapV(cx - g.W / 2); g.Y = SnapV(cy - g.H / 2);
-        D.Groups.Add(g);
-        SelectOnly(g.Id);
-    }
-
-    void AddGroupQuick()
-    {
-        if (Sel.Any(id => FindBox(id) is IGroupable)) { GroupSelection(); return; }
-        (double cx, double cy) = ViewCentre();
-        AddGroupAt(cx, cy);
-    }
-
     // ───────────── Palette drag and drop ─────────────
 
     void OnDrop(DragEventArgs e)
@@ -575,26 +121,20 @@ public partial class Designer
         switch (paletteDrag)
         {
             case "comment":
-                AddTextAt(x - 100, y - 55, (HitTest(x, y) as Node)?.Id, comment: true);
+                Editor.AddTextAt(x - 100, y - 55, (Editor.HitTest(x, y) as Node)?.Id, comment: true);
                 break;
             case "text":
-                AddTextAt(x - 100, y - 30, null, comment: false);
+                Editor.AddTextAt(x - 100, y - 30, null, comment: false);
                 break;
             case "group":
-                AddGroupAt(x, y);
+                Editor.AddGroupAt(x, y);
                 break;
             default:
-                AddNodeAt(paletteDrag, x, y, join: AutoConnect);
+                Editor.AddNodeAt(paletteDrag, x, y, join: Editor.AutoConnect);
                 break;
         }
         paletteDrag = null;
     }
-
-    // ───────────── Selection ─────────────
-
-    void SelectOnly(string id) { Sel.Clear(); Sel.Add(id); SelEdge = null; }
-
-    void ClearSelection() { Sel.Clear(); SelEdge = null; }
 
     // ───────────── Pointer handling ─────────────
 
@@ -608,19 +148,19 @@ public partial class Designer
     void ItemDown(PointerEventArgs e, string id)
     {
         if (e.Button != 0) { StartPan(e); return; }
-        if (EditId is not null && EditId != id) EndEdit();
-        SelEdge = null;
+        if (Editor.EditingId is not null && Editor.EditingId != id) Editor.EndEdit();
+        Editor.SelectedEdgeId = null;
         if (e.ShiftKey || e.CtrlKey)
         {
-            if (Sel.Contains(id)) { Sel.Remove(id); return; }
-            Sel.Add(id);
+            if (Editor.Selection.Contains(id)) { Editor.Selection.Remove(id); return; }
+            Editor.Selection.Add(id);
         }
-        else if (!Sel.Contains(id))
+        else if (!Editor.Selection.Contains(id))
         {
-            SelectOnly(id);
+            Editor.SelectOnly(id);
         }
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
-        gesture = new MoveGesture(this, x, y, WithMembers(Sel));
+        gesture = new MoveGesture(this, x, y, Editor.WithMembers(Editor.Selection));
     }
 
     /// <summary>Pressing on a group's body: click selects the group, drag draws a selection box inside it.</summary>
@@ -628,8 +168,8 @@ public partial class Designer
     {
         if (e.Button != 0) { StartPan(e); return; }
         if (e.ShiftKey || e.CtrlKey) { ItemDown(e, id); return; }
-        EndEdit();
-        ClearSelection();
+        Editor.EndEdit();
+        Editor.ClearSelection();
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
         gesture = new MarqueeGesture(this, x, y, clickSelects: id);
     }
@@ -637,15 +177,15 @@ public partial class Designer
     void PortDown(PointerEventArgs e, string id)
     {
         if (e.Button != 0) { StartPan(e); return; }
-        EndEdit();
-        SelectOnly(id);
+        Editor.EndEdit();
+        Editor.SelectOnly(id);
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
         gesture = new ConnectGesture(this, x, y, id);
     }
 
     void ResizeDown(PointerEventArgs e, string id)
     {
-        if (FindBox(id) is not { } box) return;
+        if (Editor.FindBox(id) is not { } box) return;
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
         gesture = new ResizeGesture(this, x, y, box);
     }
@@ -653,9 +193,9 @@ public partial class Designer
     void EdgeDown(PointerEventArgs e, string id)
     {
         if (e.Button != 0) { StartPan(e); return; }
-        if (EditId is not null && EditId != id) EndEdit();
-        Sel.Clear();
-        SelEdge = id;
+        if (Editor.EditingId is not null && Editor.EditingId != id) Editor.EndEdit();
+        Editor.Selection.Clear();
+        Editor.SelectedEdgeId = id;
     }
 
     /// <summary>Pressing a ● end of the selected connector: drag it to another side of its shape.</summary>
@@ -674,28 +214,13 @@ public partial class Designer
         if (BendGesture.TryStart(this, x, y, id) is { } bend) gesture = bend;
     }
 
-    void ResetRoute(Edge e)
-    {
-        if (!e.IsManual) return;
-        Change();
-        e.ResetRoute();
-    }
-
-    void ResetBend(string id)
-    {
-        Edge? edge = D.Edges.FirstOrDefault(x => x.Id == id);
-        if (edge is null || edge.Bend == 0) return;
-        Change();
-        edge.Bend = 0;
-    }
-
     void StartPan(PointerEventArgs e) => gesture = new PanGesture(this, e.ClientX, e.ClientY);
 
     void BgDown(PointerEventArgs e)
     {
-        EndEdit();
+        Editor.EndEdit();
         if (e.Button != 0) { StartPan(e); return; }
-        if (!e.ShiftKey) ClearSelection();
+        if (!e.ShiftKey) Editor.ClearSelection();
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
         gesture = new MarqueeGesture(this, x, y);
     }
@@ -703,7 +228,7 @@ public partial class Designer
     void BgDoubleClick(MouseEventArgs e)
     {
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
-        AddNodeAt(NodeTypes.Process, x, y, join: false);
+        Editor.AddNodeAt(NodeTypes.Process, x, y, join: false);
     }
 
     /// <summary>Hands the move to the current gesture; skips the render when nothing changed.</summary>
@@ -736,87 +261,7 @@ public partial class Designer
         _ => "surface",
     };
 
-    // ───────────── Editing actions (run by the editor commands in Commands/ and by panel buttons) ─────────────
-
-    void JoinSelected()
-    {
-        if (Sel.Count < 2) { ShowToast("Select two or more items to join"); return; }
-        string snap = Snapshot();
-        int added = 0;
-        for (int i = 0; i < Sel.Count - 1; i++)
-            if (AddEdge(Sel[i], Sel[i + 1])) added++;
-        if (added > 0) { PushUndo(snap); Dirty = true; }
-        ShowToast(added == 0 ? "Already joined" : $"Joined {added} connector{(added == 1 ? "" : "s")}");
-    }
-
-    void DeleteSelection()
-    {
-        if (Sel.Count == 0 && SelEdge is null) return;
-        Change();
-        if (SelEdge is not null) D.Edges.RemoveAll(e => e.Id == SelEdge);
-        // Deleting a group deletes its contents too (Ungroup keeps them).
-        HashSet<string> ids = WithMembers(Sel).Select(b => b.Id).ToHashSet();
-        D.Nodes.RemoveAll(n => ids.Contains(n.Id));
-        D.TextBoxes.RemoveAll(c => ids.Contains(c.Id));
-        D.Groups.RemoveAll(g => ids.Contains(g.Id));
-        D.Edges.RemoveAll(e => ids.Contains(e.From) || ids.Contains(e.To));
-        ClearSelection();
-        EditId = null;
-    }
-
-    void Duplicate()
-    {
-        if (Sel.Count == 0) return;
-        Change();
-        Dictionary<string, string> map = new Dictionary<string, string>();
-        List<IBox> items = WithMembers(Sel);
-        // Groups first so members can be re-pointed at the copies.
-        foreach (Group g in items.OfType<Group>())
-        {
-            Group gg = new Group { Title = g.Title, Color = g.Color, X = g.X + 30, Y = g.Y + 30, W = g.W, H = g.H };
-            D.Groups.Add(gg); map[g.Id] = gg.Id;
-        }
-        string? NewGroup(string? old) => old is not null && map.TryGetValue(old, out string? ng) ? ng : old;
-        foreach (IBox b in items)
-        {
-            switch (b)
-            {
-                case Node n:
-                    Node nn = new Node
-                    {
-                        Type = n.Type, Label = n.Label, X = n.X + 30, Y = n.Y + 30, W = n.W, H = n.H,
-                        Icon = n.Icon, Color = n.Color, Filled = n.Filled, Outcome = n.Outcome, GroupId = NewGroup(n.GroupId),
-                        Description = n.Description, TextWidth = n.TextWidth,
-                        Properties = new(n.Properties),
-                    };
-                    D.Nodes.Add(nn); map[n.Id] = nn.Id; break;
-                case TextBox c:
-                    TextBox cc = c.Copy();
-                    cc.X += 30; cc.Y += 30; cc.GroupId = NewGroup(c.GroupId);
-                    D.TextBoxes.Add(cc); map[c.Id] = cc.Id; break;
-            }
-        }
-        foreach (Edge e in D.Edges.ToList())
-            if (map.TryGetValue(e.From, out string? f) && map.TryGetValue(e.To, out string? t))
-            {
-                Edge copy = new Edge { From = f, To = t, Label = e.Label, LabelPos = e.LabelPos };
-                copy.CopyLookFrom(e);
-                copy.CopyRouteFrom(e);
-                D.Edges.Add(copy);
-            }
-        List<string> newSel = Sel.Where(map.ContainsKey).Select(id => map[id]).ToList();
-        Sel.Clear();
-        Sel.AddRange(newSel);
-    }
-
-    void Nudge(double dx, double dy)
-    {
-        if (Sel.Count == 0) return;
-        Change();
-        foreach (IBox b in WithMembers(Sel)) { b.X += dx; b.Y += dy; }
-        foreach (Group g in D.Groups.Where(g => !Sel.Contains(g.Id) && Members(g).Any(m => Sel.Contains(m.Id))).ToList())
-            GrowGroup(g);
-    }
+    // ───────────── Panel helpers ─────────────
 
     /// <summary>Small inline sample of a line look for the panel buttons.</summary>
     static MarkupString LinePreview(string weight, string pattern, string arrows)
@@ -831,34 +276,25 @@ public partial class Designer
         return new($"<svg width=\"40\" height=\"12\" viewBox=\"0 0 40 12\"><line x1=\"{x1}\" y1=\"6\" x2=\"{x2}\" y2=\"6\" stroke=\"currentColor\" stroke-width=\"{F(w)}\"{(dash is null ? "" : $" stroke-dasharray=\"{dash}\"")} stroke-linecap=\"{LineLook.Cap(pattern)}\"/>{head}</svg>");
     }
 
+    static string LabelPlaceHint(Edge e) => e.LabelOrient == LabelOrients.Along
+        ? ""
+        : "(on up-down lines: above = left, below = right)";
+
+    static string GroupStyleTip(string style) => style == GroupLook.Band
+        ? "Title on a tinted strip inside the group"
+        : "Plain bold title — inside at the top, or centred under the box when the title is at the bottom";
+
     // ───────────── Page (paper size) ─────────────
-
-    /// <summary>Items not fully inside the page (null when there is no page).</summary>
-    List<IBox> OutsidePage()
-    {
-        if (!D.Page.Enabled) return new();
-        double W = D.Page.WidthPx, H = D.Page.HeightPx;
-        return D.Nodes.Cast<IBox>().Concat(D.TextBoxes).Concat(D.Groups)
-            .Where(b => b.X < -0.5 || b.Y < -0.5 || b.X + b.W > W + 0.5 || b.Y + b.H + Geometry.ExtraBelow(b) > H + 0.5)
-            .ToList();
-    }
-
-    bool ContentTooBigForPage()
-    {
-        if (!D.Page.Enabled || Geometry.ContentBounds(D) is not { } cb) return false;
-        double m = D.Page.MarginPx;
-        return cb.W > D.Page.WidthPx - 2 * m + 0.5 || cb.H > D.Page.HeightPx - 2 * m + 0.5;
-    }
 
     void SetPageSize(string? size)
     {
         if (size is null || size == D.Page.Size) return;
-        Change();
+        Editor.Change();
         bool wasOpen = !D.Page.Enabled;
         D.Page.Size = size;
-        if (D.Page.Enabled && wasOpen && OutsidePage().Count > 0) CentreOnPage(checkpoint: false);
+        if (D.Page.Enabled && wasOpen && Editor.OutsidePage().Count > 0) Editor.CentreOnPage(checkpoint: false);
         Fit();
-        if (D.Page.Enabled && ContentTooBigForPage())
+        if (D.Page.Enabled && Editor.ContentTooBigForPage())
             ShowToast(D.Page.FitOnExport ? "Drawing is bigger than the page — it will be scaled down to fit on export" : "Drawing is bigger than the page");
     }
 
@@ -869,13 +305,13 @@ public partial class Designer
             // Custom sizes: orientation just swaps the numbers.
             bool isLandscape = D.Page.CustomW > D.Page.CustomH;
             if ((orientation == "landscape") == isLandscape) return;
-            Change();
+            Editor.Change();
             (D.Page.CustomW, D.Page.CustomH) = (D.Page.CustomH, D.Page.CustomW);
         }
         else
         {
             if (D.Page.Orientation == orientation) return;
-            Change();
+            Editor.Change();
         }
         D.Page.Orientation = orientation;
         Fit();
@@ -883,234 +319,13 @@ public partial class Designer
 
     bool PageIsLandscape => D.Page.Size == PageSetup.Custom ? D.Page.CustomW > D.Page.CustomH : D.Page.Landscape;
 
-    void CentreOnPage() => CentreOnPage(checkpoint: true);
+        /// <summary>What above/below means for the selected label's text direction.</summary>
 
-    /// <summary>Moves the whole drawing so it is centred inside the page margins.</summary>
-    void CentreOnPage(bool checkpoint)
-    {
-        if (!D.Page.Enabled || Geometry.ContentBounds(D) is not { } cb) return;
-        if (checkpoint) Change();
-        double W = D.Page.WidthPx, H = D.Page.HeightPx, m = D.Page.MarginPx;
-        double dx = SnapV(m + (W - 2 * m - cb.W) / 2 - cb.X);
-        double dy = SnapV(m + (H - 2 * m - cb.H) / 2 - cb.Y);
-        foreach (IBox b in D.Nodes.Cast<IBox>().Concat(D.TextBoxes).Concat(D.Groups)) { b.X += dx; b.Y += dy; }
-        if (checkpoint && ContentTooBigForPage())
-            ShowToast("Centred — but the drawing is bigger than the printable area");
-    }
-
-    void SelectOutsidePage()
-    {
-        Sel.Clear(); SelEdge = null;
-        Sel.AddRange(OutsidePage().Select(b => b.Id));
-    }
-
-    void PageChanged() { Dirty = true; }
-
-    // ───────────── Connector style & labels ─────────────
-
-    void SetDefaultConnector(string style)
-    {
-        D.DefaultConnector = style;
-        Dirty = true;
-        ShowToast($"New connectors will be {style}" + (SelectedEdgeObj is null ? "" : " — use the panel to change the selected one"));
-    }
-
-    void SetEdgeStyle(Edge e, string style) { if (e.Style == style) return; Change(); e.Style = style; }
-    void SetLabelPlace(Edge e, string place) { if (e.LabelPlace == place) return; Change(); e.LabelPlace = place; }
-
-    /// <summary>Panel label box: keeps the text to two lines (e.g. after a paste).</summary>
-    void EdgeLabelTyped()
-    {
-        if (SelectedEdgeObj is { } e) e.Label = Geometry.ClampEdgeLabel(e.Label);
-        MarkDirty();
-    }
-
-    /// <summary>What above/below means for the selected label's text direction.</summary>
-    static string LabelPlaceHint(Edge e) => e.LabelOrient == LabelOrients.Along
-        ? ""
-        : "(on up-down lines: above = left, below = right)";
-
-    void SetLabelOrient(Edge e, string orient) { if (e.LabelOrient == orient) return; Change(); e.LabelOrient = orient; }
-    void SetLabelPos(Edge e, double pos) { Change(); e.LabelPos = pos; }
-
-    void DragLabelPos(Edge e, object? value)
-    {
-        if (double.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double v))
-        {
-            e.LabelPos = Math.Clamp(v, 0, 1);
-            Dirty = true;
-        }
-    }
-
-    void ApplyEdgeLookToAll(Edge src)
-    {
-        Change();
-        foreach (Edge e in D.Edges) e.CopyLookFrom(src);
-        D.DefaultLook.CopyLookFrom(src);
-        D.DefaultConnector = src.Style;
-        ShowToast($"Applied to {D.Edges.Count} connectors");
-    }
-
-    void SetEdgeLook(Edge e, Action<Edge> change) { Change(); change(e); }
-
-    void MakeDefaultLook(Edge src)
-    {
-        Dirty = true;
-        D.DefaultLook.CopyLookFrom(src);
-        D.DefaultConnector = src.Style;
-        ShowToast("New connectors will use this look");
-    }
-
-    void SetStyleBetweenSelected(string style)
-    {
-        HashSet<string> ids = WithMembers(Sel).Select(b => b.Id).ToHashSet();
-        List<Edge> edges = D.Edges.Where(e => ids.Contains(e.From) && ids.Contains(e.To)).ToList();
-        if (edges.Count == 0) { ShowToast("No connectors between the selected items"); return; }
-        Change();
-        foreach (Edge e in edges) e.Style = style;
-        ShowToast($"{edges.Count} connector{(edges.Count == 1 ? "" : "s")} set to {style}");
-    }
-
-    void ReverseEdge(Edge e)
-    {
-        Change();
-        (e.From, e.To) = (e.To, e.From);
-        (e.FromSide, e.ToSide) = (e.ToSide, e.FromSide);
-    }
-
-    void ChangeType(Node n, string? type)
-    {
-        if (type is null || type == n.Type) return;
-        Change();
-        NodeTypeInfo oldT = NodeTypes.Get(n.Type);
-        NodeTypeInfo t = NodeTypes.Get(type);
-        string oldDisplay = n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : oldT.Display;
-        if (t.Key == NodeTypes.Outcome) { n.Outcome ??= Outcomes.Pass; n.Filled = true; }
-        else n.Outcome = null;
-        if (n.Label == oldDisplay) n.Label = t.Key == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : t.Display;
-        double cx = n.X + n.W / 2; double cy = n.Y + n.H / 2;
-        n.Type = t.Key; n.W = t.W; n.H = t.H;
-        n.X = SnapV(cx) - t.W / 2; n.Y = SnapV(cy) - t.H / 2;
-        if (t.Key == NodeTypes.Circle && n.Icon is null) n.Icon = "layers";
-        foreach ((string k, string v) in DefaultProps(t.Key)) n.Properties.TryAdd(k, v);
-    }
-
-    /// <summary>Description or text width edited: the text under the shape changed size, so its group may need to grow.</summary>
-    void OutsideTextChanged(Node n)
-    {
-        MarkDirty();
-        if (FindGroup(n.GroupId) is { } g) GrowGroup(g);
-    }
-
-    void SetNodeColour(Node n, string? colour) { Change(); n.Color = colour; }
-    void SetFilled(Node n, bool filled) { Change(); n.Filled = filled; }
-
-    void SetOutcome(Node n, string outcome)
-    {
-        if (n.Outcome == outcome) return;
-        Change();
-        // A label still showing the old outcome's name follows the new one.
-        if (n.Label == Outcomes.Get(n.Outcome).Display) n.Label = Outcomes.Get(outcome).Display;
-        n.Outcome = outcome;
-    }
-    void SetIcon(Node n, string? icon) { Change(); n.Icon = icon; }
-    void SetGroupColour(Group g, string colour) { Change(); g.Color = colour; }
-
-    static string GroupStyleTip(string style) => style == GroupLook.Band
-        ? "Title on a tinted strip inside the group"
-        : "Plain bold title — inside at the top, or centred under the box when the title is at the bottom";
-
-    void SetGroupFilled(Group g, bool filled) { Change(); g.Filled = filled; }
-
-    void SetGroupBorder(Group g, string pattern) { Change(); g.Border = pattern; }
-
-    /// <summary>Moving or restyling the title changes the room it takes inside the group, so the group grows if needed.</summary>
-    void SetGroupTitleLook(Group g, string? pos, string? style)
-    {
-        Change();
-        if (pos is not null) g.HeaderPos = pos;
-        if (style is not null) g.HeaderStyle = style;
-        GrowGroup(g);
-    }
-
-    // ───────────── Text boxes ─────────────
-
-    void SetTextLook(TextBox t, Action<TextBox> change) { Change(); change(t); }
-
-    /// <summary>Turning the comment flag on applies the standard comment look; turning it off keeps the look.</summary>
-    void SetComment(TextBox t, bool on)
-    {
-        if (t.IsComment == on) return;
-        Change();
-        if (on) t.ApplyCommentStyle(); else t.IsComment = false;
-        foreach (Edge e in D.Edges.Where(e => e.From == t.Id || e.To == t.Id))
-        {
-            if (on) TextBox.ApplyPinLook(e);
-            else { e.CopyLookFrom(D.DefaultLook); e.Style = D.DefaultConnector; }
-        }
-        // Comments can't be pinned to other comments.
-        if (on) D.Edges.RemoveAll(e => (e.From == t.Id && FindBox(e.To) is TextBox { IsComment: true }) || (e.To == t.Id && FindBox(e.From) is TextBox { IsComment: true }));
-    }
-
-    void ResetCommentStyle(TextBox t) { Change(); t.ApplyCommentStyle(); }
-
-    /// <summary>Sets the height so the wrapped text just fits.</summary>
-    void FitTextHeight(TextBox t)
-    {
-        Change();
-        t.H = Math.Max(24, Math.Ceiling(Geometry.Layout(t).ContentHeight / 2) * 2);
-    }
-
-    void SetFontSize(TextBox t, object? value)
-    {
-        if (!double.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double v)) return;
-        Change();
-        t.FontSize = Math.Clamp(v, 6, 96);
-    }
-
-    void AddProp(Node n)
-    {
-        Change();
-        int i = 1;
-        while (n.Properties.ContainsKey($"prop{i}")) i++;
-        n.Properties[$"prop{i}"] = "";
-    }
-
-    void RenameProp(Node n, string oldKey, string? newKey)
-    {
-        newKey = newKey?.Trim();
-        if (string.IsNullOrEmpty(newKey) || newKey == oldKey || n.Properties.ContainsKey(newKey)) return;
-        // Rebuild to keep ordering stable.
-        Dictionary<string, string> rebuilt = n.Properties.ToDictionary(kv => kv.Key == oldKey ? newKey : kv.Key, kv => kv.Value);
-        n.Properties = rebuilt;
-        Dirty = true;
-    }
-
-    // ───────────── Inline text editing ─────────────
-
-    void BeginEdit(string id) => BeginEdit(id, checkpoint: true);
-
-    void BeginEdit(string id, bool checkpoint)
-    {
-        if (checkpoint) Checkpoint();
-        CancelGesture();
-        EditId = id;
-        if (D.Edges.Any(e => e.Id == id)) { Sel.Clear(); SelEdge = id; }
-        else if (!Sel.Contains(id)) SelectOnly(id);
-        _ = module?.InvokeVoidAsync("focus", "edit-box");
-    }
-
-    void EndEdit()
-    {
-        if (EditId is null) return;
-        if (D.Nodes.FirstOrDefault(n => n.Id == EditId) is { } n) n.Label = n.Label.TrimEnd('\n', '\r');
-        if (D.Edges.FirstOrDefault(x => x.Id == EditId) is { } edge) edge.Label = Geometry.ClampEdgeLabel(edge.Label).Trim();
-        EditId = null;
-    }
+    // ───────────── Inline text editing (the editor tracks what is being edited) ─────────────
 
     void EditKey(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !e.ShiftKey) EndEdit();
+        if (e.Key == "Enter" && !e.ShiftKey) Editor.EndEdit();
     }
 
     // ───────────── View ─────────────
@@ -1166,18 +381,14 @@ public partial class Designer
     void Reset(bool keepTrail = false)
     {
         if (!keepTrail) trail.Clear();
-        D = new Diagram();
+        Editor.Load(new Diagram());
         hasFile = false;
-        Dirty = false;
-        undo.Clear(); redo.Clear();
-        ClearSelection();
-        EditId = null;
         Zoom = 1; PanX = 40; PanY = 40;
     }
 
     void NewDiagram()
     {
-        if (Dirty) dialog = Dialog.ConfirmNew;
+        if (Editor.Dirty) dialog = Dialog.ConfirmNew;
         else Reset();
     }
 
@@ -1209,7 +420,7 @@ public partial class Designer
         {
             Diagram loaded = await Store.LoadAsync(name);
             Reset(keepTrail: true);
-            D = loaded;
+            Editor.Load(loaded);
             hasFile = true;
             CloseDialog();
             Fit();
@@ -1231,10 +442,6 @@ public partial class Designer
     /// <summary>Where we're going once the unsaved-changes question is answered. KeepTrail = trail entries to keep (-1 = push current).</summary>
     (string Target, int KeepTrail)? pendingNav;
 
-    void SetNodeLink(Node n, string? link) { Change(); n.Link = link; }
-
-    void SetGroupLink(Group g, string? link) { Change(); g.Link = link; }
-
     void FollowLink(string? link)
     {
         if (string.IsNullOrWhiteSpace(link)) return;
@@ -1254,8 +461,8 @@ public partial class Designer
 
     void Navigate(string target, int keepTrail)
     {
-        EndEdit();
-        if (Dirty)
+        Editor.EndEdit();
+        if (Editor.Dirty)
         {
             pendingNav = (target, keepTrail);
             dialog = Dialog.ConfirmLeave;
@@ -1285,11 +492,11 @@ public partial class Designer
         if (save)
         {
             await Save();
-            if (Dirty) return; // save failed: stay put, the toast says why
+            if (Editor.Dirty) return; // save failed: stay put, the toast says why
         }
         pendingNav = null;
         CloseDialog();
-        Dirty = false;
+        Editor.Dirty = false;
         await DoNavigate(nav.Target, nav.KeepTrail);
     }
 
@@ -1299,19 +506,19 @@ public partial class Designer
     {
         Store.Delete(name);
         openFiles = Store.List();
-        if (hasFile && D.Name == name) { hasFile = false; Dirty = true; }
+        if (hasFile && D.Name == name) { hasFile = false; Editor.Dirty = true; }
         confirmDelete = null;
         ShowToast($"Deleted {name}");
     }
 
     async Task Save()
     {
-        EndEdit();
+        Editor.EndEdit();
         if (!hasFile) { ShowSaveAs(); return; }
         try
         {
             string path = await Store.SaveAsync(D);
-            Dirty = false;
+            Editor.Dirty = false;
             ShowToast($"Saved {Path.GetFileName(path)}");
         }
         catch (Exception ex)
@@ -1465,8 +672,8 @@ public partial class Designer
         {
             (double ax, double ay, double aw, double ah) = Geometry.GroupTitleArea(g);
             (double tx, double ty, string anchor) = Geometry.GroupTitlePos(g);
-            double width = Sel.Contains(g.Id) ? 2.5 : 1.5;
-            return new GroupView(g, Palette.Get(g.Color), Sel.Contains(g.Id), Geometry.GroupBandPath(g), new Rect(ax, ay, aw, ah),
+            double width = Editor.Selection.Contains(g.Id) ? 2.5 : 1.5;
+            return new GroupView(g, Palette.Get(g.Color), Editor.Selection.Contains(g.Id), Geometry.GroupBandPath(g), new Rect(ax, ay, aw, ah),
                                  tx, ty, anchor, Geometry.GroupFillOpacity(g), LineLook.Dash(g.Border, width));
         });
 
@@ -1482,17 +689,17 @@ public partial class Designer
         D.TextBoxes.Select(t =>
         {
             TextStyle ts = TextStyle.For(t);
-            return new TextBoxView(t, ts, Sel.Contains(t.Id), Geometry.Layout(t), Geometry.TextBoxPath(t, ts.Radius));
+            return new TextBoxView(t, ts, Editor.Selection.Contains(t.Id), Geometry.Layout(t), Geometry.TextBoxPath(t, ts.Radius));
         });
 
     IEnumerable<EdgeView> EdgeViews()
     {
         foreach (Edge e in D.Edges)
         {
-            if (FindBox(e.From) is not { } a || FindBox(e.To) is not { } b) continue;
+            if (Editor.FindBox(e.From) is not { } a || Editor.FindBox(e.To) is not { } b) continue;
             double lw = LineLook.Width(e.Weight);
             string lc = LineLook.Colour(e.Color);
-            yield return new EdgeView(e, SelEdge == e.Id, Geometry.EdgeGeometry(a, b, e), lw, lc, $"url(#{LineLook.MarkerId(lc, e.Weight)})");
+            yield return new EdgeView(e, Editor.SelectedEdgeId == e.Id, Geometry.EdgeGeometry(a, b, e), lw, lc, $"url(#{LineLook.MarkerId(lc, e.Weight)})");
         }
     }
 
@@ -1501,11 +708,11 @@ public partial class Designer
     {
         foreach (Edge e in D.Edges)
         {
-            bool editing = EditId == e.Id;
+            bool editing = Editor.EditingId == e.Id;
             if (string.IsNullOrWhiteSpace(e.Label) && !editing) continue;
-            if (FindBox(e.From) is not { } a || FindBox(e.To) is not { } b) continue;
+            if (Editor.FindBox(e.From) is not { } a || Editor.FindBox(e.To) is not { } b) continue;
             EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
-            yield return new EdgeLabelView(e, SelEdge == e.Id, editing, geo, Geometry.LayoutEdgeLabel(e, geo));
+            yield return new EdgeLabelView(e, Editor.SelectedEdgeId == e.Id, editing, geo, Geometry.LayoutEdgeLabel(e, geo));
         }
     }
 
@@ -1514,7 +721,7 @@ public partial class Designer
         {
             LabelLayout lay = Geometry.Layout(n);
             Rect? back = Geometry.OutsideTextBox(n, lay) is { } r ? new Rect(r.X, r.Y, r.W, r.H) : null;
-            return new NodeView(n, NodeTypes.Get(n.Type), Geometry.OutlineOf(n), NodeStyle.For(n), Sel.Contains(n.Id), lay, Geometry.ExtraBelow(n), back);
+            return new NodeView(n, NodeTypes.Get(n.Type), Geometry.OutlineOf(n), NodeStyle.For(n), Editor.Selection.Contains(n.Id), lay, Geometry.ExtraBelow(n), back);
         });
 
     /// <summary>Where the inline label editor sits: under the shape for labels drawn below, otherwise inside it.</summary>
@@ -1527,7 +734,7 @@ public partial class Designer
     /// <summary>The live connector drawn while dragging from a port (null when not connecting).</summary>
     ConnectPreview? LiveConnector()
     {
-        if (gesture is not ConnectGesture cg || FindBox(cg.FromId) is not { } from) return null;
+        if (gesture is not ConnectGesture cg || Editor.FindBox(cg.FromId) is not { } from) return null;
         IBox? target = cg.Target;
         IBox to = target ?? new TextBox { X = cg.CurX, Y = cg.CurY, W = 0, H = 0 };
         return new ConnectPreview(Geometry.EdgeGeometry(from, to, D.DefaultConnector).D, target);
@@ -1536,7 +743,7 @@ public partial class Designer
     /// <summary>Handles on the selected connector: ends (move to another side) and the bend (drag sideways).</summary>
     EdgeHandleView? SelectedEdgeHandles()
     {
-        if (SelectedEdgeObj is not { } he || FindBox(he.From) is not { } ha || FindBox(he.To) is not { } hb || EditId == he.Id) return null;
+        if (Editor.SelectedEdge is not { } he || Editor.FindBox(he.From) is not { } ha || Editor.FindBox(he.To) is not { } hb || Editor.EditingId == he.Id) return null;
         EdgeRoute hr = Geometry.Route(ha, hb, he);
         List<SideTarget> sides = new();
         if (gesture is EdgeEndGesture eg)
@@ -1562,9 +769,9 @@ public partial class Designer
             .Where(c => c.Names.Count > 0)
             .ToList();
 
-    int MemberCount(Group g) => Members(g).Count();
+    int MemberCount(Group g) => Editor.Members(g).Count();
 
-    int OffPageCount => OutsidePage().Count;
+    int OffPageCount => Editor.OutsidePage().Count;
 
     string? LinkExclude => hasFile ? D.Name : null;
 
@@ -1581,23 +788,18 @@ public partial class Designer
     void DragOver() { }
     void AskDelete(string name) => confirmDelete = name;
     void DiscardAndNew() { Reset(); CloseDialog(); }
-    void FitGroupToContents(Group g) { Change(); FitGroup(g); }
 
     void SetPropValue(Node n, string key, ChangeEventArgs e)
     {
         n.Properties[key] = e.Value?.ToString() ?? string.Empty;
-        MarkDirty();
+        Editor.MarkDirty();
     }
-
-    void RemoveProp(Node n, string key) { Checkpoint(); n.Properties.Remove(key); }
-
-    void SetEdgeLabel(Edge e, string label) { Checkpoint(); e.Label = label; MarkDirty(); }
 
     void RenameDiagram(ChangeEventArgs e)
     {
         D.Name = DiagramStore.SafeName(e.Value?.ToString() ?? string.Empty);
-        MarkDirty();
+        Editor.MarkDirty();
     }
 
-    void SetFitOnExport(ChangeEventArgs e) { Change(); D.Page.FitOnExport = e.Value is true; }
+    void SetFitOnExport(ChangeEventArgs e) { Editor.Change(); D.Page.FitOnExport = e.Value is true; }
 }
