@@ -119,7 +119,9 @@ public class Edge
     /// <summary>"elbow" (right-angled, default) or "straight".</summary>
     public string Style { get; set; } = EdgeStyles.Elbow;
     /// <summary>"horizontal" (always level), "along" (follows the line) or "perpendicular" (90° to the line).</summary>
-    public string LabelOrient { get; set; } = LabelOrients.Horizontal;
+    public string LabelOrient { get; set; } = LabelOrients.Along;
+    /// <summary>"inline" (on the line; two lines straddle it), "above" or "below" the line, as the text reads.</summary>
+    public string LabelPlace { get; set; } = LabelPlaces.Inline;
     /// <summary>Label position along the connector, 0 = start, 1 = end.</summary>
     public double LabelPos { get; set; } = 0.5;
     /// <summary>"light", "regular" or "heavy".</summary>
@@ -149,7 +151,7 @@ public class Edge
 
     public void CopyRouteFrom(Edge o) { FromSide = o.FromSide; ToSide = o.ToSide; Bend = o.Bend; }
 
-    public void CopyLookFrom(Edge o) { Style = o.Style; Weight = o.Weight; Pattern = o.Pattern; Color = o.Color; Arrows = o.Arrows; LabelOrient = o.LabelOrient; }
+    public void CopyLookFrom(Edge o) { Style = o.Style; Weight = o.Weight; Pattern = o.Pattern; Color = o.Color; Arrows = o.Arrows; LabelOrient = o.LabelOrient; LabelPlace = o.LabelPlace; }
 }
 
 /// <summary>Line weight, dash pattern, colour and arrowheads for connectors.</summary>
@@ -219,6 +221,14 @@ public static class Sides
     };
 
     public static bool IsValid(string? side) => side is Top or Right or Bottom or Left;
+}
+
+public static class LabelPlaces
+{
+    public const string Inline = "inline";
+    public const string Above = "above";
+    public const string Below = "below";
+    public static readonly (string Key, string Name)[] All = { (Inline, "Inline"), (Above, "Above"), (Below, "Below") };
 }
 
 public static class LabelOrients

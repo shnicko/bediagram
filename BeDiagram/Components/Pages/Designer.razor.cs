@@ -1077,6 +1077,20 @@ public partial class Designer
     }
 
     void SetEdgeStyle(Edge e, string style) { if (e.Style == style) return; Change(); e.Style = style; }
+    void SetLabelPlace(Edge e, string place) { if (e.LabelPlace == place) return; Change(); e.LabelPlace = place; }
+
+    /// <summary>Panel label box: keeps the text to two lines (e.g. after a paste).</summary>
+    void EdgeLabelTyped()
+    {
+        if (SelectedEdgeObj is { } e) e.Label = Geometry.ClampEdgeLabel(e.Label);
+        MarkDirty();
+    }
+
+    /// <summary>What above/below means for the selected label's text direction.</summary>
+    static string LabelPlaceHint(Edge e) => e.LabelOrient == LabelOrients.Along
+        ? ""
+        : "(on up-down lines: above = left, below = right)";
+
     void SetLabelOrient(Edge e, string orient) { if (e.LabelOrient == orient) return; Change(); e.LabelOrient = orient; }
     void SetLabelPos(Edge e, double pos) { Change(); e.LabelPos = pos; }
 
@@ -1251,6 +1265,7 @@ public partial class Designer
     {
         if (EditId is null) return;
         if (D.Nodes.FirstOrDefault(n => n.Id == EditId) is { } n) n.Label = n.Label.TrimEnd('\n', '\r');
+        if (D.Edges.FirstOrDefault(x => x.Id == EditId) is { } edge) edge.Label = Geometry.ClampEdgeLabel(edge.Label).Trim();
         EditId = null;
     }
 
@@ -1614,7 +1629,7 @@ public partial class Designer
                             double TitleX, double TitleY, string TitleAnchor, double FillOpacity, string? Dash);
     public record TextBoxView(TextBox T, TextStyle Style, bool Selected, Geometry.TextBoxLayout Layout, string Outline);
     public record EdgeView(Edge E, bool Selected, Geometry.EdgeGeom Geo, double Width, string Colour, string Marker);
-    public record EdgeLabelView(Edge E, bool Selected, bool Editing, Geometry.EdgeGeom Geo, double Width);
+    public record EdgeLabelView(Edge E, bool Selected, bool Editing, Geometry.EdgeGeom Geo, Geometry.EdgeLabelLayout Layout);
     /// <param name="TextBack">White backing behind text drawn outside the shape (label below / description), if any.</param>
     public record NodeView(Node N, NodeTypeInfo Type, NodeStyle Style, bool Selected, Geometry.LabelLayout Layout, double Below, Rect? TextBack);
     public record ConnectPreview(string Path, IBox? Target);
@@ -1740,7 +1755,8 @@ public partial class Designer
             bool editing = EditId == e.Id;
             if (string.IsNullOrWhiteSpace(e.Label) && !editing) continue;
             if (FindBox(e.From) is not { } a || FindBox(e.To) is not { } b) continue;
-            yield return new EdgeLabelView(e, SelEdge == e.Id, editing, Geometry.EdgeGeometry(a, b, e), Geometry.LabelWidth(e.Label));
+            Geometry.EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
+            yield return new EdgeLabelView(e, SelEdge == e.Id, editing, geo, Geometry.LayoutEdgeLabel(e, geo));
         }
     }
 

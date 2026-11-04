@@ -48,7 +48,8 @@ public static class PdfExporter
     // ───────────────────────── styles ─────────────────────────
 
     record Style(string Fill, string Stroke, double StrokeWidth, double FillOpacity, double StrokeOpacity,
-                 string? Dash, string Cap, string Join, double FontSize, string Weight, string Family, string Anchor)
+                 string? Dash, string Cap, string Join, double FontSize, string Weight, string Family, string Anchor,
+                 bool StrokeUnder = false)
     {
         public static readonly Style Default = new("#000", "none", 1, 1, 1, null, "butt", "miter", 16, "normal", "sans-serif", "start");
 
@@ -70,6 +71,8 @@ public static class PdfExporter
                 Weight = Attr(e, "font-weight") ?? s.Weight,
                 Family = Attr(e, "font-family") ?? s.Family,
                 Anchor = Attr(e, "text-anchor") ?? s.Anchor,
+                // paint-order="stroke": stroke drawn under the fill (used for white halos behind text).
+                StrokeUnder = Attr(e, "paint-order") is { } po ? po.TrimStart().StartsWith("stroke") : s.StrokeUnder,
             };
             return s;
         }
@@ -232,22 +235,39 @@ public static class PdfExporter
             byte[] bytes = Fonts.Encode(text);
             double width = Fonts.Width(font, bytes) * st.FontSize / 1000;
             double startX = st.Anchor switch { "middle" => x - width / 2, "end" => x - width, _ => x };
+            // Halo first: text outline stroked underneath (only for paint-order="stroke", so inherited strokes don't outline other text).
+            if (st.StrokeUnder && st.StrokeWidth > 0 && Colour(st.Stroke) is { } sc)
+            {
+                Out.Append("q\n").Append(Gs(1, st.StrokeOpacity));
+                Out.Append($"{F(sc.R)} {F(sc.G)} {F(sc.B)} RG {F(st.StrokeWidth)} w ");
+                Out.Append(st.Join switch { "round" => "1", "bevel" => "2", _ => "0" }).Append(" j\n");
+                Out.Append($"BT 1 Tr /F{font} {F(st.FontSize)} Tf 1 0 0 -1 {F(startX)} {F(y)} Tm ");
+                TextString(bytes);
+                Out.Append(" Tj ET\nQ\n");
+            }
             if (fill is { } f)
             {
                 Out.Append("q\n").Append(Gs(st.FillOpacity, 1));
                 Out.Append($"{F(f.R)} {F(f.G)} {F(f.B)} rg\n");
                 // Undo the page's y flip so glyphs stand upright.
                 Out.Append($"BT /F{font} {F(st.FontSize)} Tf 1 0 0 -1 {F(startX)} {F(y)} Tm ");
-                Out.Append('(');
-                foreach (byte b in bytes)
-                {
-                    if (b is (byte)'(' or (byte)')' or (byte)'\\') Out.Append('\\').Append((char)b);
-                    else if (b < 32 || b > 126) Out.Append('\\').Append(Convert.ToString(b, 8).PadLeft(3, '0'));
-                    else Out.Append((char)b);
-                }
-                Out.Append(") Tj ET\nQ\n");
+                TextString(bytes);
+                Out.Append(" Tj ET\nQ\n");
             }
             x = startX + width;
+        }
+
+        /// <summary>A PDF string literal for encoded text.</summary>
+        void TextString(byte[] bytes)
+        {
+            Out.Append('(');
+            foreach (byte b in bytes)
+            {
+                if (b is (byte)'(' or (byte)')' or (byte)'\\') Out.Append('\\').Append((char)b);
+                else if (b < 32 || b > 126) Out.Append('\\').Append(Convert.ToString(b, 8).PadLeft(3, '0'));
+                else Out.Append((char)b);
+            }
+            Out.Append(')');
         }
 
         // ───────── shapes → path operators ─────────

@@ -118,11 +118,16 @@ public static class Exporters
             sb.Append("/>\n");
             if (!string.IsNullOrWhiteSpace(e.Label))
             {
-                double w = Geometry.LabelWidth(e.Label);
+                Geometry.EdgeLabelLayout lab = Geometry.LayoutEdgeLabel(e, geo);
                 // Labels are written after the shapes so they sit on top.
                 labels.Append($"<g transform=\"translate({F(geo.LabelX)},{F(geo.LabelY)}) rotate({F(geo.LabelAngle)})\">");
-                labels.Append($"<rect x=\"{F(-w / 2)}\" y=\"-10\" width=\"{F(w)}\" height=\"20\" rx=\"4\" fill=\"#fff\" stroke=\"#cfd4da\"/>");
-                labels.Append($"<text x=\"0\" y=\"4\" font-size=\"12\" text-anchor=\"middle\" fill=\"#333\">{E(e.Label)}</text></g>\n");
+                if (lab.Box is { } bx)
+                    labels.Append($"<rect x=\"{F(bx.X)}\" y=\"{F(bx.Y)}\" width=\"{F(bx.W)}\" height=\"{F(bx.H)}\" rx=\"4\" fill=\"#fff\" stroke=\"#cfd4da\"/>");
+                string halo = lab.Halo ? " stroke=\"#fff\" stroke-width=\"3\" stroke-linejoin=\"round\" paint-order=\"stroke\"" : "";
+                labels.Append($"<text font-size=\"12\" text-anchor=\"{lab.Anchor}\" fill=\"#333\"{halo}>");
+                foreach (Geometry.EdgeLabelLine line in lab.Lines)
+                    labels.Append($"<tspan x=\"{F(line.X)}\" y=\"{F(line.Y)}\">{E(line.Text)}</tspan>");
+                labels.Append("</text></g>\n");
             }
         }
 
@@ -187,7 +192,7 @@ public static class Exporters
     /// <summary>Mermaid link syntax: dotted for any broken pattern, thick for heavy solid lines.</summary>
     static string MermaidLink(Edge e)
     {
-        static string Q(string s) => "\"" + (s ?? "").Replace("\"", "'").Replace("\r", "").Replace("\n", " ").Trim() + "\"";
+        static string Q(string s) => "\"" + string.Join("<br/>", Geometry.EdgeLabelLines((s ?? "").Replace("\"", "'"))) + "\"";
         bool label = !string.IsNullOrWhiteSpace(e.Label);
         bool dotted = e.Pattern != LineLook.Solid;
         bool thick = !dotted && e.Weight == LineLook.Heavy;
