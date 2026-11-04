@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Editing;
 
 namespace BeDiagram.Components.Shared;
 
