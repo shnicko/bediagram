@@ -41,6 +41,10 @@ BeDiagram/
   Components/Pages/Gestures/           mouse gestures (State pattern): IGesture, DragGesture / UndoableDragGesture bases,
                                        Move, Resize, Connect, Marquee, Pan, EdgeEnd, Bend
   Components/Pages/Views/              view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
+  Components/Pages/Commands/           editor commands (Command pattern): IEditorCommand, EditorCommand base, KeyGesture,
+                                       ICommandContext (receiver), CommandRegistry (invoker), one class per action
+  Components/Pages/Designer.Commands.cs        OnKey (keyboard → CommandRegistry) and Run / CanRun / Tip for buttons
+  Components/Pages/Designer.CommandContext.cs  Designer's ICommandContext implementation
   Components/Shared/*.razor(.cs)       small child components: AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas)
   Components/UiSvg.cs                  IconSvg / OutcomeSwatch helpers (imported with `@using static` in _Imports.razor)
   Components/AlignOp.cs                align / distribute / row / column operations
@@ -83,6 +87,12 @@ tools/Check-OneTypePerFile.ps1   one-type-per-file check (Windows PowerShell 5.1
   in the Designer. Gestures reach the editor only through `IEditorContext`: if a gesture needs more, add it to that
   interface and `Designer.EditorContext.cs`. Canvas previews read the gesture's public properties (e.g. `Marquee`,
   `LiveConnector()`).
+- **Editor actions use the Command pattern.** Every keyboard shortcut is an `IEditorCommand` in
+  `Components/Pages/Commands/`, registered in `CommandRegistry.CreateDefault()`. Don't add `switch` cases on keys
+  in the Designer. Toolbar and panel buttons for the same action run the command (`Run(XxxCmd)`, `CanRun` for
+  disabled, `Tip` for the tooltip). Commands reach the editor only through `ICommandContext`. A new shortcut key
+  must also be added to the key list in `designer.js`. Commands don't do their own undo: the editor actions they
+  call already use `Change()`.
 - **Text boxes** replace the old comments: one `TextBox` class, `IsComment` flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in `Geometry.Layout(TextBox)`, drawn with SVG text in both renderers.
 - **Groups** don't nest. Membership is `GroupId` on nodes/text boxes; moving a group moves its members (`MoveBox`).
 - **PDF is drawn from the SVG export**, so it has no geometry of its own. If a new visual feature uses an SVG

@@ -736,7 +736,7 @@ public partial class Designer
         _ => "surface",
     };
 
-    // ───────────── Commands ─────────────
+    // ───────────── Editing actions (run by the editor commands in Commands/ and by panel buttons) ─────────────
 
     void JoinSelected()
     {
@@ -1158,71 +1158,6 @@ public partial class Designer
         if (ctrl) ZoomAt(Math.Exp(-dy * 0.0015), px, py);
         else if (shift) PanX -= dy;
         else { PanX -= dx; PanY -= dy; }
-        StateHasChanged();
-    }
-
-    [JSInvokable]
-    public async Task OnKey(string key, bool ctrl, bool shift)
-    {
-        if (dialog != Dialog.None)
-        {
-            if (key == "Escape") CloseDialog();
-            StateHasChanged();
-            return;
-        }
-        string k = key.Length == 1 ? key.ToLowerInvariant() : key;
-        if (ctrl)
-        {
-            switch (k)
-            {
-                case "s": if (shift) ShowSaveAs(); else await Save(); break;
-                case "z": if (shift) Redo(); else Undo(); break;
-                case "y": Redo(); break;
-                case "a":
-                    Sel.Clear();
-                    Sel.AddRange(D.Nodes.Select(n => n.Id)); Sel.AddRange(D.TextBoxes.Select(c => c.Id)); Sel.AddRange(D.Groups.Select(g => g.Id));
-                    SelEdge = null; break;
-                case "d": Duplicate(); break;
-                case "g":
-                    if (shift) { if (SelectedGroup is { } g) Ungroup(g); }
-                    else GroupSelection();
-                    break;
-                default: return;
-            }
-            StateHasChanged();
-            return;
-        }
-        int step = shift ? 1 : 10;
-        switch (k)
-        {
-            case "Delete" or "Backspace": DeleteSelection(); break;
-            case "Escape": EditId = null; CancelGesture(); ClearSelection(); break;
-            case "Enter":
-                if (Sel.Count == 1) BeginEdit(Sel[0]);
-                else if (SelEdge is not null) BeginEdit(SelEdge);
-                break;
-            case "ArrowUp": Nudge(0, -step); break;
-            case "ArrowDown": Nudge(0, step); break;
-            case "ArrowLeft": Nudge(-step, 0); break;
-            case "ArrowRight": Nudge(step, 0); break;
-            case "j": JoinSelected(); break;
-            case "l":
-                if (SelectedEdgeObj is { } le) SetEdgeStyle(le, le.Style == EdgeStyles.Straight ? EdgeStyles.Elbow : EdgeStyles.Straight);
-                else return;
-                break;
-            case "c": AddCommentQuick(); break;
-            case "t": AddTextQuick(); break;
-            case "g": AddGroupQuick(); break;
-            case "f": Fit(); break;
-            case "+" or "=": ZoomBy(1.2); break;
-            case "-": ZoomBy(1 / 1.2); break;
-            case "0": Zoom = 1; break;
-            default:
-                if (k.Length == 1 && k[0] >= '1' && k[0] <= '9' && k[0] - '1' < NodeTypes.All.Count)
-                    QuickAdd(NodeTypes.All[k[0] - '1'].Key);
-                else return;
-                break;
-        }
         StateHasChanged();
     }
 

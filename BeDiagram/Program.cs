@@ -1,4 +1,5 @@
 using BeDiagram.Components;
+using BeDiagram.Components.Pages.Commands;
 using BeDiagram.Services;
 using BeDiagram.Services.Export;
 
@@ -21,6 +22,9 @@ builder.Services.AddSingleton<IExportArea, WholeDrawingArea>();
 builder.Services.AddSingleton<IExportArea, CurrentViewArea>();
 builder.Services.AddScoped<IPngRasterizer, BrowserPngRasterizer>();
 builder.Services.AddScoped<ExportService>();
+
+// Editor commands (see Components/Pages/Commands): every keyboard shortcut and the toolbar / panel actions.
+builder.Services.AddSingleton<CommandRegistry>(CommandRegistry.CreateDefault());
 
 WebApplication app = builder.Build();
 
