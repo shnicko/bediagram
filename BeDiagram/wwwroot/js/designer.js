@@ -23,6 +23,8 @@ function onKey(e) {
         // Enter finishes an inline label edit (Shift+Enter = new line); text boxes keep Enter for new lines.
         const t = e.target;
         if (key === 'Enter' && !e.shiftKey && t.classList.contains('inline-edit') && !t.classList.contains('multiline')) e.preventDefault();
+        // Connector labels are two lines at most: no new line once there are two.
+        if (key === 'Enter' && t.classList.contains('two-line') && t.value.includes('\n')) e.preventDefault();
         return;
     }
     const handled = ['Delete', 'Backspace', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'];
