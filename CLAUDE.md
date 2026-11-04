@@ -28,6 +28,9 @@ BeDiagram/
                          GroupLook, NodeStyle, TextStyle
   Models/Layout/         geometry results (BeDiagram.Models.Layout): EdgeRoute, EdgeGeom, LabelLayout, TextBoxLayout, TextLine,
                          EdgeLabelLayout, EdgeLabelLine, Rect
+  Models/Shapes/         shape outlines (Strategy pattern, BeDiagram.Models.Shapes): IShapeOutline, ShapeOutline base,
+                         one class per outline (Rect, Check, RoundedRect, Pill, Diamond, Parallelogram, Hexagon, Circle,
+                         Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (lookup by shape key)
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
   Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
@@ -75,11 +78,15 @@ tools/Check-OneTypePerFile.ps1   one-type-per-file check (Windows PowerShell 5.1
 
 - **Typed nodes.** Every shape has a `Type` (start, process, decision, check, action, data, status, end, circle, outcome)
   and free-form `Properties`. Outcome nodes carry `Outcome` (pass, fail, rework, conditional, hold — see `Outcomes`);
-  `Geometry.ShapeOf`/`IconOf` turn that into the drawn outline and glyph, so use those rather than `NodeTypes.Get(..).Shape`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`, `value`.
+  `Geometry.ShapeOf`/`OutlineOf`/`IconOf` turn that into the drawn outline and glyph, so use those rather than `NodeTypes.Get(..).Shape`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`, `value`.
   This is what lets the audit tool read diagrams later — don't replace types with purely visual styling.
 - **One geometry, two renderers.** The canvas (Designer.razor) and the SVG export (Exporters.cs) must draw the
   same thing. Put shape/connector/label maths in `Geometry.cs` and call it from both. Any new visual feature
   needs both renderers updated, and the Mermaid export updated where Mermaid can express it.
+- **Shape outlines use the Strategy pattern.** Anything that differs per outline belongs in that outline's class in
+  `Models/Shapes/`, reached through `Geometry.OutlineOf(n)`: path, connector clipping (`Boundary`), badge position,
+  label / icon layout hints, side stripe, Mermaid syntax. Don't add `switch`es or `== "diamond"` tests on shape
+  keys elsewhere. A new per-shape behaviour is a new `IShapeOutline` member (with a default in `ShapeOutline`).
 - **Undo.** Every model change goes through `Change()` (snapshot + dirty) or, for drags, a snapshot taken at
   gesture start and pushed on pointer-up (`UndoableDragGesture` does this). Panel inputs call `Checkpoint` on focus.
 - **Gestures use the State pattern.** A drag is an `IGesture` object held in `gesture` (null when idle). New drags are

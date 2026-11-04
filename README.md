@@ -121,6 +121,7 @@ BeDiagram/                   the web app project
   Models/Catalogue/            type tables: NodeTypes, Outcomes, EdgeStyles, Sides, LabelPlaces, LabelOrients
   Models/Styles/               looks and colours: Palette, Swatch, TextPalette, LineLook, TextLook, GroupLook, NodeStyle, TextStyle
   Models/Layout/               geometry results shared by canvas + export: EdgeRoute, EdgeGeom, LabelLayout, Rect, …
+  Models/Shapes/               one class per shape outline (Strategy pattern, see below)
   Services/DiagramStore.cs     local folder save / open / list / delete
   Services/Exporters.cs        SVG and Mermaid export (SVG optionally of the current view)
   Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
@@ -152,6 +153,24 @@ Export is split into two families of strategies, put together by one context cla
 `PngExportFormat` uses one more small strategy, `IPngRasterizer`, for turning SVG into pixels; `BrowserPngRasterizer` does it in the browser (`wwwroot/js/export.js`). A server-side rasteriser could be swapped in without touching the format.
 
 To add an export format or area: write a class implementing the interface and register it in `Program.cs` — the menu picks it up; the Designer doesn't change. Menu order = registration order.
+
+### Shape outlines: Strategy pattern
+
+Everything that depends on a shape's outline sits behind **`IShapeOutline`**, with one class per outline in `Models/Shapes/`. That covers the SVG path, where a straight connector meets the outline, where the 🔗 badge sits, how the label and icon are laid out, the rule-check stripe, and the Mermaid syntax.
+
+| Outline | Used by |
+|---|---|
+| `RectOutline`, `CheckOutline` (adds the left stripe) | Process, Rule check |
+| `RoundedRectOutline`, `PillOutline` | Action; Start / End |
+| `DiamondOutline`, `ParallelogramOutline`, `HexagonOutline` | Decision, Data / IFC, Status |
+| `CircleOutline` | Circle, Rework outcome |
+| `SealOutline`, `OctagonOutline`, `TriangleOutline`, `RoundedSquareOutline` | Pass, Fail, Conditional, Hold outcomes |
+
+- `ShapeOutline` is the base class with plain-rectangle behaviour; each outline overrides only what differs.
+- `ShapeOutlines.Get(key)` finds an outline by the shape key used in `NodeTypes` / `Outcomes`. Unknown keys draw as a rectangle.
+- `Geometry.OutlineOf(node)` gives the outline a node is drawn with. The canvas and the SVG export both go through it, so they always match.
+
+To add a shape: write a class (usually derived from `ShapeOutline`), add it to `ShapeOutlines`, and use its key in `NodeTypes` (or `Outcomes`). Nothing else changes.
 
 ### Editor commands and shortcuts: Command pattern
 

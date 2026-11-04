@@ -131,10 +131,9 @@ public static class Exporters
 
         foreach (Node n in d.Nodes)
         {
-            NodeTypeInfo t = NodeTypes.Get(n.Type);
             NodeStyle st = NodeStyle.For(n);
             sb.Append($"<path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"1.6\"/>\n");
-            if (t.Shape == "check")
+            if (Geometry.OutlineOf(n).HasSideStripe)
                 sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
             LabelLayout lay = Geometry.Layout(n);
             if (lay.HasIcon)
@@ -236,16 +235,7 @@ public static class Exporters
                 continue;
             }
             string label = Q(text)[..^1] + desc + "\"";
-            string shape = NodeTypes.Get(n.Type).Shape switch
-            {
-                "pill" => $"([{label}])",
-                "circle" => $"(({label}))",
-                "diamond" => $"{{{label}}}",
-                "parallelogram" => $"[/{label}/]",
-                "hexagon" => $"{{{{{label}}}}}",
-                "rect-rounded" => $"({label})",
-                _ => $"[{label}]",
-            };
+            string shape = Geometry.OutlineOf(n).Mermaid(label);
             sb.Append($"    {id}{shape}\n");
         }
         int ti = 0;
