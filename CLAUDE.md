@@ -19,11 +19,19 @@ so the file format must stay meaningful to code, not just pretty.
 ```
 BeDiagram.sln
 BeDiagram/
-  Models/Diagram.cs      data model: Diagram, Node, Edge, TextBox (IsComment flag), Group, PageSetup, NodeTypes, Palette, TextPalette, LineLook
+  Models/                data model, one type per file: Diagram, Node, Edge, TextBox (IsComment flag), Group, PageSetup,
+                         IBox, IGroupable, LegacyComment
   Models/Geometry.cs     shape outlines, connector routing (elbow/straight), label + icon layout, bounds
+  Models/Catalogue/      type tables (BeDiagram.Models.Catalogue): NodeTypes, NodeTypeInfo, Outcomes, OutcomeInfo, EdgeStyles,
+                         Sides, LabelPlaces, LabelOrients
+  Models/Styles/         looks and colours (BeDiagram.Models.Styles): Palette, Swatch, TextPalette, LineLook, TextLook,
+                         GroupLook, NodeStyle, TextStyle
+  Models/Layout/         geometry results (BeDiagram.Models.Layout): EdgeRoute, EdgeGeom, LabelLayout, TextBoxLayout, TextLine,
+                         EdgeLabelLayout, EdgeLabelLine, Rect
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
   Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
+  Services/ExportView.cs     the window onto the drawing that a current-view export uses
   Services/PdfExporter.cs    PDF = Exporters.ToSvg output converted to PDF operators (own SVG-subset reader, core fonts)
   Services/Export/           export strategies: IExportFormat (Svg/Png/Pdf/Mermaid), IExportArea (WholeDrawing/CurrentView),
                              ExportService (context: lists menu choices, renders + saves), IPngRasterizer (BrowserPngRasterizer)
@@ -32,12 +40,14 @@ BeDiagram/
   Components/Pages/Designer.EditorContext.cs   Designer's IEditorContext implementation (what gestures may use)
   Components/Pages/Gestures/           mouse gestures (State pattern): IGesture, DragGesture / UndoableDragGesture bases,
                                        Move, Resize, Connect, Marquee, Pan, EdgeEnd, Bend
+  Components/Pages/Views/              view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
   Components/Shared/*.razor(.cs)       small child components: AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas)
   Components/UiSvg.cs                  IconSvg / OutcomeSwatch helpers (imported with `@using static` in _Imports.razor)
   Components/AlignOp.cs                align / distribute / row / column operations
   wwwroot/js/designer.js     keyboard shortcuts, wheel zoom/pan, canvas size, focus, drag data
   wwwroot/js/export.js       PNG export: draws the SVG export onto a canvas, returns the bytes (streamed to .NET)
   wwwroot/app.css            all styling
+tools/Check-OneTypePerFile.ps1   one-type-per-file check (Windows PowerShell 5.1 or PowerShell 7)
 ```
 
 ## Code style (owner's preference — keep to it)
@@ -45,6 +55,12 @@ BeDiagram/
 - **No `var`.** Write the actual type (`Node n = ...`, `foreach (Edge e in ...)`, `(double x, double y) = ...`), so code
   reads clearly when browsing. `.editorconfig` flags `var` as a warning (IDE0008). In a `foreach` over a non-null
   collection use the plain type, not `Edge?`.
+- **One type per file, named after the type.** Every class, record, interface, enum and struct gets its own `.cs`
+  file (`MoveGesture` → `MoveGesture.cs`). Partial classes use `Type.Area.cs` (`Designer.EditorContext.cs`).
+  Private nested helpers may stay nested (`Designer.Dialog`, the parser classes inside `PdfExporter`); public nested
+  types get their own file. Folders match namespaces (`Models/Styles/` = `BeDiagram.Models.Styles`), with explicit
+  `using`s, no global usings. Run `tools/Check-OneTypePerFile.ps1` before opening a PR (in the cloud workspace:
+  download PowerShell from its GitHub releases tarball and run `pwsh -File tools/Check-OneTypePerFile.ps1`).
 - **No C# in `.razor` files.** No `@code` blocks and no `@{ }` blocks: every `.razor` has a `.razor.cs` partial class.
   The markup only loops, branches and reads values. Anything that needs working out (layouts, paths, transforms,
   filtered lists) is a method, property or view record in the partial class. Event handlers are named methods;

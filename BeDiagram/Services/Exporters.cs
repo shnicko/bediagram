@@ -2,14 +2,11 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 using BeDiagram.Models;
+using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Layout;
+using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Services;
-
-/// <summary>
-/// A window onto the drawing in world coordinates (what's on screen) plus the on-screen size in px.
-/// Exported as-is on an open canvas, or scaled to fit inside the margins when a page size is set.
-/// </summary>
-public record ExportView(double X, double Y, double W, double H, double ScreenW, double ScreenH);
 
 public static class Exporters
 {
@@ -90,7 +87,7 @@ public static class Exporters
 
         foreach (Group g in d.Groups)
         {
-            Palette.Swatch sw = Palette.Get(g.Color);
+            Swatch sw = Palette.Get(g.Color);
             string fill = g.Filled ? $"fill=\"{sw.Light}\" fill-opacity=\"{F(Geometry.GroupFillOpacity(g))}\"" : "fill=\"none\"";
             string? dash = LineLook.Dash(g.Border, 1.5);
             sb.Append($"<rect x=\"{F(g.X)}\" y=\"{F(g.Y)}\" width=\"{F(g.W)}\" height=\"{F(g.H)}\" rx=\"10\" {fill} stroke=\"{sw.Stroke}\" stroke-width=\"1.5\"{(dash is null ? "" : $" stroke-dasharray=\"{dash}\"")}/>\n");
@@ -107,7 +104,7 @@ public static class Exporters
         foreach (Edge e in d.Edges)
         {
             if (!lookup.TryGetValue(e.From, out IBox? a) || !lookup.TryGetValue(e.To, out IBox? b)) continue;
-            Geometry.EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
+            EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
             double lw = LineLook.Width(e.Weight);
             string lc = LineLook.Colour(e.Color);
             string? dash = LineLook.Dash(e.Pattern, lw);
@@ -119,14 +116,14 @@ public static class Exporters
             sb.Append("/>\n");
             if (!string.IsNullOrWhiteSpace(e.Label))
             {
-                Geometry.EdgeLabelLayout lab = Geometry.LayoutEdgeLabel(e, geo);
+                EdgeLabelLayout lab = Geometry.LayoutEdgeLabel(e, geo);
                 // Labels are written after the shapes so they sit on top.
                 labels.Append($"<g transform=\"translate({F(geo.LabelX)},{F(geo.LabelY)}) rotate({F(geo.LabelAngle)})\">");
                 if (lab.Box is { } bx)
                     labels.Append($"<rect x=\"{F(bx.X)}\" y=\"{F(bx.Y)}\" width=\"{F(bx.W)}\" height=\"{F(bx.H)}\" rx=\"4\" fill=\"#fff\" stroke=\"#cfd4da\"/>");
                 string halo = lab.Halo ? " stroke=\"#fff\" stroke-width=\"3\" stroke-linejoin=\"round\" paint-order=\"stroke\"" : "";
                 labels.Append($"<text font-size=\"12\" text-anchor=\"{lab.Anchor}\" fill=\"#333\"{halo}>");
-                foreach (Geometry.EdgeLabelLine line in lab.Lines)
+                foreach (EdgeLabelLine line in lab.Lines)
                     labels.Append($"<tspan x=\"{F(line.X)}\" y=\"{F(line.Y)}\">{E(line.Text)}</tspan>");
                 labels.Append("</text></g>\n");
             }
@@ -139,7 +136,7 @@ public static class Exporters
             sb.Append($"<path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"1.6\"/>\n");
             if (t.Shape == "check")
                 sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
-            Geometry.LabelLayout lay = Geometry.Layout(n);
+            LabelLayout lay = Geometry.Layout(n);
             if (lay.HasIcon)
                 sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(Geometry.IconStroke(n))}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g>\n");
             if (Geometry.OutsideTextBox(n, lay) is { } back)
@@ -182,9 +179,9 @@ public static class Exporters
             sb.Append("/>");
         }
         if (t.IsComment) sb.Append($"<path d=\"{Geometry.FoldPath(t)}\" fill=\"none\" stroke=\"{st.FoldColour}\"/>");
-        Geometry.TextBoxLayout lay = Geometry.Layout(t);
+        TextBoxLayout lay = Geometry.Layout(t);
         sb.Append($"<text font-family=\"{E(st.Family)}\" font-size=\"{F(t.FontSize)}\"{(t.Bold ? " font-weight=\"600\"" : "")} fill=\"{st.TextColour}\" text-anchor=\"{lay.Anchor}\" xml:space=\"preserve\">");
-        foreach (Geometry.TextLine l in lay.Lines)
+        foreach (TextLine l in lay.Lines)
             sb.Append($"<tspan x=\"{F(l.X)}\" y=\"{F(l.Y)}\">{E(l.Text)}</tspan>");
         sb.Append("</text></g>\n");
         return sb.ToString();

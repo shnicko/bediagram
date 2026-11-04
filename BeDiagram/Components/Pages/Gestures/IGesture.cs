@@ -1,8 +1,5 @@
 namespace BeDiagram.Components.Pages.Gestures;
 
-/// <summary>A pointer position: in screen px (for panning) and in world coordinates (for everything else).</summary>
-public record GesturePoint(double ClientX, double ClientY, double X, double Y);
-
 /// <summary>
 /// State pattern: one mouse gesture in progress (move, resize, connect, pan, marquee, connector end, connector bend).
 /// The Designer holds the current gesture (null when the pointer is idle) and hands it every pointer move and the

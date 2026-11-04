@@ -5,8 +5,6 @@ namespace BeDiagram.Components.Shared;
 /// <summary>Row of align / distribute buttons (used for a multi-selection and inside a group).</summary>
 public partial class AlignBar
 {
-    public record AlignButton(AlignOp Op, string Icon, string Tip);
-
     static readonly AlignButton[] Buttons =
     {
         new(AlignOp.Left, "align-start-vertical", "Align left"),

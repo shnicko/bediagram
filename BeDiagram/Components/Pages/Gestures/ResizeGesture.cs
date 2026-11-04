@@ -1,0 +1,26 @@
+using BeDiagram.Models;
+
+namespace BeDiagram.Components.Pages.Gestures;
+
+/// <summary>Dragging the bottom-right handle of a shape, text box or group.</summary>
+public class ResizeGesture : UndoableDragGesture
+{
+    readonly string id;
+    readonly double w0, h0;
+
+    public ResizeGesture(IEditorContext ctx, double x, double y, IBox box) : base(ctx, x, y)
+    {
+        id = box.Id;
+        (w0, h0) = (box.W, box.H);
+    }
+
+    protected override bool Drag(double dx, double dy)
+    {
+        if (Ctx.FindBox(id) is not { } r) return true;
+        (double minW, double minH) = r switch { Group => (160.0, 100.0), TextBox => (40.0, 24.0), _ => (80.0, 40.0) };
+        r.W = Math.Max(minW, Ctx.SnapV(w0 + dx));
+        r.H = Math.Max(minH, Ctx.SnapV(h0 + dy));
+        Moved = true;
+        return true;
+    }
+}

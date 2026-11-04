@@ -1,11 +1,5 @@
 namespace BeDiagram.Services.Export;
 
-/// <summary>What the editor is showing right now: pan and zoom plus the canvas size in screen px.</summary>
-public record ScreenView(double PanX, double PanY, double Zoom, double CanvasW, double CanvasH);
-
-/// <summary>An exported file: its content plus an optional note for the user (e.g. "scaled down to fit").</summary>
-public record ExportFile(byte[] Content, string? Note = null);
-
 /// <summary>
 /// Export settings chosen in the Export menu. Held by the editor for the session (not saved in the diagram).
 /// </summary>
