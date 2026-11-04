@@ -127,6 +127,7 @@ BeDiagram/                   the web app project
   Services/Export/             export strategies (see below)
   Components/Pages/Designer.razor(.cs)   the editor UI and interaction logic
   Components/Pages/Gestures/   mouse gestures (State pattern, see below)
+  Components/Pages/Commands/   editor commands and keyboard shortcuts (Command pattern, see below)
   Components/Pages/Views/      view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
   wwwroot/js/designer.js       keyboard shortcuts, wheel zoom, canvas size, focus
   wwwroot/js/export.js         draws the SVG export onto a canvas for PNG export
@@ -151,6 +152,21 @@ Export is split into two families of strategies, put together by one context cla
 `PngExportFormat` uses one more small strategy, `IPngRasterizer`, for turning SVG into pixels; `BrowserPngRasterizer` does it in the browser (`wwwroot/js/export.js`). A server-side rasteriser could be swapped in without touching the format.
 
 To add an export format or area: write a class implementing the interface and register it in `Program.cs` — the menu picks it up; the Designer doesn't change. Menu order = registration order.
+
+### Editor commands and shortcuts: Command pattern
+
+Every keyboard shortcut is an **`IEditorCommand`** object: a `Name`, its `Keys` (shortcuts), `CanExecute` and `ExecuteAsync`. Toolbar and panel buttons run the same objects, so an action, its shortcut, its tooltip ("Undo (Ctrl+Z)") and its disabled state are defined in one place.
+
+| Role (GoF) | In BeDiagram |
+|---|---|
+| Command | `IEditorCommand`, with the `EditorCommand` base class for the usual synchronous, always-available case |
+| Concrete commands | `SaveCommand`, `UndoCommand`, `DuplicateCommand`, `DeleteCommand`, `GroupCommand`, `NudgeCommand` (one per direction and step), `AddShapeCommand` (one per number key), `ZoomInCommand`, … — one class per file in `Components/Pages/Commands/` |
+| Receiver | The Designer, seen through **`ICommandContext`** (implemented in `Designer.CommandContext.cs`) |
+| Invoker | **`CommandRegistry`** (a singleton registered in `Program.cs`): finds the command for a key press. The Designer's `OnKey` and button helpers (`Run`, `CanRun`, `Tip`) live in `Designer.Commands.cs` |
+
+Shortcut matching: a key press first looks for an exact match. If there is none and Shift was held, it tries the same key without Shift. So Shift only matters where a command asks for it (Ctrl+Shift+S, Ctrl+Shift+G, Shift+arrows), and Shift+J still joins. The registry refuses two commands with the same shortcut.
+
+To add a command: write a class (usually derived from `EditorCommand`), add it to `CommandRegistry.CreateDefault()`, and add any new editor action it needs to `ICommandContext` and `Designer.CommandContext.cs`. If it's a new key, add it to the key list in `wwwroot/js/designer.js` so the browser forwards it. Undo stays snapshot-based (Memento): commands call editor actions that already record undo.
 
 ### Mouse gestures: State pattern
 

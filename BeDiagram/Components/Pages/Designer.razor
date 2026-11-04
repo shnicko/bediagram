@@ -10,8 +10,8 @@
         <div class="group">
             <button @onclick="NewDiagram" title="New diagram">New</button>
             <button @onclick="ShowOpen" title="Open a saved diagram">Open</button>
-            <button @onclick="Save" title="Save (Ctrl+S)">Save</button>
-            <button @onclick="ShowSaveAs" title="Save as (Ctrl+Shift+S)">Save as…</button>
+            <button @onclick="() => Run(SaveCmd)" title="@Tip(SaveCmd)">Save</button>
+            <button @onclick="() => Run(SaveAsCmd)" title="@Tip(SaveAsCmd)">Save as…</button>
         </div>
         @if (trail.Count > 0)
         {
@@ -58,8 +58,8 @@
             }
         </div>
         <div class="group">
-            <button @onclick="Undo" disabled="@(undo.Count == 0)" title="Undo (Ctrl+Z)">↶</button>
-            <button @onclick="Redo" disabled="@(redo.Count == 0)" title="Redo (Ctrl+Y)">↷</button>
+            <button @onclick="() => Run(UndoCmd)" disabled="@(!CanRun(UndoCmd))" title="@Tip(UndoCmd)">↶</button>
+            <button @onclick="() => Run(RedoCmd)" disabled="@(!CanRun(RedoCmd))" title="@Tip(RedoCmd)">↷</button>
         </div>
         <div class="group" title="Canvas size: open canvas or a fixed paper size">
             <span class="muted-label">Page</span>
@@ -95,10 +95,10 @@
             </label>
         </div>
         <div class="group">
-            <button @onclick="() => ZoomBy(1 / 1.2)" title="Zoom out (-)">−</button>
+            <button @onclick="() => Run(ZoomOutCmd)" title="@Tip(ZoomOutCmd)">−</button>
             <span class="zoom">@((int)Math.Round(Zoom * 100))%</span>
-            <button @onclick="() => ZoomBy(1.2)" title="Zoom in (+)">+</button>
-            <button @onclick="Fit" title="Fit to content (F)">Fit</button>
+            <button @onclick="() => Run(ZoomInCmd)" title="@Tip(ZoomInCmd)">+</button>
+            <button @onclick="() => Run(FitCmd)" title="@Tip(FitCmd)">Fit</button>
         </div>
         <div class="title">
             <span>@D.Name</span>@if (Dirty) {<span class="dirty" title="Unsaved changes">●</span>}
@@ -594,8 +594,8 @@
             </div>
             <div class="actions">
                 <button @onclick="AddNextStep">+ Next step</button>
-                <button @onclick="AddCommentQuick">+ Comment</button>
-                <button class="danger" @onclick="DeleteSelection">Delete</button>
+                <button @onclick="() => Run(AddCommentCmd)">+ Comment</button>
+                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
             </div>
         }
         else if (SelectedText is { } st)
@@ -706,9 +706,9 @@
                 @if (!st.IsComment)
                 {
                     <button @onclick="AddNextStep">+ Next step</button>
-                    <button @onclick="AddCommentQuick">+ Comment</button>
+                    <button @onclick="() => Run(AddCommentCmd)">+ Comment</button>
                 }
-                <button class="danger" @onclick="DeleteSelection">Delete</button>
+                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
             </div>
         }
         else if (SelectedEdgeObj is { } se)
@@ -796,7 +796,7 @@
                 <button @onclick="() => ReverseEdge(se)">Reverse</button>
                 <button @onclick="() => MakeDefaultLook(se)" title="New connectors will look like this one">Use as default</button>
                 <button @onclick="() => ApplyEdgeLookToAll(se)" title="Copy this connector's look to every connector">Apply to all</button>
-                <button class="danger" @onclick="DeleteSelection">Delete</button>
+                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
             </div>
         }
         else if (SelectedGroup is { } sg)
@@ -844,8 +844,8 @@
             </div>
             <p class="muted">Connect a group like any shape: drag from its ● port, or select it with another item and press J.</p>
             <div class="actions">
-                <button @onclick="() => Ungroup(sg)" title="Ctrl+Shift+G">Ungroup</button>
-                <button class="danger" @onclick="DeleteSelection">Delete group &amp; contents</button>
+                <button @onclick="() => Run(UngroupCmd)" title="Ctrl+Shift+G">Ungroup</button>
+                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete group &amp; contents</button>
             </div>
         }
         else if (Sel.Count > 1)
@@ -863,9 +863,9 @@
                 <button @onclick="() => SetStyleBetweenSelected(EdgeStyles.Straight)">@IconSvg("move-up-right", 16) Straight</button>
             </div>
             <div class="actions col">
-                <button @onclick="JoinSelected">Join in selection order (J)</button>
-                <button @onclick="GroupSelection">Group (Ctrl+G)</button>
-                <button class="danger" @onclick="DeleteSelection">Delete</button>
+                <button @onclick="() => Run(JoinCmd)">Join in selection order (J)</button>
+                <button @onclick="() => Run(GroupCmd)">Group (Ctrl+G)</button>
+                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
             </div>
         }
         else
@@ -912,7 +912,7 @@
                 }
                 <div class="actions">
                     <button @onclick="CentreOnPage">Centre drawing on page</button>
-                    <button @onclick="Fit">Show whole page</button>
+                    <button @onclick="() => Run(FitCmd)">Show whole page</button>
                 </div>
                 <p class="muted">Export SVG or PDF produces a file exactly this paper size (in mm), ready to insert into Word or PowerPoint or to print.</p>
             }
