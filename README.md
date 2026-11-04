@@ -123,6 +123,7 @@ BeDiagram/                   the web app project
   Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
   Services/Export/             export strategies (see below)
   Components/Pages/Designer.razor(.cs)   the editor UI and interaction logic
+  Components/Pages/Gestures/   mouse gestures (State pattern, see below)
   wwwroot/js/designer.js       keyboard shortcuts, wheel zoom, canvas size, focus
   wwwroot/js/export.js         draws the SVG export onto a canvas for PNG export
   wwwroot/app.css              styling
@@ -139,6 +140,24 @@ Export is split into two families of strategies, put together by one context cla
 `PngExportFormat` uses one more small strategy, `IPngRasterizer`, for turning SVG into pixels; `BrowserPngRasterizer` does it in the browser (`wwwroot/js/export.js`). A server-side rasteriser could be swapped in without touching the format.
 
 To add an export format or area: write a class implementing the interface and register it in `Program.cs` — the menu picks it up; the Designer doesn't change. Menu order = registration order.
+
+### Mouse gestures: State pattern
+
+Each drag on the canvas is a state object implementing **`IGesture`** (`Move`, `Up`, `Cancel`). The Designer holds the gesture in progress (`gesture`, null when idle): a pointer-down handler creates the right one, and every pointer move and the pointer-up are handed to it.
+
+| Gesture | Started by |
+|---|---|
+| `MoveGesture` | dragging a shape, text box, group title or the selection |
+| `ResizeGesture` | the bottom-right handle of a text box or group |
+| `ConnectGesture` | dragging from a port (drop on an item to join, on empty canvas to add a joined step) |
+| `MarqueeGesture` | dragging on empty canvas or a group's body (a click on a group's body selects it) |
+| `PanGesture` | right- or middle-button drag |
+| `EdgeEndGesture` | a ● end of the selected connector |
+| `BendGesture` | the ■ bend handle of the selected connector |
+
+Shared behaviour sits in two base classes. `DragGesture` keeps the start point and the current point. `UndoableDragGesture` takes an undo snapshot at the start and records it on pointer-up only if something changed, so a plain click adds no undo step. Gestures reach the editor only through **`IEditorContext`** (diagram, selection, lookups, snapping, undo), which the Designer implements in `Designer.EditorContext.cs`.
+
+To add a gesture: write a class (usually derived from `UndoableDragGesture`) and create it from a pointer-down handler. The other gestures don't change.
 
 To add a shape type: add an entry to `NodeTypes.All` (and optionally default properties in `DefaultProps` in `Designer.razor.cs`).
 

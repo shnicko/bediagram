@@ -174,7 +174,7 @@
     <main class="canvas" @ref="canvasEl"
           @ondragover:preventDefault="true" @ondragover="DragOver"
           @ondrop="OnDrop">
-        <svg class="surface @(mode == Mode.Pan ? "panning" : "") @(mode == Mode.Connect ? "connecting" : "")"
+        <svg class="@SurfaceClass"
              @onpointerdown="BgDown" @onpointermove="PointerMove"
              @onpointerup="PointerUp" @onpointerleave="PointerUp"
              @ondblclick="BgDoubleClick">
@@ -482,10 +482,9 @@
                     </circle>
                 }
 
-                @if (mode == Mode.Marquee)
+                @if (Marquee is { } mq)
                 {
-                    <rect class="marquee" x="@F(Math.Min(startX, curX))" y="@F(Math.Min(startY, curY))"
-                          width="@F(Math.Abs(curX - startX))" height="@F(Math.Abs(curY - startY))" />
+                    <rect class="marquee" x="@F(mq.X)" y="@F(mq.Y)" width="@F(mq.W)" height="@F(mq.H)" />
                 }
             </g>
         </svg>

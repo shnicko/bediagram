@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using BeDiagram.Models;
+using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Services;
 using BeDiagram.Services.Export;
 using Microsoft.AspNetCore.Components;
@@ -15,7 +16,6 @@ public partial class Designer
     [Inject] ExportService Exports { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
-    enum Mode { None, Move, Connect, Pan, Marquee, Resize, EdgeEnd, Bend }
     enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave }
 
     // Document state
@@ -34,22 +34,10 @@ public partial class Designer
     string? SelEdge;
     string? EditId;
 
-    // Gesture state
-    Mode mode;
-    double startX, startY, curX, curY, lastClientX, lastClientY;
-    Dictionary<string, (double X, double Y)> moveOrigins = new();
-    bool moved;
-    string? connectFrom;
-    string? resizeId;
-    string? pendingGroupSelect;
-    string? gestureSnapshot;
+    // Gesture state (State pattern — see Gestures/IGesture.cs): the drag in progress, null when the pointer is idle.
+    IGesture? gesture;
     string? paletteDrag;
     bool skipRender;
-    // Connector handle drags
-    string? edgeDragId;
-    bool edgeDragFrom;
-    double bendCoord0, bend0;
-    bool bendVertical;
 
     // Undo
     readonly List<string> undo = new();
@@ -606,6 +594,13 @@ public partial class Designer
 
     // ───────────── Pointer handling ─────────────
 
+    /// <summary>Where the pointer is, in screen px and in world coordinates.</summary>
+    GesturePoint PointAt(PointerEventArgs e)
+    {
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        return new GesturePoint(e.ClientX, e.ClientY, x, y);
+    }
+
     void ItemDown(PointerEventArgs e, string id)
     {
         if (e.Button != 0) { StartPan(e); return; }
@@ -620,11 +615,8 @@ public partial class Designer
         {
             SelectOnly(id);
         }
-        (startX, startY) = ToWorld(e.ClientX, e.ClientY);
-        moveOrigins = WithMembers(Sel).ToDictionary(b => b.Id, b => (b.X, b.Y));
-        gestureSnapshot = Snapshot();
-        moved = false;
-        mode = Mode.Move;
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        gesture = new MoveGesture(this, x, y, WithMembers(Sel));
     }
 
     /// <summary>Pressing on a group's body: click selects the group, drag draws a selection box inside it.</summary>
@@ -634,10 +626,8 @@ public partial class Designer
         if (e.ShiftKey || e.CtrlKey) { ItemDown(e, id); return; }
         EndEdit();
         ClearSelection();
-        pendingGroupSelect = id;
-        (startX, startY) = ToWorld(e.ClientX, e.ClientY);
-        (curX, curY) = (startX, startY);
-        mode = Mode.Marquee;
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        gesture = new MarqueeGesture(this, x, y, clickSelects: id);
     }
 
     void PortDown(PointerEventArgs e, string id)
@@ -645,21 +635,15 @@ public partial class Designer
         if (e.Button != 0) { StartPan(e); return; }
         EndEdit();
         SelectOnly(id);
-        connectFrom = id;
-        (startX, startY) = ToWorld(e.ClientX, e.ClientY);
-        (curX, curY) = (startX, startY);
-        mode = Mode.Connect;
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        gesture = new ConnectGesture(this, x, y, id);
     }
 
     void ResizeDown(PointerEventArgs e, string id)
     {
-        resizeId = id;
-        gestureSnapshot = Snapshot();
-        (startX, startY) = ToWorld(e.ClientX, e.ClientY);
-        IBox b = FindBox(id)!;
-        moveOrigins = new() { [id] = (b.W, b.H) };
-        moved = false;
-        mode = Mode.Resize;
+        if (FindBox(id) is not { } box) return;
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        gesture = new ResizeGesture(this, x, y, box);
     }
 
     void EdgeDown(PointerEventArgs e, string id)
@@ -674,79 +658,16 @@ public partial class Designer
     void EdgeEndDown(PointerEventArgs e, string id, bool fromEnd)
     {
         if (e.Button != 0) { StartPan(e); return; }
-        edgeDragId = id;
-        edgeDragFrom = fromEnd;
-        gestureSnapshot = Snapshot();
-        (startX, startY) = ToWorld(e.ClientX, e.ClientY);
-        (curX, curY) = (startX, startY);
-        moved = false;
-        mode = Mode.EdgeEnd;
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        gesture = new EdgeEndGesture(this, x, y, id, fromEnd);
     }
 
     /// <summary>Pressing the ■ on an elbow connector's middle segment: slide that segment sideways.</summary>
     void BendDown(PointerEventArgs e, string id)
     {
         if (e.Button != 0) { StartPan(e); return; }
-        Edge? edge = D.Edges.FirstOrDefault(x => x.Id == id);
-        if (edge is null || FindBox(edge.From) is not { } a || FindBox(edge.To) is not { } b) return;
-        Geometry.EdgeRoute r = Geometry.Route(a, b, edge);
-        if (r.BendIndex < 0) return;
-        edgeDragId = id;
-        bendVertical = r.BendIsVertical;
-        bendCoord0 = bendVertical ? r.Points[r.BendIndex].X : r.Points[r.BendIndex].Y;
-        bend0 = edge.Bend;
-        gestureSnapshot = Snapshot();
-        (startX, startY) = ToWorld(e.ClientX, e.ClientY);
-        (curX, curY) = (startX, startY);
-        moved = false;
-        mode = Mode.Bend;
-    }
-
-    /// <summary>
-    /// The first time a connector is adjusted by hand, fix both ends to the sides they use now,
-    /// so the change you make doesn't make the other end jump, and moving shapes later keeps your choice.
-    /// </summary>
-    void PinSides(Edge edge)
-    {
-        if (edge.Style == EdgeStyles.Straight) return;
-        if (FindBox(edge.From) is not { } a || FindBox(edge.To) is not { } b) return;
-        Geometry.EdgeRoute r = Geometry.Route(a, b, edge);
-        edge.FromSide ??= r.FromSide;
-        edge.ToSide ??= r.ToSide;
-    }
-
-    void DragEdgeEnd()
-    {
-        Edge? edge = D.Edges.FirstOrDefault(x => x.Id == edgeDragId);
-        if (edge is null) return;
-        IBox? box = FindBox(edgeDragFrom ? edge.From : edge.To);
-        if (box is null) return;
-        // Nearest side middle to the pointer.
-        string side = Sides.All.MinBy(s =>
-        {
-            (double px, double py) = Geometry.SidePoint(box, s);
-            return (px - curX) * (px - curX) + (py - curY) * (py - curY);
-        })!;
-        Geometry.EdgeRoute route = Geometry.Route(FindBox(edge.From)!, FindBox(edge.To)!, edge);
-        string? current = edgeDragFrom ? route.FromSide : route.ToSide;
-        if (side == current) return;
-        if (!moved && Math.Abs(curX - startX) + Math.Abs(curY - startY) < 4) return;
-        if (!moved) PinSides(edge);
-        moved = true;
-        if (edgeDragFrom) edge.FromSide = side; else edge.ToSide = side;
-        edge.Bend = 0; // a new side means a new shape of route — start its bend from the middle again
-    }
-
-    void DragBend(double dx, double dy)
-    {
-        Edge? edge = D.Edges.FirstOrDefault(x => x.Id == edgeDragId);
-        if (edge is null) return;
-        double d = bendVertical ? dx : dy;
-        if (!moved && Math.Abs(d) < 4) return;
-        if (!moved) PinSides(edge);
-        moved = true;
-        // Snap the segment itself (not the offset) to the grid.
-        edge.Bend = bend0 + SnapV(bendCoord0 + d) - bendCoord0;
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        if (BendGesture.TryStart(this, x, y, id) is { } bend) gesture = bend;
     }
 
     void ResetRoute(Edge e)
@@ -764,21 +685,15 @@ public partial class Designer
         edge.Bend = 0;
     }
 
-    void StartPan(PointerEventArgs e)
-    {
-        lastClientX = e.ClientX; lastClientY = e.ClientY;
-        mode = Mode.Pan;
-    }
+    void StartPan(PointerEventArgs e) => gesture = new PanGesture(this, e.ClientX, e.ClientY);
 
     void BgDown(PointerEventArgs e)
     {
         EndEdit();
         if (e.Button != 0) { StartPan(e); return; }
         if (!e.ShiftKey) ClearSelection();
-        pendingGroupSelect = null;
-        (startX, startY) = ToWorld(e.ClientX, e.ClientY);
-        (curX, curY) = (startX, startY);
-        mode = Mode.Marquee;
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        gesture = new MarqueeGesture(this, x, y);
     }
 
     void BgDoubleClick(MouseEventArgs e)
@@ -787,118 +702,35 @@ public partial class Designer
         AddNodeAt(NodeTypes.Process, x, y, join: false);
     }
 
+    /// <summary>Hands the move to the current gesture; skips the render when nothing changed.</summary>
     void PointerMove(PointerEventArgs e)
     {
-        switch (mode)
-        {
-            case Mode.None:
-                skipRender = true;
-                return;
-            case Mode.Pan:
-                PanX += e.ClientX - lastClientX;
-                PanY += e.ClientY - lastClientY;
-                lastClientX = e.ClientX; lastClientY = e.ClientY;
-                return;
-        }
-        (curX, curY) = ToWorld(e.ClientX, e.ClientY);
-        double dx = curX - startX, dy = curY - startY;
-        switch (mode)
-        {
-            case Mode.Move:
-                if (!moved && Math.Abs(dx) + Math.Abs(dy) < 2) { skipRender = true; return; }
-                moved = true;
-                foreach ((string id, (double ox, double oy)) in moveOrigins)
-                {
-                    IBox? b = FindBox(id);
-                    if (b is null) continue;
-                    // Snap centres (not corners) so shapes of different sizes line up and connectors stay straight.
-                    b.X = SnapV(ox + dx + b.W / 2) - b.W / 2;
-                    b.Y = SnapV(oy + dy + b.H / 2) - b.H / 2;
-                }
-                break;
-            case Mode.Resize:
-                if (resizeId is not null && FindBox(resizeId) is { } r)
-                {
-                    (double ow, double oh) = moveOrigins[resizeId];
-                    (double minW, double minH) = r switch { Group => (160.0, 100.0), TextBox => (40.0, 24.0), _ => (80.0, 40.0) };
-                    r.W = Math.Max(minW, SnapV(ow + dx));
-                    r.H = Math.Max(minH, SnapV(oh + dy));
-                    moved = true;
-                }
-                break;
-            case Mode.EdgeEnd:
-                DragEdgeEnd();
-                break;
-            case Mode.Bend:
-                DragBend(dx, dy);
-                break;
-        }
+        if (gesture is null || !gesture.Move(PointAt(e))) skipRender = true;
     }
 
     void PointerUp(PointerEventArgs e)
     {
-        switch (mode)
-        {
-            case Mode.None:
-                skipRender = true;
-                return;
-            case Mode.Move:
-                if (moved && gestureSnapshot is not null)
-                {
-                    PushUndo(gestureSnapshot);
-                    Dirty = true;
-                    // Items dragged on their own may have entered or left a group.
-                    HashSet<string> movedGroups = Sel.Where(id => FindGroup(id) is not null).ToHashSet();
-                    List<IGroupable> loose = moveOrigins.Keys.Select(FindBox).OfType<IGroupable>()
-                        .Where(i => i.GroupId is null || !movedGroups.Contains(i.GroupId)).ToList();
-                    UpdateMembership(loose);
-                }
-                break;
-            case Mode.Resize or Mode.EdgeEnd or Mode.Bend:
-                if (moved && gestureSnapshot is not null) { PushUndo(gestureSnapshot); Dirty = true; }
-                break;
-            case Mode.Connect when connectFrom is not null:
-            {
-                IBox? target = HitTest(curX, curY, connectFrom);
-                if (target is not null)
-                {
-                    string snap = Snapshot();
-                    if (AddEdge(connectFrom, target.Id)) { PushUndo(snap); Dirty = true; }
-                }
-                else if (Math.Abs(curX - startX) + Math.Abs(curY - startY) > 40)
-                {
-                    // Dropped on empty space: create a new step there, joined to the source.
-                    AddNodeAt(NodeTypes.Process, curX, curY, join: true);
-                }
-                break;
-            }
-            case Mode.Marquee:
-            {
-                if (Math.Abs(curX - startX) + Math.Abs(curY - startY) > 4)
-                {
-                    double x1 = Math.Min(startX, curX), y1 = Math.Min(startY, curY), x2 = Math.Max(startX, curX), y2 = Math.Max(startY, curY);
-                    IOrderedEnumerable<IBox> hits = D.Nodes.Cast<IBox>().Concat(D.TextBoxes)
-                        .Where(b => Geometry.Intersects(b, x1, y1, x2, y2))
-                        // Groups only when fully enclosed, so dragging inside a group selects its contents.
-                        .Concat(D.Groups.Where(g => g.X >= x1 && g.Y >= y1 && g.X + g.W <= x2 && g.Y + g.H <= y2))
-                        .OrderBy(b => b.Y).ThenBy(b => b.X);
-                    foreach (IBox b in hits)
-                        if (!Sel.Contains(b.Id)) Sel.Add(b.Id);
-                }
-                else if (pendingGroupSelect is not null)
-                {
-                    SelectOnly(pendingGroupSelect);
-                }
-                break;
-            }
-        }
-        mode = Mode.None;
-        connectFrom = null;
-        resizeId = null;
-        edgeDragId = null;
-        pendingGroupSelect = null;
-        gestureSnapshot = null;
+        if (gesture is null) { skipRender = true; return; }
+        IGesture finished = gesture;
+        gesture = null;
+        finished.Up();
     }
+
+    /// <summary>Stops the current gesture without pointer-up (Escape, inline editing).</summary>
+    void CancelGesture()
+    {
+        gesture?.Cancel();
+        gesture = null;
+    }
+
+    // What the canvas reads about the gesture in progress.
+    MarqueeGesture? Marquee => gesture as MarqueeGesture;
+    string SurfaceClass => gesture switch
+    {
+        PanGesture => "surface panning",
+        ConnectGesture => "surface connecting",
+        _ => "surface",
+    };
 
     // ───────────── Commands ─────────────
 
@@ -1257,7 +1089,7 @@ public partial class Designer
     void BeginEdit(string id, bool checkpoint)
     {
         if (checkpoint) Checkpoint();
-        mode = Mode.None;
+        CancelGesture();
         EditId = id;
         if (D.Edges.Any(e => e.Id == id)) { Sel.Clear(); SelEdge = id; }
         else if (!Sel.Contains(id)) SelectOnly(id);
@@ -1360,7 +1192,7 @@ public partial class Designer
         switch (k)
         {
             case "Delete" or "Backspace": DeleteSelection(); break;
-            case "Escape": EditId = null; mode = Mode.None; ClearSelection(); break;
+            case "Escape": EditId = null; CancelGesture(); ClearSelection(); break;
             case "Enter":
                 if (Sel.Count == 1) BeginEdit(Sel[0]);
                 else if (SelEdge is not null) BeginEdit(SelEdge);
@@ -1774,9 +1606,9 @@ public partial class Designer
     /// <summary>The live connector drawn while dragging from a port (null when not connecting).</summary>
     ConnectPreview? LiveConnector()
     {
-        if (mode != Mode.Connect || FindBox(connectFrom) is not { } from) return null;
-        IBox? target = HitTest(curX, curY, connectFrom);
-        IBox to = target ?? new TextBox { X = curX, Y = curY, W = 0, H = 0 };
+        if (gesture is not ConnectGesture cg || FindBox(cg.FromId) is not { } from) return null;
+        IBox? target = cg.Target;
+        IBox to = target ?? new TextBox { X = cg.CurX, Y = cg.CurY, W = 0, H = 0 };
         return new ConnectPreview(Geometry.EdgeGeometry(from, to, D.DefaultConnector).D, target);
     }
 
@@ -1786,10 +1618,10 @@ public partial class Designer
         if (SelectedEdgeObj is not { } he || FindBox(he.From) is not { } ha || FindBox(he.To) is not { } hb || EditId == he.Id) return null;
         Geometry.EdgeRoute hr = Geometry.Route(ha, hb, he);
         List<SideTarget> sides = new();
-        if (mode == Mode.EdgeEnd)
+        if (gesture is EdgeEndGesture eg)
         {
-            IBox box = edgeDragFrom ? ha : hb;
-            string? current = edgeDragFrom ? hr.FromSide : hr.ToSide;
+            IBox box = eg.FromEnd ? ha : hb;
+            string? current = eg.FromEnd ? hr.FromSide : hr.ToSide;
             foreach (string side in Sides.All)
             {
                 (double sx, double sy) = Geometry.SidePoint(box, side);
