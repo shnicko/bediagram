@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Models;
@@ -21,53 +22,17 @@ public static class Geometry
     /// <summary>Icon stroke width in 24-unit icon space (outcome glyphs are bolder).</summary>
     public static double IconStroke(Node n) => n.Type == NodeTypes.Outcome ? 2.75 : 2;
 
+    /// <summary>The outline strategy a node is drawn with (see <see cref="IShapeOutline"/>).</summary>
+    public static IShapeOutline OutlineOf(Node n) => ShapeOutlines.Get(ShapeOf(n));
+
+    /// <summary>The outline of any box: a node's own outline, a plain rectangle for text boxes and groups.</summary>
+    public static IShapeOutline OutlineOf(IBox b) => b is Node n ? OutlineOf(n) : ShapeOutlines.Rect;
+
     /// <summary>Shapes whose label sits underneath (icon in the middle): circles with an icon, and every outcome.</summary>
     public static bool LabelBelow(Node n) =>
-        n.Type == NodeTypes.Outcome || (ShapeOf(n) == "circle" && Icons.Exists(n.Icon));
+        n.Type == NodeTypes.Outcome || (OutlineOf(n).IconMovesLabelBelow && Icons.Exists(n.Icon));
 
-    public static string ShapePath(Node n)
-    {
-        double x = n.X, y = n.Y, w = n.W, h = n.H;
-        switch (ShapeOf(n))
-        {
-            case "pill":
-            {
-                double r = h / 2;
-                return $"M{F(x + r)},{F(y)} H{F(x + w - r)} A{F(r)},{F(r)} 0 0 1 {F(x + w - r)},{F(y + h)} H{F(x + r)} A{F(r)},{F(r)} 0 0 1 {F(x + r)},{F(y)} Z";
-            }
-            case "diamond":
-                return $"M{F(x + w / 2)},{F(y)} L{F(x + w)},{F(y + h / 2)} L{F(x + w / 2)},{F(y + h)} L{F(x)},{F(y + h / 2)} Z";
-            case "parallelogram":
-            {
-                double k = Math.Min(18, w / 6);
-                return $"M{F(x + k)},{F(y)} H{F(x + w)} L{F(x + w - k)},{F(y + h)} H{F(x)} Z";
-            }
-            case "hexagon":
-            {
-                double k = Math.Min(20, w / 5);
-                return $"M{F(x + k)},{F(y)} H{F(x + w - k)} L{F(x + w)},{F(y + h / 2)} L{F(x + w - k)},{F(y + h)} H{F(x + k)} L{F(x)},{F(y + h / 2)} Z";
-            }
-            case "circle":
-            {
-                double r = Math.Min(w, h) / 2; double cx = x + w / 2; double cy = y + h / 2;
-                return $"M{F(cx - r)},{F(cy)} A{F(r)},{F(r)} 0 1 1 {F(cx + r)},{F(cy)} A{F(r)},{F(r)} 0 1 1 {F(cx - r)},{F(cy)} Z";
-            }
-            case "seal":
-                return SealPath(x + w / 2, y + h / 2, Math.Min(w, h) / 2);
-            case "octagon":
-            case "triangle":
-                return PolyPath(Outline(n, ShapeOf(n)));
-            case "square-rounded":
-            {
-                double s = Math.Min(w, h); double sx = x + (w - s) / 2; double sy = y + (h - s) / 2;
-                return RoundRect(sx, sy, s, s, s * 0.22);
-            }
-            case "rect-rounded":
-                return RoundRect(x, y, w, h, 14);
-            default: // rect, check
-                return RoundRect(x, y, w, h, 5);
-        }
-    }
+    public static string ShapePath(Node n) => OutlineOf(n).Path(n);
 
     /// <summary>Scalloped seal: a ring of semicircular bumps whose tips touch radius <paramref name="r"/>.</summary>
     public static string SealPath(double cx, double cy, double r)
@@ -87,8 +52,6 @@ public static class Geometry
         return sb.Append(" Z").ToString();
     }
 
-    static string PolyPath(List<(double X, double Y)> pts) => PathD(pts) + " Z";
-
     public static string RoundRect(double x, double y, double w, double h, double r)
     {
         r = Math.Min(r, Math.Min(w, h) / 2);
@@ -107,47 +70,8 @@ public static class Geometry
     /// Centre of the link badge: the bottom-right of the drawn outline (on the curve for circles, seals and
     /// octagons, on the lower-right edge for diamonds), or tucked inside the bottom-right corner of a group.
     /// </summary>
-    public static (double X, double Y) LinkBadgeCentre(IBox b)
-    {
-        double x = b.X, y = b.Y, w = b.W, h = b.H, cx = x + w / 2, cy = y + h / 2;
-        const double d45 = 0.7071;
-        if (b is not Node n) return (x + w - 18, y + h - 18);
-        switch (ShapeOf(n))
-        {
-            case "circle":
-            case "seal":
-            case "octagon":
-            {
-                double r = Math.Min(w, h) / 2;
-                return (cx + r * d45, cy + r * d45);
-            }
-            case "square-rounded":
-            {
-                double s = Math.Min(w, h); double k = s * 0.22 * (1 - d45);
-                return (cx + s / 2 - k, cy + s / 2 - k);
-            }
-            case "pill":
-            {
-                double r = h / 2;
-                return (x + w - r + r * d45, cy + r * d45);
-            }
-            case "diamond":
-                return (x + w * 0.75, y + h * 0.75);
-            case "triangle":
-                return (x + w - 8, y + h);
-            case "parallelogram":
-                return (x + w - Math.Min(18, w / 6), y + h);
-            case "hexagon":
-            {
-                double k = Math.Min(20, w / 5);
-                return (x + w - k / 2, y + h * 0.75);
-            }
-            case "rect-rounded":
-                return (x + w - 14 * (1 - d45), y + h - 14 * (1 - d45));
-            default: // rect, check
-                return (x + w - 1.5, y + h - 1.5);
-        }
-    }
+    public static (double X, double Y) LinkBadgeCentre(IBox b) =>
+        b is Node n ? OutlineOf(n).LinkBadgeCentre(n) : (b.X + b.W - 18, b.Y + b.H - 18);
 
     /// <summary>SVG markup for the link badge (white disc, coloured ring, Lucide "link" glyph). Used by canvas and export.</summary>
     public static string LinkBadgeSvg(IBox b, string colour)
@@ -220,38 +144,31 @@ public static class Geometry
 
     static LabelLayout LayoutLabel(Node n, string label)
     {
-        NodeTypeInfo t = NodeTypes.Get(n.Type);
+        IShapeOutline outline = OutlineOf(n);
         double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
         bool icon = Icons.Exists(n.Icon);
 
         if (n.Type == NodeTypes.Outcome)
         {
             // Glyph centred in the outline, label underneath. A triangle's visual centre is lower down.
-            string shape = ShapeOf(n);
-            double m = Math.Min(n.W, n.H);
-            double size = m * (shape == "triangle" ? 0.38 : shape == "seal" ? 0.44 : 0.48);
-            double gy = shape == "triangle" ? n.Y + n.H * 0.62 : cy;
+            double size = Math.Min(n.W, n.H) * outline.GlyphScale;
+            double gy = n.Y + n.H * outline.GlyphCentreY;
             List<string> lines = Wrap(label, TextWidth(n));
             return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, gy - size / 2, size);
         }
 
-        if (t.Shape == "circle")
+        if (icon && outline.IconMovesLabelBelow)
         {
-            if (icon)
-            {
-                // Presentation style: icon centred in the circle, label underneath.
-                double size = Math.Min(n.W, n.H) * 0.46;
-                List<string> lines = Wrap(label, TextWidth(n));
-                return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, cy - size / 2, size);
-            }
-            List<string> inner = Wrap(label, n.W * 0.78);
-            return new(inner, cx, cy - (inner.Count - 1) * LineHeight / 2 + 4, false, false, 0, 0, 0);
+            // Presentation style: icon centred in the circle, label underneath.
+            double size = Math.Min(n.W, n.H) * 0.46;
+            List<string> lines = Wrap(label, TextWidth(n));
+            return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, cy - size / 2, size);
         }
 
-        if (icon && (t.Shape == "diamond" || t.Shape == "hexagon"))
+        if (icon && outline.IconAboveTextWrap is double aboveWrap)
         {
             // Narrow-sided shapes: icon above the text.
-            List<string> lines = Wrap(label, n.W * (t.Shape == "diamond" ? 0.55 : 0.7));
+            List<string> lines = Wrap(label, n.W * aboveWrap);
             double block = 22 + lines.Count * LineHeight;
             double top = cy - block / 2;
             return new(lines, cx, top + 22 + 12, false, true, cx - 10, top, 20);
@@ -260,13 +177,13 @@ public static class Geometry
         if (icon)
         {
             // Icon on the left, text centred in the remaining space.
-            double left = n.X + (t.Shape == "check" ? 18 : t.Shape == "parallelogram" ? 22 : 14);
+            double left = n.X + outline.IconInset;
             List<string> lines = Wrap(label, n.X + n.W - (left + 26) - 10);
             double textX = (left + 26 + n.X + n.W - 8) / 2;
             return new(lines, textX, cy - (lines.Count - 1) * LineHeight / 2 + 4, false, true, left, cy - 10, 20);
         }
 
-        List<string> wrapped = Wrap(label, n.W * (t.Shape == "diamond" ? 0.62 : 0.86));
+        List<string> wrapped = Wrap(label, n.W * outline.TextWrap);
         return new(wrapped, cx, cy - (wrapped.Count - 1) * LineHeight / 2 + 4, false, false, 0, 0, 0);
     }
 
@@ -582,69 +499,8 @@ public static class Geometry
     public static (double X, double Y) Boundary(IBox box, double tx, double ty)
     {
         double cx = box.X + box.W / 2, cy = box.Y + box.H / 2;
-        double dx = tx - cx, dy = ty - cy;
-        if (Math.Abs(dx) < 1e-6 && Math.Abs(dy) < 1e-6) return (cx, cy);
-        string shape = box is Node n ? ShapeOf(n) : "rect";
-
-        if (shape is "circle" or "seal")
-        {
-            double r = Math.Min(box.W, box.H) / 2;
-            double len = Math.Sqrt(dx * dx + dy * dy);
-            return (cx + dx / len * r, cy + dy / len * r);
-        }
-
-        List<(double X, double Y)> poly = Outline(box, shape);
-        double best = double.MaxValue;
-        for (int i = 0; i < poly.Count; i++)
-        {
-            (double p1x, double p1y) = poly[i];
-            (double p2x, double p2y) = poly[(i + 1) % poly.Count];
-            // Solve centre + t*(dx,dy) = p1 + u*(p2-p1)
-            double ex = p2x - p1x, ey = p2y - p1y;
-            double den = dx * ey - dy * ex;
-            if (Math.Abs(den) < 1e-9) continue;
-            double t = ((p1x - cx) * ey - (p1y - cy) * ex) / den;
-            double u = ((p1x - cx) * dy - (p1y - cy) * dx) / den;
-            if (t > 0 && u >= -1e-9 && u <= 1 + 1e-9 && t < best) best = t;
-        }
-        return best == double.MaxValue ? (cx, cy) : (cx + dx * best, cy + dy * best);
-    }
-
-    static List<(double X, double Y)> Outline(IBox b, string shape)
-    {
-        double x = b.X, y = b.Y, w = b.W, h = b.H;
-        switch (shape)
-        {
-            case "octagon":
-            {
-                // Regular octagon (stop sign) centred in the box, flat sides touching it.
-                double r = Math.Min(w, h) / 2; double k = r * Math.Tan(Math.PI / 8);
-                double cx = x + w / 2, cy = y + h / 2;
-                return new() { (cx - k, cy - r), (cx + k, cy - r), (cx + r, cy - k), (cx + r, cy + k),
-                               (cx + k, cy + r), (cx - k, cy + r), (cx - r, cy + k), (cx - r, cy - k) };
-            }
-            case "triangle":
-                return new() { (x + w / 2, y), (x + w, y + h), (x, y + h) };
-            case "square-rounded":
-            {
-                double s = Math.Min(w, h);
-                return new() { (x + (w - s) / 2, y + (h - s) / 2), (x + (w + s) / 2, y + (h - s) / 2), (x + (w + s) / 2, y + (h + s) / 2), (x + (w - s) / 2, y + (h + s) / 2) };
-            }
-            case "diamond":
-                return new() { (x + w / 2, y), (x + w, y + h / 2), (x + w / 2, y + h), (x, y + h / 2) };
-            case "parallelogram":
-            {
-                double k = Math.Min(18, w / 6);
-                return new() { (x + k, y), (x + w, y), (x + w - k, y + h), (x, y + h) };
-            }
-            case "hexagon":
-            {
-                double k = Math.Min(20, w / 5);
-                return new() { (x + k, y), (x + w - k, y), (x + w, y + h / 2), (x + w - k, y + h), (x + k, y + h), (x, y + h / 2) };
-            }
-            default:
-                return new() { (x, y), (x + w, y), (x + w, y + h), (x, y + h) };
-        }
+        if (Math.Abs(tx - cx) < 1e-6 && Math.Abs(ty - cy) < 1e-6) return (cx, cy);
+        return OutlineOf(box).Boundary(box, tx, ty);
     }
 
     public static string PathD(List<(double X, double Y)> pts) =>
