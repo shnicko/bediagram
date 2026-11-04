@@ -25,12 +25,15 @@ BeDiagram/
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
   Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
   Services/PdfExporter.cs    PDF = Exporters.ToSvg output converted to PDF operators (own SVG-subset reader, core fonts)
+  Services/Export/           export strategies: IExportFormat (Svg/Png/Pdf/Mermaid), IExportArea (WholeDrawing/CurrentView),
+                             ExportService (context: lists menu choices, renders + saves), IPngRasterizer (BrowserPngRasterizer)
   Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs) — markup only
   Components/Pages/Designer.razor.cs   editor state + interaction logic + render helpers (view records the markup reads)
   Components/Shared/*.razor(.cs)       small child components: AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas)
   Components/UiSvg.cs                  IconSvg / OutcomeSwatch helpers (imported with `@using static` in _Imports.razor)
   Components/AlignOp.cs                align / distribute / row / column operations
   wwwroot/js/designer.js     keyboard shortcuts, wheel zoom/pan, canvas size, focus, drag data
+  wwwroot/js/export.js       PNG export: draws the SVG export onto a canvas, returns the bytes (streamed to .NET)
   wwwroot/app.css            all styling
 ```
 
@@ -60,6 +63,9 @@ BeDiagram/
 - **Groups** don't nest. Membership is `GroupId` on nodes/text boxes; moving a group moves its members (`MoveBox`).
 - **PDF is drawn from the SVG export**, so it has no geometry of its own. If a new visual feature uses an SVG
   element or attribute `PdfExporter` doesn't read yet (gradients, images, …), extend `PdfExporter` as well.
+- **Export uses the strategy pattern** (owner's preference — he knows it well). A new format or area is a new class
+  implementing `IExportFormat` / `IExportArea`, registered in `Program.cs`; don't add format-specific export methods to
+  the Designer. PNG is rasterised from the SVG export in the browser, so like PDF it has no geometry of its own.
 - **Connector labels** render in their own layer above shapes (canvas and export).
 - **Page mode** puts the sheet at world (0,0); sizes in mm convert at 96 px/inch (`PageSetup.PxPerMm`).
 - Razor gotchas: wrap SVG `<text>` in a `<g>` when it's the first element in a code block (Razor treats a bare
@@ -84,7 +90,6 @@ BeDiagram/
 
 1. Connector routing around shapes (lines currently pass behind obstacles).
 2. Auto-layout ("tidy") — candidate: MSAGL (Microsoft Automatic Graph Layout, MIT).
-3. PNG export (PDF is done: page / extents / current view).
-4. Nested groups.
-5. Mermaid import.
-6. Later: visual rule builder for the Data Audit Tools rules engine (Excel template stays a valid source).
+3. Nested groups.
+4. Mermaid import.
+5. Later: visual rule builder for the Data Audit Tools rules engine (Excel template stays a valid source).

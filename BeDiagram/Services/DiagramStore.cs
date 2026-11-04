@@ -61,13 +61,6 @@ public class DiagramStore
         return path;
     }
 
-    public async Task<string> SaveTextAsync(string name, string ext, string content)
-    {
-        string path = PathFor(name, ext);
-        await File.WriteAllTextAsync(path, content);
-        return path;
-    }
-
     public async Task<string> SaveBytesAsync(string name, string ext, byte[] content)
     {
         string path = PathFor(name, ext);

@@ -29,10 +29,31 @@
             @if (exportMenu)
             {
                 <div class="menu" @onclick="CloseExportMenu">
-                    <button @onclick="ExportSvg">SVG image@(D.Page.Enabled ? $" ({D.Page.Mm.W:0.#} × {D.Page.Mm.H:0.#} mm)" : "")</button>
-                    <button @onclick="() => ExportPdf(false)" title="@PdfTip(false)">@PdfLabel()</button>
-                    <button @onclick="() => ExportPdf(true)" title="@PdfTip(true)">PDF — current view</button>
-                    <button @onclick="ExportMermaid">Mermaid text (.mmd)</button>
+                    @foreach (ExportMenuItem item in ExportMenuItems())
+                    {
+                        if (item.StartsGroup)
+                        {
+                            <hr class="menu-divider" />
+                        }
+                        <button @onclick="() => Export(item.Choice)" title="@item.Tip">@item.Label</button>
+                    }
+                    <hr class="menu-divider" />
+                    <div class="menu-settings" @onclick:stopPropagation="true">
+                        <span class="muted-label">PNG settings</span>
+                        <label title="Size of the PNG in pixels">
+                            Resolution
+                            <select value="@exportOptions.PngResolution" @onchange="SetPngResolution">
+                                @for (int i = 0; i < PngResolutions.Count; i++)
+                                {
+                                    <option value="@i">@PngResolutions[i].Label</option>
+                                }
+                            </select>
+                        </label>
+                        <label title="No white background — for placing over slides or coloured pages">
+                            <input type="checkbox" checked="@exportOptions.PngTransparent" @onchange="SetPngTransparent" />
+                            Transparent background
+                        </label>
+                    </div>
                 </div>
             }
         </div>
