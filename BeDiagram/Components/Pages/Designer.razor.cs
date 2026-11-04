@@ -7,6 +7,10 @@ using BeDiagram.Services.Export;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using BeDiagram.Components.Pages.Views;
+using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Layout;
+using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Components.Pages;
 
@@ -1448,23 +1452,6 @@ public partial class Designer
     // ───────────── Render helpers (read by Designer.razor) ─────────────
     // The markup only loops and reads values; anything that needs working out lives here.
 
-    public record PaletteShape(NodeTypeInfo Type, int Number);
-    public record Crumb(int Level, string Name);
-    /// <param name="BandPath">Tinted title band, or null for a plain-text title.</param>
-    /// <param name="TitleArea">Where the title sits (drag handle and inline editor).</param>
-    public record GroupView(Group G, Palette.Swatch Swatch, bool Selected, string? BandPath, Rect TitleArea,
-                            double TitleX, double TitleY, string TitleAnchor, double FillOpacity, string? Dash);
-    public record TextBoxView(TextBox T, TextStyle Style, bool Selected, Geometry.TextBoxLayout Layout, string Outline);
-    public record EdgeView(Edge E, bool Selected, Geometry.EdgeGeom Geo, double Width, string Colour, string Marker);
-    public record EdgeLabelView(Edge E, bool Selected, bool Editing, Geometry.EdgeGeom Geo, Geometry.EdgeLabelLayout Layout);
-    /// <param name="TextBack">White backing behind text drawn outside the shape (label below / description), if any.</param>
-    public record NodeView(Node N, NodeTypeInfo Type, NodeStyle Style, bool Selected, Geometry.LabelLayout Layout, double Below, Rect? TextBack);
-    public record ConnectPreview(string Path, IBox? Target);
-    public record SideTarget(double X, double Y, bool Current);
-    public record EdgeHandleView(string EdgeId, List<SideTarget> Sides, bool HasBend, double BendX, double BendY, bool BendVertical,
-                                 double StartX, double StartY, double EndX, double EndY);
-    public record Rect(double X, double Y, double W, double H);
-
     static readonly (string Key, string Name)[] HAligns = { (TextLook.Left, "Left"), (TextLook.Center, "Centre"), (TextLook.Right, "Right") };
     static readonly (string Key, string Name)[] VAligns = { (TextLook.Top, "Top"), (TextLook.Middle, "Middle"), (TextLook.Bottom, "Bottom") };
     static readonly string[] EdgeLabelChips = { "Yes", "No", "Pass", "Fail", "" };
@@ -1495,20 +1482,20 @@ public partial class Designer
 
     double BendHandleSize => 12 / Zoom;
 
-    static string NodeIconTransform(Geometry.LabelLayout lay) =>
+    static string NodeIconTransform(LabelLayout lay) =>
         $"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})";
 
     static MarkupString NodeIconMarkup(Node n) => (MarkupString)Icons.Get(Geometry.IconOf(n));
 
-    static string EdgeLabelTransform(Geometry.EdgeGeom geo) =>
+    static string EdgeLabelTransform(EdgeGeom geo) =>
         $"translate({F(geo.LabelX)},{F(geo.LabelY)}) rotate({F(geo.LabelAngle)})";
 
     /// <summary>A node's label lines with the tspan line offset (first line 0, then one line height each).</summary>
-    static IEnumerable<(string Text, string Dy)> LabelLines(Geometry.LabelLayout lay) =>
+    static IEnumerable<(string Text, string Dy)> LabelLines(LabelLayout lay) =>
         lay.Lines.Select((line, i) => (line, i == 0 ? "0" : F(Geometry.LineHeight)));
 
     /// <summary>Description lines with the tspan line offset.</summary>
-    static IEnumerable<(string Text, string Dy)> DescLines(Geometry.LabelLayout lay) =>
+    static IEnumerable<(string Text, string Dy)> DescLines(LabelLayout lay) =>
         lay.Desc.Select((line, i) => (line, i == 0 ? "0" : F(Geometry.DescLineHeight)));
 
     /// <summary>What the text width applies to for this shape, for the panel hint.</summary>
@@ -1582,7 +1569,7 @@ public partial class Designer
             bool editing = EditId == e.Id;
             if (string.IsNullOrWhiteSpace(e.Label) && !editing) continue;
             if (FindBox(e.From) is not { } a || FindBox(e.To) is not { } b) continue;
-            Geometry.EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
+            EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
             yield return new EdgeLabelView(e, SelEdge == e.Id, editing, geo, Geometry.LayoutEdgeLabel(e, geo));
         }
     }
@@ -1590,7 +1577,7 @@ public partial class Designer
     IEnumerable<NodeView> NodeViews() =>
         D.Nodes.Select(n =>
         {
-            Geometry.LabelLayout lay = Geometry.Layout(n);
+            LabelLayout lay = Geometry.Layout(n);
             Rect? back = Geometry.OutsideTextBox(n, lay) is { } r ? new Rect(r.X, r.Y, r.W, r.H) : null;
             return new NodeView(n, NodeTypes.Get(n.Type), NodeStyle.For(n), Sel.Contains(n.Id), lay, Geometry.ExtraBelow(n), back);
         });
@@ -1599,7 +1586,6 @@ public partial class Designer
     static Rect NodeEditRect(NodeView v) => v.Layout.Below
         ? new Rect(v.N.X + v.N.W / 2 - 80, v.N.Y + v.N.H + 4, 160, 44)
         : new Rect(v.N.X + 8, v.N.Y + 6, v.N.W - 16, v.N.H - 12);
-
 
     static bool HasProperties(Node n) => n.Properties.Values.Any(v => !string.IsNullOrWhiteSpace(v));
 
@@ -1616,7 +1602,7 @@ public partial class Designer
     EdgeHandleView? SelectedEdgeHandles()
     {
         if (SelectedEdgeObj is not { } he || FindBox(he.From) is not { } ha || FindBox(he.To) is not { } hb || EditId == he.Id) return null;
-        Geometry.EdgeRoute hr = Geometry.Route(ha, hb, he);
+        EdgeRoute hr = Geometry.Route(ha, hb, he);
         List<SideTarget> sides = new();
         if (gesture is EdgeEndGesture eg)
         {

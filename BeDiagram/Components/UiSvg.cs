@@ -1,6 +1,9 @@
 using System.Globalization;
 using BeDiagram.Models;
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Layout;
+using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Components;
 
@@ -18,7 +21,7 @@ public static class UiSvg
     {
         Node n = new Node { Type = NodeTypes.Outcome, Outcome = outcome, Filled = true, W = 24, H = 24 };
         NodeStyle st = NodeStyle.For(n);
-        Geometry.LabelLayout lay = Geometry.Layout(n, "");
+        LabelLayout lay = Geometry.Layout(n, "");
         return new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"-1 -1 26 26\"><path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\"/>"
                  + $"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g></svg>");
     }

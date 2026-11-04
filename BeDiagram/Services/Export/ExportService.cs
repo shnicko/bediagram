@@ -2,9 +2,6 @@ using BeDiagram.Models;
 
 namespace BeDiagram.Services.Export;
 
-/// <summary>One entry in the Export menu: a format, plus an area when the format uses one.</summary>
-public record ExportChoice(IExportFormat Format, IExportArea? Area);
-
 /// <summary>
 /// The context of the strategy pattern: holds every registered <see cref="IExportFormat"/> and <see cref="IExportArea"/>,
 /// lists the combinations for the menu, and runs a chosen one (render with the format, then save next to the diagram).

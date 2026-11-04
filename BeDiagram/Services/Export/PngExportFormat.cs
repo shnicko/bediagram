@@ -5,9 +5,6 @@ using BeDiagram.Models;
 
 namespace BeDiagram.Services.Export;
 
-/// <summary>One choice in the PNG resolution list: menu text and the scale applied to the SVG's size in px.</summary>
-public record PngResolution(string Label, double Scale);
-
 /// <summary>
 /// PNG image. The SVG export is drawn to pixels by an <see cref="IPngRasterizer"/> (the browser by default),
 /// so the PNG looks exactly like the SVG / PDF. The file records its resolution (PNG pHYs chunk),

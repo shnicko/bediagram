@@ -296,7 +296,7 @@
                             <g>
                                 <text class="text-body" font-family="@v.Style.Family" font-size="@F(v.T.FontSize)" font-weight="@(v.T.Bold ? "600" : null)"
                                       fill="@v.Style.TextColour" text-anchor="@v.Layout.Anchor">
-                                    @foreach (Geometry.TextLine line in v.Layout.Lines)
+                                    @foreach (TextLine line in v.Layout.Lines)
                                     {
                                         <tspan x="@F(line.X)" y="@F(line.Y)">@line.Text</tspan>
                                     }
@@ -447,7 +447,7 @@
                                 <rect x="@F(v.Layout.Hit.X)" y="@F(v.Layout.Hit.Y)" width="@F(v.Layout.Hit.W)" height="@F(v.Layout.Hit.H)" rx="3" class="edge-label-hit @(v.Selected ? "sel" : "")" />
                             }
                             <text class="edge-label @(v.Layout.Halo ? "halo" : "")" text-anchor="@v.Layout.Anchor">
-                                @foreach (Geometry.EdgeLabelLine line in v.Layout.Lines)
+                                @foreach (EdgeLabelLine line in v.Layout.Lines)
                                 {
                                     <tspan x="@F(line.X)" y="@F(line.Y)">@line.Text</tspan>
                                 }
@@ -523,7 +523,7 @@
             <label>Colour</label>
             <div class="swatches">
                 <button class="swatch default @(sn.Color is null ? "on" : "")" title="Type default" @onclick="() => SetNodeColour(sn, null)">∅</button>
-                @foreach ((string k, Palette.Swatch swc) in Palette.All)
+                @foreach ((string k, Swatch swc) in Palette.All)
                 {
                     <button class="swatch @(sn.Color == k ? "on" : "")" style="background:@(sn.Filled ? swc.Solid : swc.Light);border-color:@swc.Stroke" title="@k"
                             @onclick="() => SetNodeColour(sn, k)"></button>
@@ -746,7 +746,7 @@
             <label>Colour</label>
             <div class="swatches">
                 <button class="swatch line @(se.Color is null ? "on" : "")" title="Default grey" @onclick="() => SetEdgeLook(se, x => x.Color = null)"><span style="background:@LineLook.DefaultColor"></span></button>
-                @foreach ((string k, Palette.Swatch swc) in Palette.All)
+                @foreach ((string k, Swatch swc) in Palette.All)
                 {
                     <button class="swatch line @(se.Color == k ? "on" : "")" title="@k" @onclick="() => SetEdgeLook(se, x => x.Color = k)"><span style="background:@swc.Stroke"></span></button>
                 }
@@ -806,7 +806,7 @@
             <input @bind="sg.Title" @bind:event="oninput" @bind:after="MarkDirty" @onfocus="Checkpoint" />
             <label>Colour</label>
             <div class="swatches">
-                @foreach ((string k, Palette.Swatch swc) in Palette.All)
+                @foreach ((string k, Swatch swc) in Palette.All)
                 {
                     <button class="swatch @(sg.Color == k ? "on" : "")" style="background:@swc.Light;border-color:@swc.Stroke" title="@k"
                             @onclick="() => SetGroupColour(sg, k)"></button>

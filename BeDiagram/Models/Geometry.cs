@@ -1,5 +1,8 @@
 using System.Globalization;
 using System.Text;
+using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Layout;
+using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Models;
 
@@ -155,18 +158,6 @@ public static class Geometry
              + $"<g transform=\"translate({F(cx - glyph / 2)},{F(cy - glyph / 2)}) scale({F(glyph / 24)})\" fill=\"none\" stroke=\"{colour}\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get("link")}</g>";
     }
 
-    /// <summary>Where a node's label, icon and description go. Shared by the canvas and the SVG export.</summary>
-    public record LabelLayout(List<string> Lines, double TextX, double TextY, bool Below,
-                              bool HasIcon, double IconX, double IconY, double IconSize)
-    {
-        /// <summary>Description lines (smaller text). Empty when there is no description.</summary>
-        public List<string> Desc { get; init; } = new();
-        /// <summary>Centre of the description lines (the shape's centre).</summary>
-        public double DescX { get; init; }
-        /// <summary>Baseline of the first description line.</summary>
-        public double DescY { get; init; }
-    }
-
     public const double LineHeight = 16;
     public const double DescFontSize = 11;
     public const double DescLineHeight = 14;
@@ -278,12 +269,6 @@ public static class Geometry
         List<string> wrapped = Wrap(label, n.W * (t.Shape == "diamond" ? 0.62 : 0.86));
         return new(wrapped, cx, cy - (wrapped.Count - 1) * LineHeight / 2 + 4, false, false, 0, 0, 0);
     }
-
-    /// <summary>One positioned line of text-box text (baseline coordinates).</summary>
-    public record TextLine(string Text, double X, double Y);
-
-    /// <summary>Where a text box's lines go, plus the SVG text-anchor. Shared by the canvas and the SVG export.</summary>
-    public record TextBoxLayout(List<TextLine> Lines, string Anchor, double LineHeight, double ContentHeight);
 
     public static TextBoxLayout Layout(TextBox t)
     {
@@ -405,9 +390,6 @@ public static class Geometry
         return OutsideTextBox(n, lay) is { } r ? r.Y + r.H - (n.Y + n.H) + 8 : 0;
     }
 
-    /// <param name="SegAngle">Direction (degrees) of the connector segment the label sits on.</param>
-    public record EdgeGeom(string D, double LabelX, double LabelY, double LabelAngle, double SegAngle = 0);
-
     /// <summary>Full connector geometry: path plus where (and at what angle) its label sits.</summary>
     public static EdgeGeom EdgeGeometry(IBox a, IBox b, string style, string labelOrient = LabelOrients.Horizontal, double labelPos = 0.5)
     {
@@ -422,18 +404,6 @@ public static class Geometry
         EdgeRoute r = Route(a, b, e);
         (double x, double y, double seg) = PointAt(r.Points, e.LabelPos);
         return new EdgeGeom(PathD(r.Points), x, y, LabelAngle(e.LabelOrient, seg), seg);
-    }
-
-    /// <summary>
-    /// A routed connector. <see cref="BendIndex"/> is the segment (Points[i] → Points[i+1]) the user can drag
-    /// sideways, or -1 when there isn't one. <see cref="FromSide"/>/<see cref="ToSide"/> are the sides actually
-    /// used (null for an automatic straight end, which aims at the other shape rather than a side).
-    /// </summary>
-    public record EdgeRoute(List<(double X, double Y)> Points, int BendIndex, string? FromSide, string? ToSide)
-    {
-        public bool BendIsVertical => BendIndex >= 0 && Math.Abs(Points[BendIndex].X - Points[BendIndex + 1].X) < 0.5;
-        public (double X, double Y) BendHandle => BendIndex < 0 ? (0, 0)
-            : ((Points[BendIndex].X + Points[BendIndex + 1].X) / 2, (Points[BendIndex].Y + Points[BendIndex + 1].Y) / 2);
     }
 
     public static EdgeRoute Route(IBox a, IBox b, Edge e) =>
@@ -743,17 +713,6 @@ public static class Geometry
         if (parts.Length <= MaxEdgeLabelLines) return raw;
         return parts[0] + "\n" + string.Join(" ", parts.Skip(1).Select(l => l.Trim()).Where(l => l.Length > 0));
     }
-
-    public record EdgeLabelLine(string Text, double X, double Y);
-
-    /// <summary>
-    /// Connector label laid out in its own frame (origin on the line, rotated by <see cref="EdgeGeom.LabelAngle"/>).
-    /// <paramref name="Box"/> is the white backing (inline labels covering the line), else null and the text gets a
-    /// white halo. <paramref name="Hit"/> covers the text for clicking.
-    /// </summary>
-    public record EdgeLabelLayout(List<EdgeLabelLine> Lines, string Anchor, Rect? Box, bool Halo, Rect Hit);
-
-    public record Rect(double X, double Y, double W, double H);
 
     /// <summary>
     /// Where a connector label's lines go. When the text runs along the line, "above"/"below" stack the text on that

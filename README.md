@@ -115,18 +115,29 @@ Node types: `start`, `process`, `decision`, `check`, `action`, `data`, `status`,
 ```
 BeDiagram.sln                solution (open this in Visual Studio)
 BeDiagram/                   the web app project
-  Models/Diagram.cs            data model + node type catalogue (shapes, colours, sizes)
-  Models/Icons.cs              built-in icon set (Lucide, ISC licence — see LICENSE-lucide.txt)
+  Models/                      the diagram model: Diagram, Node, Edge, TextBox, Group, PageSetup, IBox, IGroupable
   Models/Geometry.cs           shape paths, elbow connectors, text wrap (shared by canvas + export)
+  Models/Icons.cs              built-in icon set (Lucide, ISC licence — see LICENSE-lucide.txt)
+  Models/Catalogue/            type tables: NodeTypes, Outcomes, EdgeStyles, Sides, LabelPlaces, LabelOrients
+  Models/Styles/               looks and colours: Palette, Swatch, TextPalette, LineLook, TextLook, GroupLook, NodeStyle, TextStyle
+  Models/Layout/               geometry results shared by canvas + export: EdgeRoute, EdgeGeom, LabelLayout, Rect, …
   Services/DiagramStore.cs     local folder save / open / list / delete
   Services/Exporters.cs        SVG and Mermaid export (SVG optionally of the current view)
   Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
   Services/Export/             export strategies (see below)
   Components/Pages/Designer.razor(.cs)   the editor UI and interaction logic
   Components/Pages/Gestures/   mouse gestures (State pattern, see below)
+  Components/Pages/Views/      view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
   wwwroot/js/designer.js       keyboard shortcuts, wheel zoom, canvas size, focus
   wwwroot/js/export.js         draws the SVG export onto a canvas for PNG export
   wwwroot/app.css              styling
+tools/Check-OneTypePerFile.ps1   checks the one-type-per-file rule (see below)
+```
+
+**One type per file.** Every class, record, interface and enum is in its own `.cs` file named after it (`MoveGesture` → `MoveGesture.cs`). Partial classes use `Type.Area.cs` (`Designer.EditorContext.cs`). Private nested helpers may stay nested; public nested types get their own file. Folders match namespaces (`Models/Styles/` = `BeDiagram.Models.Styles`). Check it with:
+
+```
+powershell -ExecutionPolicy Bypass -File tools\Check-OneTypePerFile.ps1
 ```
 
 ### Export: strategy pattern
