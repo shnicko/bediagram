@@ -19,8 +19,9 @@ public static class Exporters
     /// <summary>
     /// Standalone SVG of the diagram. Without a view: the page (when a size is set) or the drawing extents.
     /// With a view: just that window, clipped — at screen size, or fitted to the page when a size is set.
+    /// <paramref name="background"/> = false leaves out the white background (transparent PNG export).
     /// </summary>
-    public static string ToSvg(Diagram d, ExportView? view = null)
+    public static string ToSvg(Diagram d, ExportView? view = null, bool background = true)
     {
         List<IBox> boxes = d.Nodes.Cast<IBox>().Concat(d.TextBoxes).Concat(d.Groups).ToList();
         Dictionary<string, IBox> lookup = boxes.ToDictionary(b => b.Id);
@@ -41,7 +42,7 @@ public static class Exporters
                 double ty = m + (availH - view.H * scale) / 2 - view.Y * scale;
                 sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(wmm)}mm\" height=\"{F(hmm)}mm\" viewBox=\"0 0 {F(W)} {F(H)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
                 sb.Append(defs.Replace("</defs>", $"<clipPath id=\"view\"><rect x=\"{F(view.X)}\" y=\"{F(view.Y)}\" width=\"{F(view.W)}\" height=\"{F(view.H)}\"/></clipPath></defs>"));
-                sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
+                if (background) sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
                 sb.Append($"<g transform=\"translate({F(tx)},{F(ty)}) scale({F(scale)})\"><g clip-path=\"url(#view)\">\n");
                 closeContent = "</g></g>\n";
             }
@@ -50,7 +51,7 @@ public static class Exporters
                 // Exactly the screen: the viewBox does the clipping.
                 sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{F(view.X)} {F(view.Y)} {F(view.W)} {F(view.H)}\" width=\"{F(view.ScreenW)}\" height=\"{F(view.ScreenH)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
                 sb.Append(defs);
-                sb.Append($"<rect x=\"{F(view.X)}\" y=\"{F(view.Y)}\" width=\"{F(view.W)}\" height=\"{F(view.H)}\" fill=\"#ffffff\"/>\n");
+                if (background) sb.Append($"<rect x=\"{F(view.X)}\" y=\"{F(view.Y)}\" width=\"{F(view.W)}\" height=\"{F(view.H)}\" fill=\"#ffffff\"/>\n");
             }
         }
         else if (d.Page.Enabled)
@@ -60,7 +61,7 @@ public static class Exporters
             double W = d.Page.WidthPx, H = d.Page.HeightPx, m = d.Page.MarginPx;
             sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(wmm)}mm\" height=\"{F(hmm)}mm\" viewBox=\"0 0 {F(W)} {F(H)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
             sb.Append(defs);
-            sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
+            if (background) sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
             if (Geometry.ContentBounds(d) is { } cb && d.Page.FitOnExport)
             {
                 double availW = W - 2 * m, availH = H - 2 * m;
@@ -84,7 +85,7 @@ public static class Exporters
             }
             sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{F(minX)} {F(minY)} {F(maxX - minX)} {F(maxY - minY)}\" width=\"{F(maxX - minX)}\" height=\"{F(maxY - minY)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
             sb.Append(defs);
-            sb.Append($"<rect x=\"{F(minX)}\" y=\"{F(minY)}\" width=\"{F(maxX - minX)}\" height=\"{F(maxY - minY)}\" fill=\"#ffffff\"/>\n");
+            if (background) sb.Append($"<rect x=\"{F(minX)}\" y=\"{F(minY)}\" width=\"{F(maxX - minX)}\" height=\"{F(maxY - minY)}\" fill=\"#ffffff\"/>\n");
         }
 
         foreach (Group g in d.Groups)

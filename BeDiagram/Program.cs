@@ -1,5 +1,6 @@
 using BeDiagram.Components;
 using BeDiagram.Services;
+using BeDiagram.Services.Export;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,17 @@ builder.Services.AddRazorComponents()
 
 // Diagrams are stored as JSON files in a local folder (see appsettings.json -> Storage:Folder).
 builder.Services.AddSingleton<DiagramStore>();
+
+// Export strategies (see Services/Export). The Export menu lists formats and areas in the order registered here.
+// Formats: what kind of file. Areas: which part of the drawing (whole page / extents, or the current view).
+builder.Services.AddSingleton<IExportFormat, SvgExportFormat>();
+builder.Services.AddScoped<IExportFormat, PngExportFormat>();     // scoped: draws in this user's browser
+builder.Services.AddSingleton<IExportFormat, PdfExportFormat>();
+builder.Services.AddSingleton<IExportFormat, MermaidExportFormat>();
+builder.Services.AddSingleton<IExportArea, WholeDrawingArea>();
+builder.Services.AddSingleton<IExportArea, CurrentViewArea>();
+builder.Services.AddScoped<IPngRasterizer, BrowserPngRasterizer>();
+builder.Services.AddScoped<ExportService>();
 
 WebApplication app = builder.Build();
 

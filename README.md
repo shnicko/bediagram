@@ -24,15 +24,24 @@ Change it in `appsettings.json`:
 "Storage": { "Folder": "D:\\Projects\\Diagrams" }
 ```
 
-Each diagram can produce three files, side by side:
+Each diagram can produce these files, side by side:
 
 | File | What |
 |---|---|
 | `Name.diagram.json` | The diagram (source of truth) |
 | `Name.svg` | Export → SVG image — for reports, Word, PowerPoint (page-sized in mm when a page is set) |
+| `Name.png` | Export → PNG image — the page or drawing extents as pixels, at the resolution chosen under *PNG settings* |
 | `Name.pdf` | Export → PDF — the whole page at the selected paper size, or (open canvas) the drawing zoomed to its extents |
-| `Name.view.pdf` | Export → PDF — current view: exactly what's on screen (fitted inside the page margins when a page size is set) |
+| `Name.view.svg` / `.view.png` / `.view.pdf` | Export → *… — current view*: exactly what's on screen (fitted inside the page margins when a page size is set) |
 | `Name.mmd` | Export → Mermaid — paste into Mermaid-aware tools (Markdown, wikis) |
+
+**Export areas:** SVG, PNG and PDF each have two entries — the *page* (when a page size is set) or *drawing extents* (open canvas), and the *current view*. Mermaid describes the structure, so it has one.
+
+**PNG settings** (at the bottom of the Export menu, kept for the session):
+- *Resolution* — on an open canvas 1× (screen size), 2× or 3×; with a page size 96, 150 or 300 dpi (A4 at 300 dpi = 3508 × 2480 px). The dpi is written into the file, so a page PNG inserts into Word/PowerPoint at its paper size. Very large images (e.g. A0 at 300 dpi) are reduced to what the browser can draw, and the message says so.
+- *Transparent background* — leaves out the white background, for placing over slides or coloured pages.
+
+The PNG is drawn by your browser from the SVG export, so it matches the SVG and the screen exactly.
 
 ## Using it
 
@@ -112,10 +121,24 @@ BeDiagram/                   the web app project
   Services/DiagramStore.cs     local folder save / open / list / delete
   Services/Exporters.cs        SVG and Mermaid export (SVG optionally of the current view)
   Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
+  Services/Export/             export strategies (see below)
   Components/Pages/Designer.razor(.cs)   the editor UI and interaction logic
   wwwroot/js/designer.js       keyboard shortcuts, wheel zoom, canvas size, focus
+  wwwroot/js/export.js         draws the SVG export onto a canvas for PNG export
   wwwroot/app.css              styling
 ```
+
+### Export: strategy pattern
+
+Export is split into two families of strategies, put together by one context class:
+
+- **`IExportFormat`** — *what kind of file*: `SvgExportFormat`, `PngExportFormat`, `PdfExportFormat`, `MermaidExportFormat`. Each turns a diagram (plus an optional view window) into bytes.
+- **`IExportArea`** — *which part of the drawing*: `WholeDrawingArea` (page or extents) and `CurrentViewArea` (what's on screen, saved with a `.view` suffix).
+- **`ExportService`** — the context. It gets every registered format and area from dependency injection, lists the combinations for the Export menu (`Choices()`), and runs one (`ExportAsync`: area → view window, format → bytes, then save next to the diagram).
+
+`PngExportFormat` uses one more small strategy, `IPngRasterizer`, for turning SVG into pixels; `BrowserPngRasterizer` does it in the browser (`wwwroot/js/export.js`). A server-side rasteriser could be swapped in without touching the format.
+
+To add an export format or area: write a class implementing the interface and register it in `Program.cs` — the menu picks it up; the Designer doesn't change. Menu order = registration order.
 
 To add a shape type: add an entry to `NodeTypes.All` (and optionally default properties in `DefaultProps` in `Designer.razor.cs`).
 
@@ -124,7 +147,7 @@ To add a shape type: add an entry to `NodeTypes.All` (and optionally default pro
 - Connectors (elbow or straight) don't route around other shapes yet.
 - No auto-layout ("tidy up") yet — candidate: MSAGL.
 - Groups can't be nested inside other groups yet.
-- No Mermaid import or PNG export yet.
+- No Mermaid import yet.
 - PDF text uses the standard PDF fonts (Helvetica / Times / Courier), so text widths differ slightly from Segoe UI on screen; characters outside Windows-1252 print as `?`.
 - One page per diagram (no multi-page documents).
 - Linked diagrams open in place of the current one; showing a linked diagram on the same canvas (each sheet as a sized diagram object) is planned for later. Links are by name, so renaming a diagram with *Save as…* doesn't update links that point to it.

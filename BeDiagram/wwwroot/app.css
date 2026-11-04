@@ -300,6 +300,10 @@ kbd {
     box-shadow: 0 8px 24px rgba(0,0,0,.12);
 }
 .menu button { border: none; text-align: left; padding: 7px 10px; }
+.menu-divider { border: none; border-top: 1px solid var(--line); margin: 4px 6px; }
+.menu-settings { display: flex; flex-direction: column; gap: 6px; padding: 4px 10px 8px; font-size: 13px; }
+.menu-settings label { display: flex; align-items: center; gap: 6px; }
+.menu-settings select { flex: 1; }
 
 /* ── Connector line looks ── */
 .seg.patterns button { padding: 6px 2px; }

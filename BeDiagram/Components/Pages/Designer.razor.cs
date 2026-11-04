@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using BeDiagram.Models;
 using BeDiagram.Services;
+using BeDiagram.Services.Export;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -11,6 +12,7 @@ namespace BeDiagram.Components.Pages;
 public partial class Designer
 {
     [Inject] DiagramStore Store { get; set; } = default!;
+    [Inject] ExportService Exports { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
     enum Mode { None, Move, Connect, Pan, Marquee, Resize, EdgeEnd, Bend }
@@ -63,6 +65,7 @@ public partial class Designer
     /// <summary>Saved diagrams listed in the Open dialog (read when it opens).</summary>
     IReadOnlyList<(string Name, DateTime Modified)> openFiles = Array.Empty<(string Name, DateTime Modified)>();
     bool exportMenu;
+    readonly ExportOptions exportOptions = new();
     CancellationTokenSource? toastCts;
 
     ElementReference canvasEl;
@@ -1559,51 +1562,43 @@ public partial class Designer
         if (e.Key == "Enter") await ConfirmSaveAs();
     }
 
-    async Task ExportSvg()
+    /// <summary>One Export menu entry, worked out for the markup. StartsGroup draws a divider before a new format.</summary>
+    record ExportMenuItem(ExportChoice Choice, string Label, string Tip, bool StartsGroup);
+
+    /// <summary>The Export menu: every format × area combination the <see cref="ExportService"/> offers.</summary>
+    IReadOnlyList<ExportMenuItem> ExportMenuItems()
     {
-        string svg = Exporters.ToSvg(D);
-        string path = await Store.SaveTextAsync(D.Name, ".svg", svg);
-        ShowToast($"Exported {Path.GetFileName(path)}");
+        List<ExportMenuItem> items = new List<ExportMenuItem>();
+        IExportFormat? previous = null;
+        foreach (ExportChoice c in Exports.Choices())
+        {
+            items.Add(new ExportMenuItem(c, ExportService.Label(c, D), ExportService.Tip(c, D), previous is not null && previous != c.Format));
+            previous = c.Format;
+        }
+        return items;
     }
 
-    /// <summary>
-    /// PDF next to the saved diagram. Whole export: the page when a size is set, otherwise the drawing extents.
-    /// Current view: what is on screen (fitted to the page when a size is set), saved as "name.view.pdf".
-    /// </summary>
-    string PdfLabel() => D.Page.Enabled
-        ? $"PDF — page ({D.Page.Mm.W:0.#} × {D.Page.Mm.H:0.#} mm)"
-        : "PDF — drawing extents";
+    IReadOnlyList<PngResolution> PngResolutions => PngExportFormat.Resolutions(D);
 
-    string PdfTip(bool currentView) => (currentView, D.Page.Enabled) switch
-    {
-        (true, true) => "What is on screen now, fitted inside the page margins",
-        (true, false) => "Exactly what is on screen now",
-        (false, true) => "The whole page at the selected paper size",
-        _ => "The whole drawing, zoomed to its extents",
-    };
-
-    async Task ExportPdf(bool currentView)
+    /// <summary>Exports next to the saved diagram; the current-view area uses what is on screen now.</summary>
+    async Task Export(ExportChoice choice)
     {
         try
         {
-            ExportView? view = currentView
-                ? new ExportView(-PanX / Zoom, -PanY / Zoom, canvasW / Zoom, canvasH / Zoom, canvasW, canvasH)
-                : null;
-            byte[] pdf = PdfExporter.FromSvg(Exporters.ToSvg(D, view), D.Name);
-            string path = await Store.SaveBytesAsync(D.Name, currentView ? ".view.pdf" : ".pdf", pdf);
-            ShowToast($"Exported {Path.GetFileName(path)}");
+            ScreenView screen = new ScreenView(PanX, PanY, Zoom, canvasW, canvasH);
+            (string path, string? note) = await Exports.ExportAsync(choice, D, screen, exportOptions);
+            ShowToast(note is null ? $"Exported {Path.GetFileName(path)}" : $"Exported {Path.GetFileName(path)} ({note})");
         }
         catch (Exception ex)
         {
-            ShowToast($"PDF export failed: {ex.Message}");
+            ShowToast($"{choice.Format.Name} export failed: {ex.Message}");
         }
     }
 
-    async Task ExportMermaid()
-    {
-        string path = await Store.SaveTextAsync(D.Name, ".mmd", Exporters.ToMermaid(D));
-        ShowToast($"Exported {Path.GetFileName(path)}");
-    }
+    void SetPngResolution(ChangeEventArgs e) =>
+        exportOptions.PngResolution = int.TryParse(e.Value?.ToString(), out int i) ? i : 1;
+
+    void SetPngTransparent(ChangeEventArgs e) => exportOptions.PngTransparent = e.Value is true;
 
     void ShowToast(string message)
     {
