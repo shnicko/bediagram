@@ -29,6 +29,9 @@ BeDiagram/
                              ExportService (context: lists menu choices, renders + saves), IPngRasterizer (BrowserPngRasterizer)
   Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs) — markup only
   Components/Pages/Designer.razor.cs   editor state + interaction logic + render helpers (view records the markup reads)
+  Components/Pages/Designer.EditorContext.cs   Designer's IEditorContext implementation (what gestures may use)
+  Components/Pages/Gestures/           mouse gestures (State pattern): IGesture, DragGesture / UndoableDragGesture bases,
+                                       Move, Resize, Connect, Marquee, Pan, EdgeEnd, Bend
   Components/Shared/*.razor(.cs)       small child components: AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas)
   Components/UiSvg.cs                  IconSvg / OutcomeSwatch helpers (imported with `@using static` in _Imports.razor)
   Components/AlignOp.cs                align / distribute / row / column operations
@@ -58,7 +61,12 @@ BeDiagram/
   same thing. Put shape/connector/label maths in `Geometry.cs` and call it from both. Any new visual feature
   needs both renderers updated, and the Mermaid export updated where Mermaid can express it.
 - **Undo.** Every model change goes through `Change()` (snapshot + dirty) or, for drags, a snapshot taken at
-  gesture start and pushed on pointer-up. Panel inputs call `Checkpoint` on focus.
+  gesture start and pushed on pointer-up (`UndoableDragGesture` does this). Panel inputs call `Checkpoint` on focus.
+- **Gestures use the State pattern.** A drag is an `IGesture` object held in `gesture` (null when idle). New drags are
+  new gesture classes created from a pointer-down handler. Don't add mode enums or `switch` statements on gesture type
+  in the Designer. Gestures reach the editor only through `IEditorContext`: if a gesture needs more, add it to that
+  interface and `Designer.EditorContext.cs`. Canvas previews read the gesture's public properties (e.g. `Marquee`,
+  `LiveConnector()`).
 - **Text boxes** replace the old comments: one `TextBox` class, `IsComment` flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in `Geometry.Layout(TextBox)`, drawn with SVG text in both renderers.
 - **Groups** don't nest. Membership is `GroupId` on nodes/text boxes; moving a group moves its members (`MoveBox`).
 - **PDF is drawn from the SVG export**, so it has no geometry of its own. If a new visual feature uses an SVG
