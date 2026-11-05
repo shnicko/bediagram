@@ -874,8 +874,25 @@ public class DiagramEditor
     public void FitTextHeight(TextBox t)
     {
         Change();
-        t.H = Math.Max(24, Math.Ceiling(Geometry.Layout(t).ContentHeight / 2) * 2);
+        t.H = TextHeight(t);
+        GrowAround(t);
     }
+
+    /// <summary>
+    /// Makes a text box taller if its text no longer fits; never shrinks it (a box made tall on purpose stays tall).
+    /// No undo step of its own: it runs after typing, which already has one. The groups around it grow too.
+    /// </summary>
+    public void GrowToText(TextBox t)
+    {
+        double h = TextHeight(t);
+        if (h <= t.H) return;
+        t.H = h;
+        Dirty = true;
+        GrowAround(t);
+    }
+
+    /// <summary>The height at which the wrapped text just fits.</summary>
+    static double TextHeight(TextBox t) => Math.Max(24, Math.Ceiling(Geometry.Layout(t).ContentHeight / 2) * 2);
 
     public void SetFontSize(TextBox t, object? value)
     {
@@ -921,6 +938,7 @@ public class DiagramEditor
     {
         if (EditingId is null) return;
         if (Diagram.Nodes.FirstOrDefault(n => n.Id == EditingId) is { } n) n.Label = n.Label.TrimEnd('\n', '\r');
+        if (Diagram.TextBoxes.FirstOrDefault(t => t.Id == EditingId) is { } tb) GrowToText(tb);
         if (Diagram.Edges.FirstOrDefault(x => x.Id == EditingId) is { } edge) edge.Label = Geometry.ClampEdgeLabel(edge.Label).Trim();
         EditingId = null;
     }
