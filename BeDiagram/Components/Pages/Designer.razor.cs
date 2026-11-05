@@ -356,7 +356,23 @@ public partial class Designer
             if (cb is not { } c) { Zoom = 1; PanX = 40; PanY = 40; return; }
             (minX, minY, maxX, maxY) = (c.X, c.Y, c.X + c.W, c.Y + c.H);
         }
-        Zoom = Math.Clamp(Math.Min((canvasW - 80) / (maxX - minX), (canvasH - 80) / (maxY - minY)), 0.05, 1.5);
+        ZoomToBounds(minX, minY, maxX, maxY);
+    }
+
+    /// <summary>Zooms and centres on the selected items, labels under shapes included. A selected connector counts as its two ends.</summary>
+    void FitSelection()
+    {
+        List<IBox> boxes = Editor.Selection.Select(Editor.FindBox).OfType<IBox>().ToList();
+        if (Editor.SelectedEdge is { } e) boxes.AddRange(new[] { Editor.FindBox(e.From), Editor.FindBox(e.To) }.OfType<IBox>());
+        if (boxes.Count == 0) { ShowToast("Select something to zoom to"); return; }
+        ZoomToBounds(boxes.Min(b => b.X), boxes.Min(b => b.Y),
+                     boxes.Max(b => b.X + b.W), boxes.Max(b => b.Y + b.H + Geometry.ExtraBelow(b)));
+    }
+
+    /// <summary>Zooms so the area fits the canvas with a 40px margin (at most 150%), centred.</summary>
+    void ZoomToBounds(double minX, double minY, double maxX, double maxY)
+    {
+        Zoom = Math.Clamp(Math.Min((canvasW - 80) / Math.Max(1, maxX - minX), (canvasH - 80) / Math.Max(1, maxY - minY)), 0.05, 1.5);
         PanX = canvasW / 2 - (minX + maxX) / 2 * Zoom;
         PanY = canvasH / 2 - (minY + maxY) / 2 * Zoom;
     }

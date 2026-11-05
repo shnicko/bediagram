@@ -11,6 +11,8 @@ public interface ICommandContext
     bool CanUndo { get; }
     bool CanRedo { get; }
     bool HasSelectedConnector { get; }
+    /// <summary>Any shape, text box, group or connector is selected.</summary>
+    bool HasSelection { get; }
 
     Task SaveAsync();
     void ShowSaveAs();
@@ -38,6 +40,7 @@ public interface ICommandContext
     void AddGroup();
 
     void Fit();
+    void FitSelection();
     void ZoomBy(double factor);
     void ResetZoom();
 }

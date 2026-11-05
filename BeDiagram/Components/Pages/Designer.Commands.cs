@@ -47,6 +47,7 @@ public partial class Designer
     IEditorCommand ZoomInCmd => Commands.Get<ZoomInCommand>();
     IEditorCommand ZoomOutCmd => Commands.Get<ZoomOutCommand>();
     IEditorCommand FitCmd => Commands.Get<FitCommand>();
+    IEditorCommand FitSelectionCmd => Commands.Get<FitSelectionCommand>();
     IEditorCommand DeleteCmd => Commands.Get<DeleteCommand>();
     IEditorCommand JoinCmd => Commands.Get<JoinCommand>();
     IEditorCommand GroupCmd => Commands.Get<GroupCommand>();
