@@ -29,6 +29,8 @@ public class Group : IGroupable
     public bool Filled { get; set; } = true;
     /// <summary>Outline pattern: a <see cref="LineLook"/> pattern key ("solid", "dashed", "dotted", ...).</summary>
     public string Border { get; set; } = LineLook.Solid;
+    /// <summary>Outline weight: "light", "regular" or "heavy" (see <see cref="GroupLook.Width"/>).</summary>
+    public string BorderWeight { get; set; } = LineLook.Regular;
     /// <summary>Where the title goes: "top" or "bottom" (see <see cref="GroupLook"/>).</summary>
     public string HeaderPos { get; set; } = GroupLook.Top;
     /// <summary>"band" = title on a tinted strip inside the group; "text" = plain bold title

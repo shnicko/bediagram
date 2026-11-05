@@ -223,7 +223,7 @@
                                   width="@F(GroupSelectionRect(v.G).W)" height="@F(GroupSelectionRect(v.G).H)" rx="13" />
                         }
                         <rect class="group-body" x="@F(v.G.X)" y="@F(v.G.Y)" width="@F(v.G.W)" height="@F(v.G.H)" rx="10"
-                              fill="@v.Swatch.Light" fill-opacity="@F(v.FillOpacity)" stroke="@v.Swatch.Stroke" stroke-width="@(v.Selected ? 2.5 : 1.5)"
+                              fill="@v.Swatch.Light" fill-opacity="@F(v.FillOpacity)" stroke="@v.Swatch.Stroke" stroke-width="@F(v.Width)"
                               stroke-dasharray="@v.Dash"
                               @onpointerdown="e => GroupBodyDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
                         @if (v.BandPath is { } band)
@@ -818,7 +818,14 @@
             <div class="seg wide patterns">
                 @foreach ((string k, string name) in LineLook.Patterns)
                 {
-                    <button class="@(sg.Border == k ? "on" : "")" title="@name" @onclick="() => Editor.SetGroupBorder(sg, k)">@LinePreview(LineLook.Regular, k, LineLook.ArrowNone)</button>
+                    <button class="@(sg.Border == k ? "on" : "")" title="@name" @onclick="() => Editor.SetGroupBorder(sg, k)">@LinePreview(sg.BorderWeight, k, LineLook.ArrowNone)</button>
+                }
+            </div>
+            <label>Border weight</label>
+            <div class="seg wide stacked">
+                @foreach ((string k, string name) in LineLook.Weights)
+                {
+                    <button class="@(sg.BorderWeight == k ? "on" : "")" title="@name" @onclick="() => Editor.SetGroupBorderWeight(sg, k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
                 }
             </div>
             <label>Title position and style</label>

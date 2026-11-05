@@ -834,6 +834,8 @@ public class DiagramEditor
 
     public void SetGroupBorder(Group g, string pattern) { Change(); g.Border = pattern; }
 
+    public void SetGroupBorderWeight(Group g, string weight) { Change(); g.BorderWeight = weight; }
+
     /// <summary>Moving or restyling the title changes the room it takes inside the group, so the group grows if needed.</summary>
     public void SetGroupTitleLook(Group g, string? pos, string? style)
     {

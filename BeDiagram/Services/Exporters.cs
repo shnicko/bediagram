@@ -90,8 +90,9 @@ public static class Exporters
         {
             Swatch sw = Palette.Get(g.Color);
             string fill = g.Filled ? $"fill=\"{sw.Light}\" fill-opacity=\"{F(Geometry.GroupFillOpacity(g))}\"" : "fill=\"none\"";
-            string? dash = LineLook.Dash(g.Border, 1.5);
-            sb.Append($"<rect x=\"{F(g.X)}\" y=\"{F(g.Y)}\" width=\"{F(g.W)}\" height=\"{F(g.H)}\" rx=\"10\" {fill} stroke=\"{sw.Stroke}\" stroke-width=\"1.5\"{(dash is null ? "" : $" stroke-dasharray=\"{dash}\"")}/>\n");
+            double width = GroupLook.Width(g.BorderWeight);
+            string? dash = LineLook.Dash(g.Border, width);
+            sb.Append($"<rect x=\"{F(g.X)}\" y=\"{F(g.Y)}\" width=\"{F(g.W)}\" height=\"{F(g.H)}\" rx=\"10\" {fill} stroke=\"{sw.Stroke}\" stroke-width=\"{F(width)}\"{(dash is null ? "" : $" stroke-dasharray=\"{dash}\"")}/>\n");
             if (Geometry.GroupBandPath(g) is { } band)
                 sb.Append($"<path d=\"{band}\" fill=\"{sw.Stroke}\" fill-opacity=\"0.14\"/>\n");
             (double tx, double ty, string anchor) = Geometry.GroupTitlePos(g);
@@ -270,10 +271,11 @@ public static class Exporters
             sb.Append($"{indent}subgraph {gid}[{Q(g.Title)}]\n");
             foreach (IGroupable m in tree.Children(g).Where(m => m is not Group))
                 sb.Append($"{indent}    {ids[m.Id]}\n");
-            // Carry the group's look across where Mermaid can show it (no fill, broken outline).
+            // Carry the group's look across where Mermaid can show it (no fill, broken outline, line weight).
             List<string> look = new List<string>();
             if (!g.Filled) look.Add("fill:none");
             if (g.Border != LineLook.Solid) look.Add("stroke-dasharray:5 5");
+            if (g.BorderWeight != LineLook.Regular) look.Add($"stroke-width:{F(GroupLook.Width(g.BorderWeight))}px");
             if (look.Count > 0) styles.Append($"    style {gid} {string.Join(",", look)}\n");
             foreach (Group inner in tree.Children(g).OfType<Group>()) WriteGroup(inner, depth + 1);
             sb.Append($"{indent}end\n");
