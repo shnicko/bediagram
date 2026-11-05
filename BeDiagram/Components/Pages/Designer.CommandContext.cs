@@ -13,6 +13,7 @@ public partial class Designer : ICommandContext
     bool ICommandContext.CanUndo => Editor.CanUndo;
     bool ICommandContext.CanRedo => Editor.CanRedo;
     bool ICommandContext.HasSelectedConnector => Editor.SelectedEdge is not null;
+    bool ICommandContext.HasSelection => Editor.Selection.Count > 0 || Editor.SelectedEdge is not null;
 
     Task ICommandContext.SaveAsync() => Save();
     void ICommandContext.ShowSaveAs() => ShowSaveAs();
@@ -57,6 +58,7 @@ public partial class Designer : ICommandContext
     void ICommandContext.AddGroup() => Editor.AddGroupQuick();
 
     void ICommandContext.Fit() => Fit();
+    void ICommandContext.FitSelection() => FitSelection();
     void ICommandContext.ZoomBy(double factor) => ZoomBy(factor);
     void ICommandContext.ResetZoom() => Zoom = 1;
 }

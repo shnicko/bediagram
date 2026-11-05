@@ -99,6 +99,7 @@
             <span class="zoom">@((int)Math.Round(Zoom * 100))%</span>
             <button @onclick="() => Run(ZoomInCmd)" title="@Tip(ZoomInCmd)">+</button>
             <button @onclick="() => Run(FitCmd)" title="@Tip(FitCmd)">Fit</button>
+            <button @onclick="() => Run(FitSelectionCmd)" disabled="@(!CanRun(FitSelectionCmd))" title="@Tip(FitSelectionCmd)">Selection</button>
         </div>
         <div class="title">
             <span>@D.Name</span>@if (Editor.Dirty) {<span class="dirty" title="Unsaved changes">●</span>}
@@ -950,7 +951,7 @@
                 <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></td><td>Undo / redo</td></tr>
                 <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd> / <kbd>A</kbd></td><td>Duplicate / select all</td></tr>
                 <tr><td>Wheel · right-drag</td><td>Pan</td></tr>
-                <tr><td><kbd>Ctrl</kbd>+wheel · <kbd>F</kbd></td><td>Zoom · fit</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+wheel · <kbd>F</kbd> · <kbd>Shift</kbd>+<kbd>F</kbd></td><td>Zoom · fit · zoom to selection</td></tr>
             </table>
         }
     </aside>

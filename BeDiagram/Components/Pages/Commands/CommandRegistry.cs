@@ -30,7 +30,7 @@ public class CommandRegistry
             new DuplicateCommand(), new DeleteCommand(), new GroupCommand(), new UngroupCommand(), new JoinCommand(),
             new ToggleConnectorStyleCommand(),
             new AddTextCommand(), new AddCommentCommand(), new AddGroupCommand(),
-            new FitCommand(), new ZoomInCommand(), new ZoomOutCommand(), new ResetZoomCommand(),
+            new FitCommand(), new FitSelectionCommand(), new ZoomInCommand(), new ZoomOutCommand(), new ResetZoomCommand(),
         };
         foreach (bool fine in new[] { false, true })
         {
