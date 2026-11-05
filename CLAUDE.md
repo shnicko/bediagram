@@ -62,6 +62,7 @@ BeDiagram/
   wwwroot/js/export.js       PNG export: draws the SVG export onto a canvas, returns the bytes (streamed to .NET)
   wwwroot/app.css            all styling
 tools/Check-OneTypePerFile.ps1   one-type-per-file check (Windows PowerShell 5.1 or PowerShell 7)
+tools/regression/                side-by-side regression suites (master vs working copy) — see its README.md
 ```
 
 ## Code style (owner's preference — keep to it)
@@ -138,6 +139,12 @@ tools/Check-OneTypePerFile.ps1   one-type-per-file check (Windows PowerShell 5.1
     (Models, Services, Designer, js, css) is copied in unchanged. Run with `Storage__Folder=/tmp/diagrams`.
   - Drive it with Playwright (pre-installed: `NODE_PATH=$(npm root -g) node test.js`), take screenshots and look
     at them. Check the browser console for errors and the exported SVG/Mermaid files (`mmdc` validates Mermaid).
+  - `tools/regression/prepare-net8.sh <BeDiagram folder> <dest>` does the .NET 8 copy above in one step.
+- **Regression suites:** `tools/regression/run.sh [base-ref]` builds master (or `base-ref`) and the working copy, runs
+  the gesture / keyboard / all-shapes / panel suites on both, and prints `ALL THE SAME` or the steps that differ
+  (~25 min; run it in the background). Refactors must come out ALL THE SAME. Features should differ only where
+  they change things. A toast that vanishes one step apart is timing, not behaviour (rerun to confirm). When a
+  feature adds a shape or a shortcut, extend `make-shapes-diagram.py` / `keyboard.js`.
 - Tell the user plainly that the .NET 10 build was compile-checked but click-tested on .NET 8.
 
 ## Backlog (rough priority)

@@ -137,6 +137,7 @@ BeDiagram/                   the web app project
   wwwroot/js/export.js         draws the SVG export onto a canvas for PNG export
   wwwroot/app.css              styling
 tools/Check-OneTypePerFile.ps1   checks the one-type-per-file rule (see below)
+tools/regression/                side-by-side regression tests: master vs your changes (see its README)
 ```
 
 **One type per file.** Every class, record, interface and enum is in its own `.cs` file named after it (`MoveGesture` → `MoveGesture.cs`). Partial classes use `Type.Area.cs` (`Designer.EditorContext.cs`). Private nested helpers may stay nested; public nested types get their own file. Folders match namespaces (`Models/Styles/` = `BeDiagram.Models.Styles`). Check it with:
