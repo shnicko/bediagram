@@ -30,10 +30,10 @@ public class MoveGesture : UndoableDragGesture
 
     protected override void Finished()
     {
-        // Items dragged on their own may have entered or left a group.
-        HashSet<string> movedGroups = Ctx.Selection.Where(id => Ctx.FindGroup(id) is not null).ToHashSet();
+        // Items dragged on their own (not carried by a group that moved with them) may have entered or left a group.
+        // Groups count too: a group dropped wholly inside another group nests in it.
         List<IGroupable> loose = origins.Keys.Select(Ctx.FindBox).OfType<IGroupable>()
-            .Where(i => i.GroupId is null || !movedGroups.Contains(i.GroupId)).ToList();
+            .Where(i => i.GroupId is null || !origins.ContainsKey(i.GroupId)).ToList();
         Ctx.UpdateMembership(loose);
     }
 }

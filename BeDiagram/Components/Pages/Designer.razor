@@ -834,6 +834,10 @@
                 }
             </div>
             <p class="muted">@MemberCount(sg) item@(MemberCount(sg) == 1 ? "" : "s") inside · drag items in or out to change membership</p>
+            @if (Editor.FindGroup(sg.GroupId) is { } pg)
+            {
+                <p class="muted">In group “@pg.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(sg)">remove from group</button></p>
+            }
             <LinkPicker Current="@sg.Link" Exclude="@LinkExclude" OnChange="link => Editor.SetGroupLink(sg, link)" OnFollow="FollowLink" />
             <label>Align items within the group</label>
             <AlignBar Enabled="@(MemberCount(sg) > 0)" OnAlign="op => Editor.AlignInGroup(sg, op)" />

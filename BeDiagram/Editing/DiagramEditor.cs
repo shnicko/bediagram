@@ -74,8 +74,11 @@ public class DiagramEditor
 
     public Group? FindGroup(string? id) => id is null ? null : Diagram.Groups.FirstOrDefault(g => g.Id == id);
 
-    public IEnumerable<IGroupable> Members(Group g) =>
-        Diagram.Nodes.Where(n => n.GroupId == g.Id).Cast<IGroupable>().Concat(Diagram.TextBoxes.Where(c => c.GroupId == g.Id));
+    /// <summary>The group hierarchy (Composite) of the open diagram, worked out from the GroupId fields.</summary>
+    public GroupTree Tree => new GroupTree(Diagram);
+
+    /// <summary>A group's direct members: shapes, text boxes and the groups nested in it.</summary>
+    public IEnumerable<IGroupable> Members(Group g) => Tree.Children(g);
 
     public Node? SelectedNode => Selection.Count == 1 ? Diagram.Nodes.FirstOrDefault(n => n.Id == Selection[0]) : null;
 
@@ -106,24 +109,48 @@ public class DiagramEditor
             if (Diagram.Nodes[i].Id != exclude && Geometry.Contains(Diagram.Nodes[i], x, y)) return Diagram.Nodes[i];
         for (int i = Diagram.TextBoxes.Count - 1; i >= 0; i--)
             if (Diagram.TextBoxes[i].Id != exclude && Geometry.Contains(Diagram.TextBoxes[i], x, y)) return Diagram.TextBoxes[i];
-        string? ownGroup = (FindBox(exclude) as IGroupable)?.GroupId;
-        for (int i = Diagram.Groups.Count - 1; i >= 0; i--)
-            if (Diagram.Groups[i].Id != exclude && Diagram.Groups[i].Id != ownGroup && Geometry.Contains(Diagram.Groups[i], x, y)) return Diagram.Groups[i];
+        // Groups top-most first (inner groups are drawn over their parents), skipping the groups the excluded item is in.
+        GroupTree tree = Tree;
+        HashSet<string> around = FindBox(exclude) is IGroupable ex ? tree.Ancestors(ex).Select(a => a.Id).ToHashSet() : new HashSet<string>();
+        List<Group> order = tree.PaintOrder();
+        for (int i = order.Count - 1; i >= 0; i--)
+            if (order[i].Id != exclude && !around.Contains(order[i].Id) && Geometry.Contains(order[i], x, y)) return order[i];
         return null;
     }
 
-    Group? GroupAt(double x, double y)
+    /// <summary>The innermost group under a point that <paramref name="item"/> could join (never itself or a group inside it).</summary>
+    Group? GroupAt(double x, double y, IGroupable? item = null)
     {
-        for (int i = Diagram.Groups.Count - 1; i >= 0; i--)
-            if (Geometry.Contains(Diagram.Groups[i], x, y)) return Diagram.Groups[i];
+        GroupTree tree = Tree;
+        List<Group> order = tree.PaintOrder();
+        for (int i = order.Count - 1; i >= 0; i--)
+            if (CanHold(tree, order[i], item) && Geometry.Contains(order[i], x, y)) return order[i];
         return null;
     }
+
+    /// <summary>The innermost group that wholly contains group <paramref name="g"/>'s outline (never itself or a group inside it).</summary>
+    Group? GroupAround(Group g)
+    {
+        GroupTree tree = Tree;
+        List<Group> order = tree.PaintOrder();
+        for (int i = order.Count - 1; i >= 0; i--)
+        {
+            Group o = order[i];
+            if (CanHold(tree, o, g) && g.X >= o.X && g.Y >= o.Y && g.X + g.W <= o.X + o.W && g.Y + g.H <= o.Y + o.H) return o;
+        }
+        return null;
+    }
+
+    /// <summary>A group can't hold itself or one of its own ancestors (that would make a loop).</summary>
+    static bool CanHold(GroupTree tree, Group container, IGroupable? item) =>
+        item is not Group ig || (container.Id != ig.Id && !tree.IsInside(container, ig));
 
     public double SnapV(double v) => Snap ? Math.Round(v / 10) * 10 : v;
 
-    /// <summary>Selected ids plus the members of any selected groups (so groups move as a unit).</summary>
+    /// <summary>Selected ids plus everything inside any selected groups, at any depth (so groups move as a unit).</summary>
     public List<IBox> WithMembers(IEnumerable<string> ids)
     {
+        GroupTree tree = Tree;
         List<IBox> result = new List<IBox>();
         HashSet<string> seen = new HashSet<string>();
         foreach (string id in ids)
@@ -132,7 +159,7 @@ public class DiagramEditor
             if (b is null) continue;
             if (seen.Add(b.Id)) result.Add(b);
             if (b is Group g)
-                foreach (IGroupable m in Members(g))
+                foreach (IGroupable m in tree.Descendants(g))
                     if (seen.Add(m.Id)) result.Add(m);
         }
         return result;
@@ -191,26 +218,40 @@ public class DiagramEditor
     // ───────────── Groups ─────────────
 
     /// <summary>
-    /// After a drag: a loose item joins the group under its centre; a member moves to another group only when
-    /// dropped inside that group, otherwise it stays in its own group (which grows to fit, like nudging with
-    /// the arrow keys). Leaving a group is done with Ungroup or "remove from group" in the panel.
+    /// After a drag: a loose shape or text box joins the innermost group under its centre; a loose group joins the
+    /// innermost group that wholly contains it. A member moves to another group (or out to an outer one) only when
+    /// dropped inside that group, otherwise it stays in its own group (which grows to fit, like nudging with the
+    /// arrow keys). Leaving the top-level group is done with Ungroup or "remove from group" in the panel.
     /// </summary>
     public void UpdateMembership(IEnumerable<IGroupable> items)
     {
-        HashSet<Group> touched = new HashSet<Group>();
+        List<Group> touched = new List<Group>();
         foreach (IGroupable it in items)
         {
-            Group? old = FindGroup(it.GroupId);
-            Group? g = GroupAt(it.X + it.W / 2, it.Y + it.H / 2) ?? old;
+            Group? old = Tree.Parent(it);
+            Group? target = it is Group ig ? GroupAround(ig) : GroupAt(it.X + it.W / 2, it.Y + it.H / 2, it);
+            Group? g = target ?? old;
             it.GroupId = g?.Id;
-            if (g is not null) touched.Add(g);
-            if (old is not null && old != g) touched.Add(old);
+            if (g is not null && !touched.Contains(g)) touched.Add(g);
+            if (old is not null && old != g && !touched.Contains(old)) touched.Add(old);
         }
         foreach (Group g in touched) GrowGroup(g);
     }
 
-    /// <summary>Expands a group (never shrinks it) so all members fit inside with padding.</summary>
+    /// <summary>Expands a group (never shrinks it) so all members fit inside with padding, then the groups around it.</summary>
     public void GrowGroup(Group g)
+    {
+        GrowOne(g);
+        foreach (Group outer in Tree.Ancestors(g)) GrowOne(outer);
+    }
+
+    /// <summary>Grows the groups around <paramref name="item"/> so it still fits (e.g. after a resize).</summary>
+    public void GrowAround(IGroupable item)
+    {
+        if (Tree.Parent(item) is { } g) GrowGroup(g);
+    }
+
+    void GrowOne(Group g)
     {
         List<IBox> members = Members(g).Cast<IBox>().ToList();
         if (members.Count == 0) return;
@@ -220,12 +261,13 @@ public class DiagramEditor
         g.W = right - g.X; g.H = bottom - g.Y;
     }
 
-    /// <summary>Shrink-wraps a group around its members.</summary>
+    /// <summary>Shrink-wraps a group around its members (the groups around it grow if they need to).</summary>
     public void FitGroup(Group g)
     {
         List<IBox> members = Members(g).Cast<IBox>().ToList();
         if (members.Count == 0) return;
         (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(members, g);
+        foreach (Group outer in Tree.Ancestors(g)) GrowOne(outer);
     }
 
     string NextGroupColour()
@@ -234,45 +276,60 @@ public class DiagramEditor
         return Palette.All.Keys.FirstOrDefault(k => !used.Contains(k)) ?? Palette.All.Keys.ElementAt(Diagram.Groups.Count % Palette.All.Count);
     }
 
+    /// <summary>
+    /// Wraps the selected shapes, text boxes and groups in a new group. Items inside another selected group stay
+    /// in it (they move with it). The new group sits inside the innermost group that held all the items, so
+    /// grouping things inside a group makes a nested group.
+    /// </summary>
     public void GroupSelection()
     {
-        List<IGroupable> items = Selection.Select(FindBox).OfType<IGroupable>().ToList();
-        if (items.Count == 0) { view.ShowToast("Select shapes or text boxes to group"); return; }
+        GroupTree tree = Tree;
+        List<IGroupable> picked = Selection.Select(FindBox).OfType<IGroupable>().ToList();
+        List<IGroupable> items = picked.Where(i => !tree.Ancestors(i).Any(a => picked.Contains(a))).ToList();
+        if (items.Count == 0) { view.ShowToast("Select shapes, text boxes or groups to group"); return; }
         Change();
-        Group g = new Group { Title = "Group", Color = NextGroupColour() };
+        Group? outer = tree.CommonParent(items);
+        Group g = new Group { Title = "Group", Color = NextGroupColour(), GroupId = outer?.Id };
         (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(items);
         Diagram.Groups.Add(g);
         foreach (IGroupable it in items) it.GroupId = g.Id;
+        if (outer is not null) GrowGroup(outer);
         SelectOnly(g.Id);
         BeginEdit(g.Id, checkpoint: false);
     }
 
+    /// <summary>Removes a group; its members move up into the group around it (or to the top level).</summary>
     public void Ungroup(Group g)
     {
         Change();
-        foreach (IGroupable m in Members(g)) m.GroupId = null;
+        string? outer = Tree.Parent(g)?.Id;
+        foreach (IGroupable m in Members(g).ToList()) m.GroupId = outer;
         Diagram.Edges.RemoveAll(e => e.From == g.Id || e.To == g.Id);
         Diagram.Groups.Remove(g);
         ClearSelection();
     }
 
+    /// <summary>Takes an item out of its group, into the group around that one (or to the top level).</summary>
     public void RemoveFromGroup(IGroupable item)
     {
-        if (FindGroup(item.GroupId) is not { } g) return;
+        GroupTree tree = Tree;
+        if (tree.Parent(item) is not { } g) return;
         Change();
-        item.GroupId = null;
+        Group? outer = tree.Parent(g);
+        item.GroupId = outer?.Id;
         // Move it just outside the group so it doesn't look like it's still inside.
-        item.X = SnapV(g.X + g.W + 40);
+        MoveBox(item, SnapV(g.X + g.W + 40), item.Y);
         FitGroup(g);
+        if (outer is not null) GrowGroup(outer);
     }
 
-    /// <summary>Moves a box; a group carries its members with it.</summary>
+    /// <summary>Moves a box; a group carries everything inside it (at any depth) with it.</summary>
     public void MoveBox(IBox b, double x, double y)
     {
         double dx = x - b.X, dy = y - b.Y;
         b.X = x; b.Y = y;
         if (b is Group g)
-            foreach (IGroupable m in Members(g)) { m.X += dx; m.Y += dy; }
+            foreach (IGroupable m in Tree.Descendants(g)) { m.X += dx; m.Y += dy; }
     }
 
     // ───────────── Alignment ─────────────
@@ -358,7 +415,8 @@ public class DiagramEditor
         }
         else
         {
-            foreach (Group g in Diagram.Groups.Where(g => items.OfType<IGroupable>().Any(i => i.GroupId == g.Id)).ToList())
+            GroupTree tree = Tree;
+            foreach (Group g in items.OfType<IGroupable>().Select(tree.Parent).OfType<Group>().Distinct().ToList())
                 GrowGroup(g);
         }
     }
@@ -378,9 +436,10 @@ public class DiagramEditor
         // Two comments pinned to each other is meaningless; any other pairing (text ↔ shape, text ↔ text) is fine.
         bool aNote = a is TextBox { IsComment: true }, bNote = b is TextBox { IsComment: true };
         if (aNote && bNote) return false;
-        // A group connecting to its own member is meaningless.
-        if (a is Group ga && (b as IGroupable)?.GroupId == ga.Id) return false;
-        if (b is Group gb && (a as IGroupable)?.GroupId == gb.Id) return false;
+        // A group connecting to something inside it (at any depth) is meaningless.
+        GroupTree tree = Tree;
+        if (a is Group ga && b is IGroupable ib && tree.IsInside(ib, ga)) return false;
+        if (b is Group gb && a is IGroupable ia && tree.IsInside(ia, gb)) return false;
         Edge edge = new Edge { From = from, To = to, Label = label };
         edge.CopyLookFrom(Diagram.DefaultLook);
         edge.Style = Diagram.DefaultConnector;
@@ -473,7 +532,11 @@ public class DiagramEditor
         Change();
         Group g = new Group { Color = NextGroupColour() };
         g.X = SnapV(cx - g.W / 2); g.Y = SnapV(cy - g.H / 2);
+        // Dropped inside a group: it becomes a group within that group, which grows to fit.
+        Group? outer = GroupAt(cx, cy);
+        g.GroupId = outer?.Id;
         Diagram.Groups.Add(g);
+        if (outer is not null) GrowGroup(outer);
         SelectOnly(g.Id);
     }
 
@@ -557,13 +620,16 @@ public class DiagramEditor
         Change();
         Dictionary<string, string> map = new Dictionary<string, string>();
         List<IBox> items = WithMembers(Selection);
-        // Groups first so members can be re-pointed at the copies.
+        // Groups first so members (and nested groups) can be re-pointed at the copies.
+        List<(Group Old, Group Copy)> groupCopies = new List<(Group Old, Group Copy)>();
         foreach (Group g in items.OfType<Group>())
         {
             Group gg = new Group { Title = g.Title, Color = g.Color, X = g.X + 30, Y = g.Y + 30, W = g.W, H = g.H };
             Diagram.Groups.Add(gg); map[g.Id] = gg.Id;
+            groupCopies.Add((g, gg));
         }
         string? NewGroup(string? old) => old is not null && map.TryGetValue(old, out string? ng) ? ng : old;
+        foreach ((Group g, Group gg) in groupCopies) gg.GroupId = NewGroup(g.GroupId);
         foreach (IBox b in items)
         {
             switch (b)
@@ -600,8 +666,10 @@ public class DiagramEditor
     {
         if (Selection.Count == 0) return;
         Change();
-        foreach (IBox b in WithMembers(Selection)) { b.X += dx; b.Y += dy; }
-        foreach (Group g in Diagram.Groups.Where(g => !Selection.Contains(g.Id) && Members(g).Any(m => Selection.Contains(m.Id))).ToList())
+        List<IBox> moved = WithMembers(Selection);
+        HashSet<string> movedIds = moved.Select(b => b.Id).ToHashSet();
+        foreach (IBox b in moved) { b.X += dx; b.Y += dy; }
+        foreach (Group g in Diagram.Groups.Where(g => !movedIds.Contains(g.Id) && Members(g).Any(m => movedIds.Contains(m.Id))).ToList())
             GrowGroup(g);
     }
 

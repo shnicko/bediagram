@@ -85,7 +85,8 @@ public static class Exporters
             if (background) sb.Append($"<rect x=\"{F(minX)}\" y=\"{F(minY)}\" width=\"{F(maxX - minX)}\" height=\"{F(maxY - minY)}\" fill=\"#ffffff\"/>\n");
         }
 
-        foreach (Group g in d.Groups)
+        // Drawing order: a group inside another is drawn over it.
+        foreach (Group g in new GroupTree(d).PaintOrder())
         {
             Swatch sw = Palette.Get(g.Color);
             string fill = g.Filled ? $"fill=\"{sw.Light}\" fill-opacity=\"{F(Geometry.GroupFillOpacity(g))}\"" : "fill=\"none\"";
@@ -256,21 +257,29 @@ public static class Exporters
             }
             styles.Append($"    style {id} {string.Join(",", css)}\n");
         }
+        // Groups become subgraphs; a group inside another is a subgraph inside that one (ids follow file order).
+        GroupTree tree = new GroupTree(d);
         int gi = 0;
-        foreach (Group g in d.Groups)
+        foreach (Group g in d.Groups) ids[g.Id] = $"G{++gi}";
+        HashSet<string> written = new HashSet<string>();
+        void WriteGroup(Group g, int depth)
         {
-            string gid = $"G{++gi}";
-            ids[g.Id] = gid;
-            sb.Append($"    subgraph {gid}[{Q(g.Title)}]\n");
-            foreach (IGroupable m in d.Nodes.Cast<IGroupable>().Concat(d.TextBoxes).Where(m => m.GroupId == g.Id))
-                sb.Append($"        {ids[m.Id]}\n");
-            sb.Append("    end\n");
+            if (!written.Add(g.Id)) return;
+            string gid = ids[g.Id];
+            string indent = new string(' ', 4 * (depth + 1));
+            sb.Append($"{indent}subgraph {gid}[{Q(g.Title)}]\n");
+            foreach (IGroupable m in tree.Children(g).Where(m => m is not Group))
+                sb.Append($"{indent}    {ids[m.Id]}\n");
             // Carry the group's look across where Mermaid can show it (no fill, broken outline).
             List<string> look = new List<string>();
             if (!g.Filled) look.Add("fill:none");
             if (g.Border != LineLook.Solid) look.Add("stroke-dasharray:5 5");
             if (look.Count > 0) styles.Append($"    style {gid} {string.Join(",", look)}\n");
+            foreach (Group inner in tree.Children(g).OfType<Group>()) WriteGroup(inner, depth + 1);
+            sb.Append($"{indent}end\n");
         }
+        foreach (Group g in d.Groups.Where(g => tree.Parent(g) is null)) WriteGroup(g, 0);
+        foreach (Group g in d.Groups) WriteGroup(g, 0);   // only groups caught in a parent loop (hand-edited file)
         foreach (Edge e in d.Edges)
         {
             if (!ids.TryGetValue(e.From, out string? a) || !ids.TryGetValue(e.To, out string? b)) continue;

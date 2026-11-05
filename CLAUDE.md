@@ -31,6 +31,7 @@ BeDiagram/
   Models/Shapes/         shape outlines (Strategy pattern, BeDiagram.Models.Shapes): IShapeOutline, ShapeOutline base,
                          one class per outline (Rect, Check, RoundedRect, Pill, Diamond, Parallelogram, Hexagon, Circle,
                          Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (lookup by shape key)
+  Models/GroupTree.cs    group hierarchy (Composite): parent / children / descendants / ancestors / paint order from GroupId
   Models/NodeFactory.cs  new nodes: size, label, icon, fill and default properties per type (palette keys incl. "outcome:pass")
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
   Editing/DiagramEditor.cs   the editor model, no UI (BeDiagram.Editing): open Diagram, Selection / SelectedEdgeId /
@@ -115,7 +116,12 @@ tools/regression/                side-by-side regression suites (master vs worki
   must also be added to the key list in `designer.js`. Commands don't do their own undo: the editor actions they
   call already use `Editor.Change()`.
 - **Text boxes** replace the old comments: one `TextBox` class, `IsComment` flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in `Geometry.Layout(TextBox)`, drawn with SVG text in both renderers.
-- **Groups** don't nest. Membership is `GroupId` on nodes/text boxes; moving a group moves its members (`MoveBox`).
+- **Groups nest (Composite pattern).** Membership is `GroupId` on nodes, text boxes and groups (`Group` is an
+  `IGroupable`), so the file stays flat. Walk the hierarchy with `GroupTree` (`Editor.Tree`, or `new GroupTree(d)` in
+  exports): `Children`, `Descendants`, `Ancestors`, `IsInside`, `CommonParent`, `PaintOrder`. Don't compare `GroupId`
+  by hand or loop over `Diagram.Groups` to draw — use `PaintOrder` so inner groups sit over their parents. Moving a
+  group moves all its descendants (`MoveBox`); `GrowGroup` also grows every group around it. A group can't go inside
+  itself or one of its own groups (`CanHold`).
 - **PDF is drawn from the SVG export**, so it has no geometry of its own. If a new visual feature uses an SVG
   element or attribute `PdfExporter` doesn't read yet (gradients, images, …), extend `PdfExporter` as well.
 - **Export uses the strategy pattern** (owner's preference — he knows it well). A new format or area is a new class
@@ -151,6 +157,5 @@ tools/regression/                side-by-side regression suites (master vs worki
 
 1. Connector routing around shapes (lines currently pass behind obstacles).
 2. Auto-layout ("tidy") — candidate: MSAGL (Microsoft Automatic Graph Layout, MIT).
-3. Nested groups.
-4. Mermaid import.
-5. Later: visual rule builder for the Data Audit Tools rules engine (Excel template stays a valid source).
+3. Mermaid import.
+4. Later: visual rule builder for the Data Audit Tools rules engine (Excel template stays a valid source).

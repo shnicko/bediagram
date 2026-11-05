@@ -17,6 +17,7 @@ public partial class Designer : IEditorContext
     double IEditorContext.SnapV(double v) => Editor.SnapV(v);
     void IEditorContext.SelectOnly(string id) => Editor.SelectOnly(id);
     void IEditorContext.UpdateMembership(IEnumerable<IGroupable> items) => Editor.UpdateMembership(items);
+    void IEditorContext.GrowAround(IGroupable item) => Editor.GrowAround(item);
     bool IEditorContext.AddEdge(string from, string to) => Editor.AddEdge(from, to);
     void IEditorContext.AddNodeAt(string type, double cx, double cy, bool join) => Editor.AddNodeAt(type, cx, cy, join);
     void IEditorContext.PanBy(double dx, double dy) { PanX += dx; PanY += dy; }

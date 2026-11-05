@@ -27,6 +27,9 @@ public interface IEditorContext
     /// <summary>Puts loose items into the group under their centre (after a drag).</summary>
     void UpdateMembership(IEnumerable<IGroupable> items);
 
+    /// <summary>Grows the groups around an item so it still fits inside them (after a resize).</summary>
+    void GrowAround(IGroupable item);
+
     /// <summary>Adds a connector (false when it isn't allowed or already exists). Doesn't record undo.</summary>
     bool AddEdge(string from, string to);
 
