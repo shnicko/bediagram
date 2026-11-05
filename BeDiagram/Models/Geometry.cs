@@ -32,6 +32,10 @@ public static class Geometry
     public static bool LabelBelow(Node n) =>
         n.Type == NodeTypes.Outcome || (OutlineOf(n).IconMovesLabelBelow && Icons.Exists(n.Icon));
 
+    /// <summary>Label font weight: circles get semibold (600) so their labels read well on slides; others stay regular (null).
+    /// 600 rather than 500 because Segoe UI has no 500 and would fall back to regular.</summary>
+    public static string? LabelWeight(Node n) => n.Type == NodeTypes.Circle ? "600" : null;
+
     public static string ShapePath(Node n) => OutlineOf(n).Path(n);
 
     /// <summary>Scalloped seal: a ring of semicircular bumps whose tips touch radius <paramref name="r"/>.</summary>
