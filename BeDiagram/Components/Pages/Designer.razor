@@ -380,7 +380,7 @@
                         else
                         {
                             <g>
-                                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? "#1f2933" : v.Style.Text)">
+                                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? "#1f2933" : v.Style.Text)" font-weight="@Geometry.LabelWeight(v.N)">
                                     @foreach ((string text, string dy) in LabelLines(v.Layout))
                                     {
                                         <tspan x="@F(v.Layout.TextX)" dy="@dy">@text</tspan>
