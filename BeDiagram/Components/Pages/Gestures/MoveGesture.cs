@@ -1,8 +1,12 @@
+using BeDiagram.Editing.Angles;
 using BeDiagram.Models;
 
 namespace BeDiagram.Components.Pages.Gestures;
 
-/// <summary>Dragging the selection (groups bring their members). Snaps shape centres to the grid.</summary>
+/// <summary>
+/// Dragging the selection (groups bring their members). Snaps shape centres to the grid, and keeps the move on an
+/// allowed angle when an angle lock is on (an axis the lock holds still is not snapped, so items stay in line).
+/// </summary>
 public class MoveGesture : UndoableDragGesture
 {
     readonly Dictionary<string, (double X, double Y)> origins;
@@ -17,13 +21,14 @@ public class MoveGesture : UndoableDragGesture
     {
         if (!Moved && Math.Abs(dx) + Math.Abs(dy) < 2) return false;
         Moved = true;
+        LockedOffset o = Ctx.LockOffset(dx, dy);
         foreach ((string id, (double ox, double oy)) in origins)
         {
             IBox? b = Ctx.FindBox(id);
             if (b is null) continue;
             // Snap centres (not corners) so shapes of different sizes line up and connectors stay straight.
-            b.X = Ctx.SnapV(ox + dx + b.W / 2) - b.W / 2;
-            b.Y = Ctx.SnapV(oy + dy + b.H / 2) - b.H / 2;
+            b.X = o.SnapX ? Ctx.SnapV(ox + o.Dx + b.W / 2) - b.W / 2 : ox + o.Dx;
+            b.Y = o.SnapY ? Ctx.SnapV(oy + o.Dy + b.H / 2) - b.H / 2 : oy + o.Dy;
         }
         return true;
     }

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using BeDiagram.Components.Pages.Views;
 using BeDiagram.Editing;
+using BeDiagram.Editing.Angles;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
@@ -132,7 +133,7 @@ public partial class Designer
                 Editor.AddGroupAt(x, y);
                 break;
             default:
-                Editor.AddNodeAt(paletteDrag, x, y, join: Editor.AutoConnect);
+                Editor.AddNodeAt(paletteDrag, x, y, join: Editor.AutoConnect, lockAngle: true);
                 break;
         }
         paletteDrag = null;
@@ -688,6 +689,9 @@ public partial class Designer
 
     void SetGrid(string key) => grid = key;
 
+    /// <summary>Toolbar angle lock: a view-time setting on the editor, kept while the page is open, not saved in the file.</summary>
+    void SetAngleLock(IAngleLock a) => Editor.AngleLock = a;
+
     string GridTransform => $"translate({F(PanX)},{F(PanY)}) scale({F(Zoom)})";
 
     MarkupString ArrowMarkerDefs => (MarkupString)string.Concat(D.Edges.Append(D.DefaultLook)
@@ -764,7 +768,8 @@ public partial class Designer
     {
         if (gesture is not ConnectGesture cg || Editor.FindBox(cg.FromId) is not { } from) return null;
         IBox? target = cg.Target;
-        IBox to = target ?? new TextBox { X = cg.CurX, Y = cg.CurY, W = 0, H = 0 };
+        (double dropX, double dropY) = cg.DropPoint;
+        IBox to = target ?? new TextBox { X = dropX, Y = dropY, W = 0, H = 0 };
         return new ConnectPreview(Geometry.EdgeGeometry(from, to, D.DefaultConnector).D, target);
     }
 
