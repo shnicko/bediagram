@@ -853,6 +853,8 @@
                 <button disabled="@(MemberCount(sg) == 0)" @onclick="() => Editor.AlignInGroup(sg, AlignOp.Row)">Arrange in a row</button>
                 <button disabled="@(MemberCount(sg) == 0)" @onclick="() => Editor.AlignInGroup(sg, AlignOp.Column)">Arrange in a column</button>
                 <button disabled="@(MemberCount(sg) == 0)" @onclick="() => Editor.FitGroupToContents(sg)">Fit to contents</button>
+                <button disabled="@(MemberCount(sg) == 0)" title="Move the group box (same size) so the items sit in its middle — the items stay put" @onclick="() => Editor.CentreGroupOnContents(sg)">Centre box on items</button>
+                <button disabled="@(MemberCount(sg) == 0)" title="Move the items together to the middle of the group — the box stays put" @onclick="() => Editor.CentreContentsInGroup(sg)">Centre items in box</button>
             </div>
             <p class="muted">Connect a group like any shape: drag from its ● port, or select it with another item and press J.</p>
             <div class="actions">

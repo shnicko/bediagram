@@ -851,6 +851,38 @@ public class DiagramEditor
 
     public void FitGroupToContents(Group g) { Change(); FitGroup(g); }
 
+    /// <summary>
+    /// Moves the group box (same size) so its contents sit in the middle of it. The items stay where they are.
+    /// "Middle" allows for the title band and for labels under circles, like <see cref="FitGroup"/>.
+    /// </summary>
+    public void CentreGroupOnContents(Group g)
+    {
+        if (ContentsOffset(g) is not { } off) return;
+        Change();
+        g.X -= off.Dx; g.Y -= off.Dy;   // the group alone, not MoveBox: its members stay put
+        foreach (Group outer in Tree.Ancestors(g)) GrowOne(outer);
+    }
+
+    /// <summary>Moves the group's contents together (keeping their layout) to the middle of the group. The box stays.</summary>
+    public void CentreContentsInGroup(Group g)
+    {
+        if (ContentsOffset(g) is not { } off) return;
+        Change();
+        foreach (IBox b in Members(g).Cast<IBox>().ToList()) MoveBox(b, b.X + off.Dx, b.Y + off.Dy);
+    }
+
+    /// <summary>
+    /// How far the contents would have to move to sit in the middle of the group: the centre of the group minus the
+    /// centre of the shrink-wrapped box <see cref="FitGroup"/> would make. Null when the group is empty.
+    /// </summary>
+    (double Dx, double Dy)? ContentsOffset(Group g)
+    {
+        List<IBox> members = Members(g).Cast<IBox>().ToList();
+        if (members.Count == 0) return null;
+        (double x, double y, double w, double h) = Geometry.GroupBounds(members, g);
+        return (g.X + g.W / 2 - (x + w / 2), g.Y + g.H / 2 - (y + h / 2));
+    }
+
     // ───────────── Text boxes and properties ─────────────
 
     public void SetTextLook(TextBox t, Action<TextBox> change) { Change(); change(t); }
