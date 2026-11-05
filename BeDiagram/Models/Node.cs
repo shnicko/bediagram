@@ -37,6 +37,10 @@ public class Node : IGroupable
     /// Null = automatic (see <see cref="Geometry.TextWidth"/>).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? TextWidth { get; set; }
+    /// <summary>Text drawn outside the shape (label below / description) has no white backing, so a tinted group or
+    /// anything behind shows through. False (the default) is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ClearTextBack { get; set; }
     /// <summary>Name of another saved diagram (without extension) holding this step's more detailed flow. Shows a link badge.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Link { get; set; }

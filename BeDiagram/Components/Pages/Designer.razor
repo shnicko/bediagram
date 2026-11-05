@@ -509,6 +509,7 @@
             <textarea id="prop-desc" rows="3" placeholder="Optional — e.g. who does this step and how" @bind="sn.Description" @bind:event="oninput" @bind:after="() => Editor.OutsideTextChanged(sn)" @onfocus="Editor.Checkpoint"></textarea>
             <label>Text width <span class="muted">(px — @TextWidthHint(sn))</span></label>
             <input type="number" min="40" step="10" placeholder="@TextWidthPlaceholder(sn)" @bind="sn.TextWidth" @bind:after="() => Editor.OutsideTextChanged(sn)" @onfocus="Editor.Checkpoint" />
+            <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@sn.ClearTextBack" @onchange="e => Editor.SetClearTextBack(sn, e.Value is true)" /> Transparent text background</label>
             <label>Type</label>
             <select value="@sn.Type" @onchange="e => Editor.ChangeType(sn, e.Value?.ToString())">
                 @foreach (NodeTypeInfo t in NodeTypes.All)

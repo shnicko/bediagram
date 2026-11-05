@@ -114,6 +114,12 @@ public static class Geometry
         return lay with { Desc = lines, DescX = n.X + n.W / 2, DescY = firstBaseline };
     }
 
+    /// <summary>The white backing to draw behind text outside the shape, or null when there is none or the node
+    /// asks for a clear background (<see cref="Node.ClearTextBack"/>). Spacing and bounds still use
+    /// <see cref="OutsideTextBox"/>, so a clear background doesn't move anything.</summary>
+    public static (double X, double Y, double W, double H)? DrawnTextBack(Node n, LabelLayout lay) =>
+        n.ClearTextBack ? null : OutsideTextBox(n, lay);
+
     /// <summary>
     /// The white backing behind text drawn outside the shape (label below and/or description), or null when nothing
     /// is drawn outside. One rectangle covers both so they read as one block.
