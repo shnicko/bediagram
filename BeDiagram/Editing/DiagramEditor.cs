@@ -639,7 +639,7 @@ public class DiagramEditor
                     {
                         Type = n.Type, Label = n.Label, X = n.X + 30, Y = n.Y + 30, W = n.W, H = n.H,
                         Icon = n.Icon, Color = n.Color, Filled = n.Filled, Outcome = n.Outcome, GroupId = NewGroup(n.GroupId),
-                        Description = n.Description, TextWidth = n.TextWidth,
+                        Description = n.Description, TextWidth = n.TextWidth, ClearTextBack = n.ClearTextBack,
                         Properties = new(n.Properties),
                     };
                     Diagram.Nodes.Add(nn); map[n.Id] = nn.Id; break;
@@ -815,6 +815,7 @@ public class DiagramEditor
     public void SetNodeColour(Node n, string? colour) { Change(); n.Color = colour; }
 
     public void SetFilled(Node n, bool filled) { Change(); n.Filled = filled; }
+    public void SetClearTextBack(Node n, bool clear) { Change(); n.ClearTextBack = clear; }
 
     public void SetOutcome(Node n, string outcome)
     {

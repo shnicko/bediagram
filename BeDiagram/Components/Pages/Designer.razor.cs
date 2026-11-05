@@ -721,7 +721,7 @@ public partial class Designer
         D.Nodes.Select(n =>
         {
             LabelLayout lay = Geometry.Layout(n);
-            Rect? back = Geometry.OutsideTextBox(n, lay) is { } r ? new Rect(r.X, r.Y, r.W, r.H) : null;
+            Rect? back = Geometry.DrawnTextBack(n, lay) is { } r ? new Rect(r.X, r.Y, r.W, r.H) : null;
             return new NodeView(n, NodeTypes.Get(n.Type), Geometry.OutlineOf(n), NodeStyle.For(n), Editor.Selection.Contains(n.Id), lay, Geometry.ExtraBelow(n), back);
         });
 

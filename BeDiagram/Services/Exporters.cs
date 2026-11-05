@@ -139,7 +139,7 @@ public static class Exporters
             LabelLayout lay = Geometry.Layout(n);
             if (lay.HasIcon)
                 sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(Geometry.IconStroke(n))}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g>\n");
-            if (Geometry.OutsideTextBox(n, lay) is { } back)
+            if (Geometry.DrawnTextBack(n, lay) is { } back)
                 sb.Append($"<rect x=\"{F(back.X)}\" y=\"{F(back.Y)}\" width=\"{F(back.W)}\" height=\"{F(back.H)}\" rx=\"4\" fill=\"#ffffff\" fill-opacity=\"0.92\"/>");
             sb.Append($"<text x=\"{F(lay.TextX)}\" y=\"{F(lay.TextY)}\" font-size=\"13\" text-anchor=\"middle\" fill=\"{(lay.Below ? "#1f2933" : st.Text)}\">");
             for (int i = 0; i < lay.Lines.Count; i++)
