@@ -603,7 +603,7 @@
         {
             <h3>@(st.IsComment ? "Comment" : "Text box")</h3>
             <label>Text <span class="muted">(or double-click the box · Enter = new line)</span></label>
-            <textarea rows="5" @bind="st.Text" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint"></textarea>
+            <textarea rows="5" @bind="st.Text" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" @onblur="() => Editor.GrowToText(st)"></textarea>
             <label class="check" title="Comments are annotations: sticky-note look and dashed pin lines">
                 <input type="checkbox" checked="@st.IsComment" @onchange="e => Editor.SetComment(st, e.Value is true)" /> Comment
             </label>
