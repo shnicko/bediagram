@@ -94,6 +94,15 @@
                 <input type="checkbox" @bind="Editor.Snap" /> Snap
             </label>
         </div>
+        <div class="group" title="Background grid (screen only, not exported)">
+            <span class="muted-label">Grid</span>
+            <div class="seg">
+                @foreach ((string k, string name, string icon) in GridLook.Options)
+                {
+                    <button class="@(grid == k ? "on" : "")" title="@name" @onclick="() => SetGrid(k)">@IconSvg(icon, 16)</button>
+                }
+            </div>
+        </div>
         <div class="group">
             <button @onclick="() => Run(ZoomOutCmd)" title="@Tip(ZoomOutCmd)">−</button>
             <span class="zoom">@((int)Math.Round(Zoom * 100))%</span>
@@ -185,6 +194,12 @@
                 <pattern id="grid-world" width="20" height="20" patternUnits="userSpaceOnUse">
                     <circle cx="1" cy="1" r="1" fill="#d5dae0" />
                 </pattern>
+                <pattern id="grid-lines" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="@GridTransform">
+                    <path d="M20 0.5 H0.5 V20" fill="none" stroke="#dde2e8" stroke-width="1" />
+                </pattern>
+                <pattern id="grid-world-lines" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <path d="M20 0.5 H0.5 V20" fill="none" stroke="#e4e8ed" stroke-width="1" />
+                </pattern>
                 <filter id="page-shadow" x="-5%" y="-5%" width="110%" height="110%">
                     <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#1f2933" flood-opacity="0.16" />
                 </filter>
@@ -196,7 +211,7 @@
                 </marker>
                 @ArrowMarkerDefs
             </defs>
-            <rect class="grid" width="100%" height="100%" fill="@(D.Page.Enabled ? "#e3e7ec" : "url(#grid)")" />
+            <rect class="grid" width="100%" height="100%" fill="@CanvasFill" />
 
             <g transform="@GridTransform">
                 @* Page sheet (fixed paper size) *@
@@ -204,7 +219,10 @@
                 {
                     <g class="page">
                         <rect x="0" y="0" width="@F(D.Page.WidthPx)" height="@F(D.Page.HeightPx)" fill="#ffffff" filter="url(#page-shadow)" />
-                        <rect x="0" y="0" width="@F(D.Page.WidthPx)" height="@F(D.Page.HeightPx)" fill="url(#grid-world)" />
+                        @if (PageGridFill is { } pageFill)
+                        {
+                            <rect x="0" y="0" width="@F(D.Page.WidthPx)" height="@F(D.Page.HeightPx)" fill="@pageFill" />
+                        }
                         @if (D.Page.MarginPx > 0)
                         {
                             <rect class="page-margin" x="@F(D.Page.MarginPx)" y="@F(D.Page.MarginPx)" width="@F(PrintableW)" height="@F(PrintableH)" />

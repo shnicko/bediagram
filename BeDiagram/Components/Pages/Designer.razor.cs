@@ -40,6 +40,8 @@ public partial class Designer
 
     // View state
     double PanX = 40, PanY = 40, Zoom = 1;
+    /// <summary>Background grid (<see cref="GridLook"/>): a view setting, kept while the page is open, not saved in the file.</summary>
+    string grid = GridLook.Dots;
     double canvasLeft, canvasTop, canvasW = 1000, canvasH = 700;
 
     // Gesture state (State pattern — see Gestures/IGesture.cs): the drag in progress, null when the pointer is idle.
@@ -660,6 +662,15 @@ public partial class Designer
     string SaveAsPath => Path.Combine(Store.Folder, DiagramStore.SafeName(saveAsName) + DiagramStore.Extension);
 
     IEnumerable<Crumb> Crumbs => trail.Select((name, i) => new Crumb(i, name));
+
+    /// <summary>Canvas background: grey around a page sheet, otherwise the chosen grid (or nothing).</summary>
+    string CanvasFill =>
+        D.Page.Enabled ? "#e3e7ec" : GridLook.CanvasPattern(grid) is { } pattern ? $"url(#{pattern})" : "transparent";
+
+    /// <summary>The grid drawn on the page sheet, or null for no grid.</summary>
+    string? PageGridFill => GridLook.PagePattern(grid) is { } pattern ? $"url(#{pattern})" : null;
+
+    void SetGrid(string key) => grid = key;
 
     string GridTransform => $"translate({F(PanX)},{F(PanY)}) scale({F(Zoom)})";
 
