@@ -667,8 +667,9 @@ public partial class Designer
         .Select(x => (Colour: LineLook.Colour(x.Color), x.Weight)).Distinct()
         .Select(m => LineLook.MarkerDef(m.Colour, m.Weight)));
 
+    /// <summary>Groups in drawing order: a group inside another is drawn over it.</summary>
     IEnumerable<GroupView> GroupViews() =>
-        D.Groups.Select(g =>
+        Editor.Tree.PaintOrder().Select(g =>
         {
             (double ax, double ay, double aw, double ah) = Geometry.GroupTitleArea(g);
             (double tx, double ty, string anchor) = Geometry.GroupTitlePos(g);

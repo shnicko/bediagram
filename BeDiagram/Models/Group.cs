@@ -3,8 +3,11 @@ using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Models;
 
-/// <summary>A coloured container. Members are the nodes/comments whose GroupId points here.</summary>
-public class Group : IBox
+/// <summary>
+/// A coloured container. Members are the shapes, text boxes and other groups whose GroupId points here, so groups
+/// can nest (see <see cref="GroupTree"/>, the Composite view of that hierarchy).
+/// </summary>
+public class Group : IGroupable
 {
     public const double Header = 32;
     public const double Pad = 20;
@@ -16,6 +19,9 @@ public class Group : IBox
     public double Y { get; set; }
     public double W { get; set; } = 360;
     public double H { get; set; } = 220;
+    /// <summary>The group this group sits inside (null at the top level). Left out of the file when null.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GroupId { get; set; }
     /// <summary>Name of another saved diagram (without extension) holding this group's more detailed flow. Shows a link badge.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Link { get; set; }

@@ -23,4 +23,10 @@ public class ResizeGesture : UndoableDragGesture
         Moved = true;
         return true;
     }
+
+    /// <summary>A bigger shape or group may no longer fit in the groups around it, so they grow.</summary>
+    protected override void Finished()
+    {
+        if (Ctx.FindBox(id) is IGroupable item) Ctx.GrowAround(item);
+    }
 }
