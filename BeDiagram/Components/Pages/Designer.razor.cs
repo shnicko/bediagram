@@ -673,9 +673,9 @@ public partial class Designer
         {
             (double ax, double ay, double aw, double ah) = Geometry.GroupTitleArea(g);
             (double tx, double ty, string anchor) = Geometry.GroupTitlePos(g);
-            double width = Editor.Selection.Contains(g.Id) ? 2.5 : 1.5;
+            double width = GroupLook.Width(g.BorderWeight) + (Editor.Selection.Contains(g.Id) ? 1 : 0);
             return new GroupView(g, Palette.Get(g.Color), Editor.Selection.Contains(g.Id), Geometry.GroupBandPath(g), new Rect(ax, ay, aw, ah),
-                                 tx, ty, anchor, Geometry.GroupFillOpacity(g), LineLook.Dash(g.Border, width));
+                                 tx, ty, anchor, Geometry.GroupFillOpacity(g), LineLook.Dash(g.Border, width), width);
         });
 
     /// <summary>Selection outline drawn just outside a group (and around a title shown under it).</summary>
