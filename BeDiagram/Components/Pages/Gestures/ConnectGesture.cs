@@ -5,7 +5,7 @@ namespace BeDiagram.Components.Pages.Gestures;
 
 /// <summary>
 /// Dragging from a shape's port. Drop on another item to connect; drop on empty canvas (far enough away)
-/// to create a new joined step there. The canvas draws a live preview from <see cref="FromId"/> to the pointer.
+/// to create a new joined step there (on an allowed angle when an angle lock is on). The canvas draws a live preview from <see cref="FromId"/> to the pointer.
 /// </summary>
 public class ConnectGesture : DragGesture
 {
@@ -19,6 +19,13 @@ public class ConnectGesture : DragGesture
     /// <summary>The item the connector would join to if released now (null over empty canvas).</summary>
     public IBox? Target => Ctx.HitTest(CurX, CurY, FromId);
 
+    /// <summary>
+    /// Where a new step would be centred if released over empty canvas: on an allowed angle from the source's centre
+    /// (angle lock), or the pointer itself when the source has gone.
+    /// </summary>
+    public (double X, double Y) DropPoint =>
+        Ctx.FindBox(FromId) is { } from ? Ctx.LockPoint(from.X + from.W / 2, from.Y + from.H / 2, CurX, CurY) : (CurX, CurY);
+
     protected override bool Drag(double dx, double dy) => true;
 
     public override void Up()
@@ -31,7 +38,7 @@ public class ConnectGesture : DragGesture
         else if (Distance > 40)
         {
             // Dropped on empty space: create a new step there, joined to the source (selected when the drag began).
-            Ctx.AddNodeAt(NodeTypes.Process, CurX, CurY, join: true);
+            Ctx.AddNodeAt(NodeTypes.Process, CurX, CurY, join: true, lockAngle: true);
         }
     }
 }

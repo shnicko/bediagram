@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using BeDiagram.Editing.Angles;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Styles;
@@ -35,6 +36,9 @@ public class DiagramEditor
 
     /// <summary>Snap positions and sizes to a 10 px grid.</summary>
     public bool Snap { get; set; } = true;
+
+    /// <summary>Angle lock for moving items and placing joined steps (free, 90°, 45° or 30°). Not saved in the file.</summary>
+    public IAngleLock AngleLock { get; set; } = AngleLocks.Free;
 
     /// <summary>Selected shapes, text boxes and groups, in the order they were picked (so "join" follows that order).</summary>
     public List<string> Selection { get; } = new();
@@ -146,6 +150,19 @@ public class DiagramEditor
         item is not Group ig || (container.Id != ig.Id && !tree.IsInside(container, ig));
 
     public double SnapV(double v) => Snap ? Math.Round(v / 10) * 10 : v;
+
+    /// <summary>A drag offset after the angle lock (see <see cref="LockedOffset"/> for which axes may still snap).</summary>
+    public LockedOffset LockOffset(double dx, double dy) => AngleLock.Apply(dx, dy, Snap);
+
+    /// <summary>
+    /// Where a point dragged from (<paramref name="fromX"/>, <paramref name="fromY"/>) lands: on an allowed angle from
+    /// the start, snapped to the grid on the axes the lock leaves free. With no lock this is just the snapped point.
+    /// </summary>
+    public (double X, double Y) LockPoint(double fromX, double fromY, double x, double y)
+    {
+        LockedOffset o = LockOffset(x - fromX, y - fromY);
+        return (o.SnapX ? SnapV(fromX + o.Dx) : fromX + o.Dx, o.SnapY ? SnapV(fromY + o.Dy) : fromY + o.Dy);
+    }
 
     /// <summary>Selected ids plus everything inside any selected groups, at any depth (so groups move as a unit).</summary>
     public List<IBox> WithMembers(IEnumerable<string> ids)
@@ -456,11 +473,21 @@ public class DiagramEditor
         return b is Node or Group or TextBox { IsComment: false } ? b : null;
     }
 
-    public void AddNodeAt(string type, double cx, double cy, bool join, string? groupId = null)
+    /// <param name="lockAngle">
+    /// Placed by the pointer (palette drop, port drag): when joined, put the new shape on an allowed angle from the
+    /// source's centre (<see cref="AngleLock"/>). Steps placed by the editor itself (below the selection) pass false.
+    /// </param>
+    public void AddNodeAt(string type, double cx, double cy, bool join, string? groupId = null, bool lockAngle = false)
     {
         Change();
         IBox? src = join ? JoinSource() : null;
-        Node n = CreateNode(type, cx, cy);
+        Node n;
+        if (lockAngle && src is not null)
+        {
+            (double lx, double ly) = LockPoint(src.X + src.W / 2, src.Y + src.H / 2, cx, cy);
+            n = CreateNode(type, lx, ly, exact: true);
+        }
+        else n = CreateNode(type, cx, cy);
         if (src is not null) AddEdge(src.Id, n.Id);
         if (groupId is not null && FindGroup(groupId) is { } g) { n.GroupId = g.Id; GrowGroup(g); }
         else UpdateMembership(new[] { n });
@@ -547,9 +574,10 @@ public class DiagramEditor
         AddGroupAt(cx, cy);
     }
 
-    Node CreateNode(string key, double cx, double cy)
+    /// <param name="exact">Centre already worked out (e.g. by <see cref="LockPoint"/>): don't snap it again.</param>
+    Node CreateNode(string key, double cx, double cy, bool exact = false)
     {
-        Node n = NodeFactory.Create(key, SnapV(cx), SnapV(cy));
+        Node n = exact ? NodeFactory.Create(key, cx, cy) : NodeFactory.Create(key, SnapV(cx), SnapV(cy));
         Diagram.Nodes.Add(n);
         return n;
     }

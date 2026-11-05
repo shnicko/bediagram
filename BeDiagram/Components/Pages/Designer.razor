@@ -94,6 +94,15 @@
                 <input type="checkbox" @bind="Editor.Snap" /> Snap
             </label>
         </div>
+        <div class="group" title="Angle lock when moving items and placing joined steps">
+            <span class="muted-label">Angle</span>
+            <div class="seg">
+                @foreach (IAngleLock a in AngleLocks.All)
+                {
+                    <button class="@(Editor.AngleLock == a ? "on" : "")" title="@a.Name" @onclick="() => SetAngleLock(a)">@a.Label</button>
+                }
+            </div>
+        </div>
         <div class="group" title="Background grid (screen only, not exported)">
             <span class="muted-label">Grid</span>
             <div class="seg">

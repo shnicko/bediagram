@@ -1,3 +1,4 @@
+using BeDiagram.Editing.Angles;
 using BeDiagram.Models;
 
 namespace BeDiagram.Components.Pages.Gestures;
@@ -22,6 +23,12 @@ public interface IEditorContext
     /// <summary>Snaps a coordinate to the 10 px grid when Snap is on.</summary>
     double SnapV(double v);
 
+    /// <summary>A drag offset after the angle lock (free, 90°, 45° or 30°).</summary>
+    LockedOffset LockOffset(double dx, double dy);
+
+    /// <summary>A point dragged from a start point, on an allowed angle and snapped where the lock allows.</summary>
+    (double X, double Y) LockPoint(double fromX, double fromY, double x, double y);
+
     void SelectOnly(string id);
 
     /// <summary>Puts loose items into the group under their centre (after a drag).</summary>
@@ -33,8 +40,11 @@ public interface IEditorContext
     /// <summary>Adds a connector (false when it isn't allowed or already exists). Doesn't record undo.</summary>
     bool AddEdge(string from, string to);
 
-    /// <summary>Adds a shape centred on a world point (records undo), joined from the selection when asked.</summary>
-    void AddNodeAt(string type, double cx, double cy, bool join);
+    /// <summary>
+    /// Adds a shape centred on a world point (records undo), joined from the selection when asked.
+    /// With <paramref name="lockAngle"/>, a joined shape is placed on an allowed angle from its source.
+    /// </summary>
+    void AddNodeAt(string type, double cx, double cy, bool join, bool lockAngle);
 
     /// <summary>Moves the view by screen px.</summary>
     void PanBy(double dx, double dy);

@@ -39,6 +39,8 @@ BeDiagram/
                              (create, join, group, align, duplicate, delete, nudge, panel setters)
   Editing/IEditorView.cs     what the editor needs from the screen: ShowToast, ViewCentre, EditStarted
   Editing/AlignOp.cs         align / distribute / row / column operations
+  Editing/Angles/            angle lock (Strategy pattern, BeDiagram.Editing.Angles): IAngleLock, LockedOffset, FreeAngle,
+                             StepAngle (90 / 45 / 30), AngleLocks. Editor.LockOffset (moves) / LockPoint (placed steps)
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
   Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
   Services/ExportView.cs     the window onto the drawing that a current-view export uses
