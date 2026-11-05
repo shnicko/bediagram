@@ -145,6 +145,16 @@ tools/regression/                side-by-side regression suites (master vs worki
   (~25 min; run it in the background). Refactors must come out ALL THE SAME. Features should differ only where
   they change things. A toast that vanishes one step apart is timing, not behaviour (rerun to confirm). When a
   feature adds a shape or a shortcut, extend `make-shapes-diagram.py` / `keyboard.js`.
+- **How much regression to run** (agreed with Nick 2026-11-05 — he tests every merge himself and reports problems):
+  - **Full run** (all four suites) for refactors (no behaviour change allowed), and for any change to shared code:
+    `Geometry`, the exporters (`Exporters`, `PdfExporter`, `Services/Export/`), `DiagramEditor` beyond a new method or
+    two, the canvas markup in `Designer.razor`, or `CommandRegistry` / `designer.js` keys.
+  - **Small features and fixes** that touch only a few classes: a hands-on Playwright test of the change itself, plus
+    only the suites that cover the area touched, e.g. `SUITES="panel" tools/regression/run.sh` —
+    `gestures` for dragging, moving, resizing, connecting; `keyboard` for shortcuts, commands, toolbar buttons;
+    `all-shapes` for how things are drawn and exported; `panel` for the side panel. If unsure, run the full set.
+  - Say in the PR which suites ran and why the others were skipped.
+  - Problems Nick finds after a merge come back as their own `fix/` PRs; note them in the PR as found after merge.
 - Tell the user plainly that the .NET 10 build was compile-checked but click-tested on .NET 8.
 
 ## Backlog (rough priority)
