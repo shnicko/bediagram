@@ -385,8 +385,15 @@
                         {
                             <rect x="@F(v.N.X - 5)" y="@F(v.N.Y - 5)" width="@F(v.N.W + 10)" height="@F(v.N.H + 10 + v.Below)" rx="8" class="sel-outline" />
                         }
-                        <path d="@Geometry.ShapePath(v.N)" class="node-shadow" transform="@Geometry.ShadowTransform" fill="@v.Style.Stroke" fill-opacity="@F(Geometry.ShadowOpacity)" />
-                        <path d="@Geometry.ShapePath(v.N)" fill="@v.Style.Fill" stroke="@v.Style.Stroke" stroke-width="@F(Geometry.ShapeStroke)" />
+                        @if (HaloMarkup(v) is { } halo)
+                        {
+                            <g class="node-halo">@halo</g>
+                        }
+                        @if (Geometry.ShadowOpacityOf(v.N) > 0)
+                        {
+                            <path d="@Geometry.ShapePath(v.N)" class="node-shadow" transform="@Geometry.ShadowTransform" fill="@v.Style.Stroke" fill-opacity="@F(Geometry.ShadowOpacityOf(v.N))" />
+                        }
+                        <path d="@Geometry.ShapePath(v.N)" fill="@v.Style.Fill" stroke="@v.Style.Stroke" stroke-width="@F(Geometry.ShapeStrokeOf(v.N))" />
                         @if (v.Outline.HasSideStripe)
                         {
                             <rect x="@F(v.N.X)" y="@F(v.N.Y)" width="6" height="@F(v.N.H)" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" fill-opacity="@(v.N.Filled ? "0.5" : "1")" />
@@ -412,7 +419,7 @@
                         else
                         {
                             <g>
-                                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? "#1f2933" : v.Style.Text)" font-weight="@Geometry.LabelWeight(v.N)">
+                                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? Geometry.BelowLabelColour(v.N) : v.Style.Text)" font-weight="@Geometry.LabelWeight(v.N)">
                                     @foreach ((string text, string dy) in LabelLines(v.Layout))
                                     {
                                         <tspan x="@F(v.Layout.TextX)" dy="@dy">@text</tspan>
@@ -580,7 +587,14 @@
                             @onclick="() => Editor.SetNodeColour(sn, k)"></button>
                 }
             </div>
-            <label class="check"><input type="checkbox" checked="@sn.Filled" @onchange="e => Editor.SetFilled(sn, e.Value is true)" /> Solid fill (presentation style)</label>
+            <label class="check" title="@(SolidFillForced(sn) ? "Major steps always have a solid fill" : "")"><input type="checkbox" checked="@(sn.Filled || SolidFillForced(sn))" disabled="@SolidFillForced(sn)" @onchange="e => Editor.SetFilled(sn, e.Value is true)" /> Solid fill (presentation style)</label>
+            <label>Emphasis</label>
+            <div class="seg wide">
+                @foreach (IEmphasis em in Emphases.All)
+                {
+                    <button class="@(Emphases.Of(sn) == em ? "on" : "")" title="@em.Hint" @onclick="() => Editor.SetEmphasis(sn, em.Key)">@em.Name</button>
+                }
+            </div>
 
             @if (sn.Type == NodeTypes.Outcome)
             {

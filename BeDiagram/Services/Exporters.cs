@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
 
@@ -135,8 +136,10 @@ public static class Exporters
         {
             NodeStyle st = NodeStyle.For(n);
             string shape = Geometry.ShapePath(n);
-            sb.Append($"<path d=\"{shape}\" transform=\"{Geometry.ShadowTransform}\" fill=\"{st.Stroke}\" fill-opacity=\"{F(Geometry.ShadowOpacity)}\"/>\n");
-            sb.Append($"<path d=\"{shape}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"{F(Geometry.ShapeStroke)}\"/>\n");
+            if (Geometry.HaloSvg(n, st.Stroke) is { } halo) sb.Append(halo).Append('\n');
+            if (Geometry.ShadowOpacityOf(n) > 0)
+                sb.Append($"<path d=\"{shape}\" transform=\"{Geometry.ShadowTransform}\" fill=\"{st.Stroke}\" fill-opacity=\"{F(Geometry.ShadowOpacityOf(n))}\"/>\n");
+            sb.Append($"<path d=\"{shape}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"{F(Geometry.ShapeStrokeOf(n))}\"/>\n");
             if (Geometry.OutlineOf(n).HasSideStripe)
                 sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
             LabelLayout lay = Geometry.Layout(n);
@@ -145,7 +148,7 @@ public static class Exporters
             if (Geometry.DrawnTextBack(n, lay) is { } back)
                 sb.Append($"<rect x=\"{F(back.X)}\" y=\"{F(back.Y)}\" width=\"{F(back.W)}\" height=\"{F(back.H)}\" rx=\"4\" fill=\"#ffffff\" fill-opacity=\"0.92\"/>");
             string weight = Geometry.LabelWeight(n) is { } lw ? $" font-weight=\"{lw}\"" : "";
-            sb.Append($"<text x=\"{F(lay.TextX)}\" y=\"{F(lay.TextY)}\" font-size=\"13\"{weight} text-anchor=\"middle\" fill=\"{(lay.Below ? "#1f2933" : st.Text)}\">");
+            sb.Append($"<text x=\"{F(lay.TextX)}\" y=\"{F(lay.TextY)}\" font-size=\"13\"{weight} text-anchor=\"middle\" fill=\"{(lay.Below ? Geometry.BelowLabelColour(n) : st.Text)}\">");
             for (int i = 0; i < lay.Lines.Count; i++)
                 sb.Append($"<tspan x=\"{F(lay.TextX)}\" dy=\"{(i == 0 ? "0" : "16")}\">{E(lay.Lines[i])}</tspan>");
             sb.Append("</text>\n");
@@ -243,6 +246,13 @@ public static class Exporters
             string label = Q(text)[..^1] + desc + "\"";
             string shape = Geometry.OutlineOf(n).Mermaid(label);
             sb.Append($"    {id}{shape}\n");
+            // Mermaid has no halo: a major step keeps its solid fill and gets a heavy outline; a minor one goes light.
+            if (n.Emphasis is not null)
+            {
+                NodeStyle est = NodeStyle.For(n);
+                IEmphasis em = Emphases.Of(n);
+                styles.Append($"    style {id} fill:{est.Fill},stroke:{est.Stroke},color:{est.Text},stroke-width:{F(em.HasHalo ? 4 : em.StrokeWidth)}px\n");
+            }
         }
         int ti = 0;
         foreach (TextBox t in d.TextBoxes)
