@@ -402,3 +402,12 @@ kbd {
 .modal.shortcuts { max-width: 520px; max-height: 85vh; overflow-y: auto; }
 .modal.shortcuts .keys td:first-child { white-space: nowrap; padding-right: 14px; }
 h4.bulk { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+/* Lane creator on a blank canvas */
+.lane-creator { pointer-events: auto; margin-top: 14px; color: var(--text); }
+.lane-form { width: 300px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; box-shadow: 0 6px 18px rgba(0,0,0,.08); text-align: left; }
+.lane-form label { display: block; margin: 8px 0 4px; font-size: 12px; color: var(--muted); }
+.lane-form input { width: 100%; }
+.lane-form .row { display: flex; gap: 10px; }
+.lane-form .row > div { flex: 1; }
+.lane-form .actions { margin-top: 10px; }

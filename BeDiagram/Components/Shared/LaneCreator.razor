@@ -1,0 +1,27 @@
+@using BeDiagram.Editing.Lanes
+<div class="lane-creator">
+    @if (!Open)
+    {
+        <button class="small" @onclick="Toggle">@IconSvg("rows-3", 16) Start with swim lanes ▾</button>
+    }
+    else
+    {
+        <div class="lane-form">
+            <label>Lanes run</label>
+            <div class="seg wide">
+                @foreach (ILaneLayout l in LaneLayouts.All)
+                {
+                    <button class="@LayoutClass(l)" @onclick="() => Pick(l)">@IconSvg(LayoutIcon(l), 16) @l.Direction</button>
+                }
+            </div>
+            <div class="row">
+                <div><label>How many</label><input type="number" min="1" max="20" @bind="Count" /></div>
+                <div><label>Gap (px)</label><input type="number" min="0" max="400" step="10" @bind="Gap" /></div>
+            </div>
+            <div class="actions">
+                <button class="primary" @onclick="Create">Create lanes</button>
+                <button @onclick="Toggle">Cancel</button>
+            </div>
+        </div>
+    }
+</div>

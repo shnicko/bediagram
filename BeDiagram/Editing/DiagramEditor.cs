@@ -575,6 +575,41 @@ public class DiagramEditor
         SelectOnly(g.Id);
     }
 
+    /// <summary>True when the diagram has nothing in it yet (the lane creator is offered then).</summary>
+    public bool IsBlank => Diagram.Nodes.Count == 0 && Diagram.TextBoxes.Count == 0 && Diagram.Groups.Count == 0;
+
+    /// <summary>Default size of a created lane (along the flow, across it) on an open canvas.</summary>
+    public const double NewLaneLength = 1200, NewLaneWidth = 240;
+
+    /// <summary>
+    /// Starts a diagram with <paramref name="count"/> empty swim lanes (top-level groups "Lane 1", "Lane 2", …) running
+    /// the way <paramref name="layout"/> says, <paramref name="gap"/> px apart (0 = edge to edge). With a page size
+    /// set they fill the printable area; on an open canvas each lane is <see cref="NewLaneLength"/> ×
+    /// <see cref="NewLaneWidth"/>. One undo step. Rename the lanes in the group panel as usual.
+    /// </summary>
+    public void CreateLanes(ILaneLayout layout, int count, double gap)
+    {
+        count = Math.Clamp(count, 1, 20);
+        gap = Math.Clamp(gap, 0, 400);
+        double flow = NewLaneLength, across = NewLaneWidth, x0 = 0, y0 = 0;
+        if (Diagram.Page.Enabled)
+        {
+            double m = Diagram.Page.MarginPx;
+            (double pageFlow, double pageCross) = layout.ToLane(Diagram.Page.WidthPx - 2 * m, Diagram.Page.HeightPx - 2 * m);
+            flow = pageFlow;
+            across = Math.Max(Group.Header + 2 * Group.Pad, (pageCross - (count - 1) * gap) / count);
+            x0 = m; y0 = m;
+        }
+        Change();
+        (double w, double h) = layout.FromLane(flow, across);
+        for (int i = 0; i < count; i++)
+        {
+            (double x, double y) = layout.FromLane(0, i * (across + gap));
+            Diagram.Groups.Add(new Group { Title = $"Lane {i + 1}", Color = NextGroupColour(), X = x0 + x, Y = y0 + y, W = w, H = h });
+        }
+        ClearSelection();
+    }
+
     public void AddGroupQuick()
     {
         if (Selection.Any(id => FindBox(id) is IGroupable)) { GroupSelection(); return; }

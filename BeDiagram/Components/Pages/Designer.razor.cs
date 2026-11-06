@@ -844,6 +844,9 @@ public partial class Designer
 
     // Small UI handlers that used to be inline lambdas in the markup.
 
+    /// <summary>After the lane creator adds lanes: fit them in view.</summary>
+    Task FitAfterLanes() => Run(FitCmd);
+
     void SetOpenMenu(string? menu) => openMenu = menu;
     void CloseMenus() => openMenu = null;
     void StartPaletteDrag(string key) => paletteDrag = key;
