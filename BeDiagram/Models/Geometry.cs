@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
@@ -32,14 +33,36 @@ public static class Geometry
     public static bool LabelBelow(Node n) =>
         n.Type == NodeTypes.Outcome || (OutlineOf(n).IconMovesLabelBelow && Icons.Exists(n.Icon));
 
-    /// <summary>Label font weight: circles get semibold (600) so their labels read well on slides; others stay regular (null).
-    /// 600 rather than 500 because Segoe UI has no 500 and would fall back to regular.</summary>
-    public static string? LabelWeight(Node n) => n.Type == NodeTypes.Circle ? "600" : null;
+    /// <summary>Label font weight, or null for regular: circles and major steps are semibold (see <see cref="IEmphasis.LabelWeight"/>).</summary>
+    public static string? LabelWeight(Node n) => Emphases.Of(n).LabelWeight(n);
+
+    /// <summary>Colour of a label drawn under the shape (muted for minor steps).</summary>
+    public static string BelowLabelColour(Node n) => Emphases.Of(n).BelowLabelColour;
 
     public static string ShapePath(Node n) => OutlineOf(n).Path(n);
 
-    /// <summary>Outline width of every shape (the presentation look: a firm ring that holds up on slides and prints).</summary>
+    /// <summary>Outline width of a normal shape (the presentation look: a firm ring that holds up on slides and prints).</summary>
     public const double ShapeStroke = 2.4;
+
+    /// <summary>Outline width a node is drawn with (thinner for minor steps).</summary>
+    public static double ShapeStrokeOf(Node n) => Emphases.Of(n).StrokeWidth;
+
+    /// <summary>Shadow opacity a node is drawn with (none for minor steps).</summary>
+    public static double ShadowOpacityOf(Node n) => Emphases.Of(n).ShadowOpacity;
+
+    /// <summary>Gap between a major step's outline and its halo ring, and the ring's width.</summary>
+    public const double HaloGap = 6, HaloRing = 2;
+
+    /// <summary>
+    /// The halo ring around a major step, or null for other steps: the shape's own outline drawn <see cref="HaloGap"/>
+    /// further out, as a thin line. It leaves the gap open, so connectors still reach the shape and keep their arrowheads.
+    /// </summary>
+    public static string? HaloSvg(Node n, string colour)
+    {
+        if (!Emphases.Of(n).HasHalo) return null;
+        AreaBox ring = new AreaBox(n.X - HaloGap, n.Y - HaloGap, n.W + 2 * HaloGap, n.H + 2 * HaloGap);
+        return $"<path d=\"{OutlineOf(n).Path(ring)}\" fill=\"none\" stroke=\"{colour}\" stroke-width=\"{F(HaloRing)}\"/>";
+    }
 
     /// <summary>Soft shadow under each shape: the same outline moved down, in the shape's own colour, faint.
     /// Drawn as a plain shape (no SVG blur filter), so the PDF export and greyscale prints show it too.</summary>

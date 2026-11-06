@@ -32,6 +32,8 @@ BeDiagram/
                          one class per outline (Rect, Check, RoundedRect, Pill, Diamond, Parallelogram, Hexagon, Circle,
                          Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (lookup by shape key)
   Models/GroupTree.cs    group hierarchy (Composite): parent / children / descendants / ancestors / paint order from GroupId
+  Models/Emphasis/       major / normal / minor looks (Strategy pattern, BeDiagram.Models.Emphasis): IEmphasis, NodeEmphasis
+                         base, NormalEmphasis, MajorEmphasis, MinorEmphasis, Emphases (lookup by Node.Emphasis)
   Models/StepOrder.cs    step order (Node.Step): numbering, gap-closing, move / parallel, flow order for unnumbered shapes
   Models/NodeFactory.cs  new nodes: size, label, icon, fill and default properties per type (palette keys incl. "outcome:pass")
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
@@ -125,6 +127,11 @@ tools/regression/                side-by-side regression suites (master vs worki
   by hand or loop over `Diagram.Groups` to draw — use `PaintOrder` so inner groups sit over their parents. Moving a
   group moves all its descendants (`MoveBox`); `GrowGroup` also grows every group around it. A group can't go inside
   itself or one of its own groups (`CanHold`).
+- **Emphasis uses the Strategy pattern.** Anything that differs between major / normal / minor (colours via
+  `Adjust`, outline width, shadow, halo ring, label weight and colour) belongs in that emphasis class, reached through
+  `Emphases.Of(n)` — via `NodeStyle.For` and the `Geometry` helpers (`ShapeStrokeOf`, `ShadowOpacityOf`, `HaloSvg`,
+  `LabelWeight`, `BelowLabelColour`). Don't test `n.Emphasis == "major"` elsewhere. Emphasis is a look only: it
+  never changes size or step.
 - **Step order is data, not decoration.** Every shape except outcomes has `Node.Step` (1, 2, 3, …, no gaps; parallel
   steps share a number), whether or not `Diagram.ShowSteps` draws the badges. Change numbers only through `StepOrder`
   (`Editor.Steps`): `Normalise` / `Compact` after adding, deleting or retyping shapes, `MoveTo` / `SetParallel` /
