@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using BeDiagram.Editing.Angles;
+using BeDiagram.Editing.Lanes;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
@@ -925,6 +926,33 @@ public class DiagramEditor
         int start = nodes[0].Step!.Value;
         for (int i = 0; i < nodes.Count; i++) Steps.MoveTo(nodes[i], start + i);
         view.ShowToast($"Steps {start}–{start + nodes.Count - 1} in turn");
+    }
+
+    // ───────────── Swim lanes ─────────────
+
+    /// <summary>The top-level groups (the lanes that <see cref="ArrangeLanes"/> would arrange).</summary>
+    public List<Group> TopLevelGroups()
+    {
+        GroupTree tree = Tree;
+        return Diagram.Groups.Where(g => tree.Parent(g) is null).ToList();
+    }
+
+    /// <summary>True when there is at least one top-level group to treat as a lane.</summary>
+    public bool HasLanes => TopLevelGroups().Count > 0;
+
+    /// <summary>
+    /// Arranges top-level groups as swim lanes (see <see cref="LaneArranger"/>): the selected ones when two or more are
+    /// selected, otherwise all of them. One undo step.
+    /// </summary>
+    public void ArrangeLanes(ILaneLayout layout)
+    {
+        List<Group> top = TopLevelGroups();
+        List<Group> picked = top.Where(g => Selection.Contains(g.Id)).ToList();
+        List<Group> lanes = picked.Count >= 2 ? picked : top;
+        if (lanes.Count == 0) { view.ShowToast("Make a group for each lane first: select its shapes and press Ctrl+G"); return; }
+        Change();
+        int placed = new LaneArranger(Diagram, layout).Arrange(lanes);
+        view.ShowToast($"{lanes.Count} lane{(lanes.Count == 1 ? "" : "s")} arranged ({layout.Name}), {placed} item{(placed == 1 ? "" : "s")} lined up by step");
     }
 
     public void SetGroupColour(Group g, string colour) { Change(); g.Color = colour; }

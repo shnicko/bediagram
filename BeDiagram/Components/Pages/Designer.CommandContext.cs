@@ -1,4 +1,5 @@
 using BeDiagram.Components.Pages.Commands;
+using BeDiagram.Editing.Lanes;
 using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Components.Pages;
@@ -34,6 +35,9 @@ public partial class Designer : ICommandContext
         if (Editor.Selection.Count == 1) Editor.BeginEdit(Editor.Selection[0]);
         else if (Editor.SelectedEdgeId is not null) Editor.BeginEdit(Editor.SelectedEdgeId);
     }
+
+    bool ICommandContext.HasLanes => Editor.HasLanes;
+    void ICommandContext.ArrangeLanes(ILaneLayout layout) => Editor.ArrangeLanes(layout);
 
     void ICommandContext.Duplicate() => Editor.Duplicate();
     void ICommandContext.DeleteSelection() => Editor.DeleteSelection();

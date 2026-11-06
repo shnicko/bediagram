@@ -42,6 +42,8 @@ BeDiagram/
                              (create, join, group, align, duplicate, delete, nudge, panel setters)
   Editing/IEditorView.cs     what the editor needs from the screen: ShowToast, ViewCentre, EditStarted
   Editing/AlignOp.cs         align / distribute / row / column operations
+  Editing/Lanes/             swim lanes (Strategy pattern, BeDiagram.Editing.Lanes): ILaneLayout, HorizontalLanes,
+                             VerticalLanes, LaneLayouts, LaneArranger (the one-off arrange). Editor.ArrangeLanes(layout)
   Editing/Angles/            angle lock (Strategy pattern, BeDiagram.Editing.Angles): IAngleLock, LockedOffset, FreeAngle,
                              StepAngle (90 / 45 / 30), AngleLocks. Editor.LockOffset (moves) / LockPoint (placed steps)
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
@@ -133,6 +135,10 @@ tools/regression/                side-by-side regression suites (master vs worki
   `Emphases.Of(n)` — via `NodeStyle.For` and the `Geometry` helpers (`ShapeStrokeOf`, `ShadowOpacityOf`, `HaloSvg`,
   `LabelWeight`, `BelowLabelColour`). Don't test `n.Emphasis == "major"` elsewhere. Emphasis is a look only: it
   never changes size or step.
+- **Swim lanes use the Strategy pattern.** A lane is a top-level group; `LaneArranger` works in lane coordinates
+  (`flow` along a lane, `cross` across) and an `ILaneLayout` maps them to x / y and gives the title insets, so one
+  algorithm does both directions. Columns come from `Node.Step`. It's a one-off arrange (one `Change()`), not a
+  stored layout: no file-format change. Run from `ArrangeLanesHorizontalCommand` / `ArrangeLanesVerticalCommand`.
 - **Step order is data, not decoration.** Every shape except outcomes has `Node.Step` (1, 2, 3, …, no gaps; parallel
   steps share a number), whether or not `Diagram.ShowSteps` draws the badges. Change numbers only through `StepOrder`
   (`Editor.Steps`): `Normalise` / `Compact` after adding, deleting or retyping shapes, `MoveTo` / `SetParallel` /

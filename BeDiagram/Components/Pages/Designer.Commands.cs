@@ -39,6 +39,11 @@ public partial class Designer
     static string Tip(IEditorCommand command) =>
         command.Keys.Count == 0 ? command.Name : $"{command.Name} ({command.Keys[0]})";
 
+    /// <summary>Tooltip for the swim-lane buttons (they have no shortcut key, so say what they do or why they're off).</summary>
+    string LanesTip(IEditorCommand command) => CanRun(command)
+        ? $"{command.Name}: line the lanes up and put their shapes in columns by step number"
+        : "Group the shapes of each lane first (select them, Ctrl+G)";
+
     // Commands wired to buttons in Designer.razor.
     IEditorCommand SaveCmd => Commands.Get<SaveCommand>();
     IEditorCommand SaveAsCmd => Commands.Get<SaveAsCommand>();
@@ -53,4 +58,6 @@ public partial class Designer
     IEditorCommand GroupCmd => Commands.Get<GroupCommand>();
     IEditorCommand UngroupCmd => Commands.Get<UngroupCommand>();
     IEditorCommand AddCommentCmd => Commands.Get<AddCommentCommand>();
+    IEditorCommand LanesAcrossCmd => Commands.Get<ArrangeLanesHorizontalCommand>();
+    IEditorCommand LanesDownCmd => Commands.Get<ArrangeLanesVerticalCommand>();
 }

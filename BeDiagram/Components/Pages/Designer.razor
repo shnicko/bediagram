@@ -927,6 +927,14 @@
                 <button @onclick="() => Run(UngroupCmd)" title="Ctrl+Shift+G">Ungroup</button>
                 <button class="danger" @onclick="() => Run(DeleteCmd)">Delete group &amp; contents</button>
             </div>
+            @if (IsTopLevel(sg))
+            {
+                <label>Swim lanes <span class="muted">(every top-level group is a lane)</span></label>
+                <div class="seg wide">
+                    <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
+                    <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
+                </div>
+            }
         }
         else if (Editor.Selection.Count > 1)
         {
@@ -955,6 +963,14 @@
                 <button @onclick="() => Run(GroupCmd)">Group (Ctrl+G)</button>
                 <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
             </div>
+            @if (SelectedLaneCount >= 2)
+            {
+                <label>Swim lanes <span class="muted">(the @SelectedLaneCount selected groups)</span></label>
+                <div class="seg wide">
+                    <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
+                    <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
+                </div>
+            }
         }
         else
         {
@@ -967,6 +983,13 @@
             <label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
             <p class="muted">Every shape except outcomes has a step number, shown or not — new shapes go on the end. Reorder them all in <em>Step order…</em>, or change one shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</p>
             <button class="small" @onclick="ShowStepOrder">Step order…</button>
+
+            <h4>Swim lanes</h4>
+            <p class="muted">Each top-level group is a lane. <em>Arrange</em> lines the lanes up edge to edge and puts their shapes in columns by step number, so step 3 sits in the same column in every lane. Select two or more groups to arrange just those. Undo puts everything back.</p>
+            <div class="seg wide">
+                <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
+                <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
+            </div>
 
             <h4>Page</h4>
             <select value="@D.Page.Size" @onchange="SetPageSize">
