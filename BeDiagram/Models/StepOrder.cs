@@ -100,6 +100,51 @@ public class StepOrder
         }
     }
 
+    // ───── Reorder dialog ─────
+    // The dialog shows the steps as numbered slots with gaps between them. Gap k sits just before slot k
+    // (gap 1 = before the first step, gap Next = after the last). Dropping a shape in a gap makes it a step of its own
+    // there; dropping it on a slot makes it run in parallel with that step.
+
+    /// <summary>True when putting <paramref name="n"/> in gap <paramref name="gap"/> would change anything.
+    /// A shape that is a step of its own doesn't move when dropped in the gap just before or just after it.</summary>
+    public bool CanMoveBefore(Node n, int gap)
+    {
+        if (!IsStep(n) || n.Step is not int s || gap < 1 || gap > Next) return false;
+        return IsParallel(n) || (gap != s && gap != s + 1);
+    }
+
+    /// <summary>
+    /// Makes <paramref name="n"/> a step of its own in gap <paramref name="gap"/> (see above): it leaves any parallel
+    /// step it was part of, the steps from the gap on move down one, and its old place closes up.
+    /// </summary>
+    public void MoveBefore(Node n, int gap)
+    {
+        if (!CanMoveBefore(n, gap)) return;
+        int s = n.Step!.Value;
+        // A step of its own leaves a hole when it goes, so the slots after it are one lower by the time it lands.
+        MoveTo(n, !IsParallel(n) && s < gap ? gap - 1 : gap);
+    }
+
+    /// <summary>The gap that moves <paramref name="n"/> one place earlier: a step of its own swaps with the step before;
+    /// a parallel step comes out of its group and goes just before it.</summary>
+    public int EarlierGap(Node n) => n.Step is int s ? (IsParallel(n) ? s : s - 1) : 0;
+
+    /// <summary>The gap that moves <paramref name="n"/> one place later: a step of its own swaps with the step after;
+    /// a parallel step comes out of its group and goes just after it.</summary>
+    public int LaterGap(Node n) => n.Step is int s ? (IsParallel(n) ? s + 1 : s + 2) : 0;
+
+    /// <summary>True when <paramref name="n"/> could join step <paramref name="step"/> (a different, existing step).</summary>
+    public bool CanJoin(Node n, int step) => IsStep(n) && n.Step is int s && s != step && step >= 1 && step <= Last;
+
+    /// <summary><paramref name="n"/> takes number <paramref name="step"/> so it runs in parallel with that step; if it was
+    /// a step of its own, the gap it leaves closes up.</summary>
+    public void Join(Node n, int step)
+    {
+        if (!CanJoin(n, step)) return;
+        n.Step = step;
+        Compact();
+    }
+
     /// <summary>The shapes all take the earliest of their numbers, so they run in parallel; the gaps close up.</summary>
     public void MakeParallel(IEnumerable<Node> nodes)
     {

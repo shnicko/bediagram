@@ -62,7 +62,8 @@ BeDiagram/
                                        ICommandContext (receiver), CommandRegistry (invoker), one class per action
   Components/Pages/Designer.Commands.cs        OnKey (keyboard → CommandRegistry) and Run / CanRun / Tip for buttons
   Components/Pages/Designer.CommandContext.cs  Designer's ICommandContext implementation
-  Components/Shared/*.razor(.cs)       small child components: AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas)
+  Components/Shared/*.razor(.cs)       small child components: AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas),
+                                       StepOrderDialog (the step order pop-up; drives Editor.MoveStepBefore / JoinStep)
   Components/UiSvg.cs                  IconSvg / OutcomeSwatch helpers (imported with `@using static` in _Imports.razor)
   wwwroot/js/designer.js     keyboard shortcuts, wheel zoom/pan, canvas size, focus, drag data
   wwwroot/js/export.js       PNG export: draws the SVG export onto a canvas, returns the bytes (streamed to .NET)
@@ -135,7 +136,7 @@ tools/regression/                side-by-side regression suites (master vs worki
 - **Step order is data, not decoration.** Every shape except outcomes has `Node.Step` (1, 2, 3, …, no gaps; parallel
   steps share a number), whether or not `Diagram.ShowSteps` draws the badges. Change numbers only through `StepOrder`
   (`Editor.Steps`): `Normalise` / `Compact` after adding, deleting or retyping shapes, `MoveTo` / `SetParallel` /
-  `MakeParallel` for edits. The later reorder dialog drives the same methods. The badge sits at
+  `MakeParallel` for edits; the step order pop-up uses `MoveBefore` (a gap between slots) and `Join` (onto a slot). The badge sits at
   `IShapeOutline.StepBadgeCentre` (default: the link badge's spot mirrored through the centre).
 - **PDF is drawn from the SVG export**, so it has no geometry of its own. If a new visual feature uses an SVG
   element or attribute `PdfExporter` doesn't read yet (gradients, images, …), extend `PdfExporter` as well.

@@ -335,3 +335,23 @@ kbd {
 .trail .crumb { font-size: 13px; }
 .trail .crumb-sep { color: #9aa3ad; }
 .trail .crumb-here { font-weight: 600; }
+
+/* Step order dialog: sits to the right with a light backdrop so the diagram behind stays readable. */
+.modal-bg.see-through { background: rgba(20, 28, 40, .08); justify-content: flex-end; padding-right: 300px; }
+.modal.step-order { width: 420px; max-height: 84vh; }
+.step-list { margin: 10px 0 4px; }
+.step-gap { height: 8px; border-radius: 4px; margin: 1px 0; }
+.step-gap.over { height: 14px; background: var(--accent-soft); outline: 2px dashed var(--accent); }
+.step-slot { display: flex; gap: 10px; align-items: stretch; border: 1px solid #e3e7ec; border-radius: 8px; padding: 6px 8px; background: #fafbfc; }
+.step-slot.over { border-color: var(--accent); background: var(--accent-soft); }
+.step-num { min-width: 22px; height: 22px; border-radius: 11px; background: #3a4656; color: #fff; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; margin-top: 3px; }
+.step-items { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.step-item { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e3e7ec; border-radius: 6px; padding: 3px 4px 3px 6px; cursor: grab; }
+.step-item.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.step-item.dragging { opacity: .45; }
+.step-item .grip { color: #b4bcc6; font-size: 11px; letter-spacing: -2px; cursor: grab; }
+.step-item .step-name { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.step-item .step-meta { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.step-item .step-btn { padding: 2px 5px; font-size: 14px; line-height: 1; }
+.step-order label.check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: inherit; margin: 4px 0; }
+.step-order label.check input { width: auto; margin: 0; }
