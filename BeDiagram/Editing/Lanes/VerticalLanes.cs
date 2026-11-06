@@ -8,6 +8,7 @@ public class VerticalLanes : ILaneLayout
     public const string KeyName = "vertical";
 
     public string Key => KeyName;
+    public string Direction => "top → down";
     public string Name => "Lanes top → down";
 
     public (double Flow, double Cross) ToLane(double x, double y) => (y, x);

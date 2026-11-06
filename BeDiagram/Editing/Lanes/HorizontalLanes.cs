@@ -8,6 +8,7 @@ public class HorizontalLanes : ILaneLayout
     public const string KeyName = "horizontal";
 
     public string Key => KeyName;
+    public string Direction => "left → right";
     public string Name => "Lanes left → right";
 
     public (double Flow, double Cross) ToLane(double x, double y) => (x, y);

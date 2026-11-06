@@ -44,6 +44,11 @@ public partial class Designer
         ? $"{command.Name}: line the lanes up and put their shapes in columns by step number"
         : "Group the shapes of each lane first (select them, Ctrl+G)";
 
+    /// <summary>Tooltip for the auto-layout buttons.</summary>
+    string LayoutTip(IEditorCommand command) => CanRun(command)
+        ? $"{command.Name}: put every shape in columns by step number (groups move as blocks), then tidy the connectors"
+        : "Nothing to lay out yet";
+
     /// <summary>Tooltip for Tidy: what it will work on, given the selection.</summary>
     string TidyTip => !CanRun(TidyCmd) ? "No connectors yet"
         : Editor.SelectedEdge is not null ? "Tidy the selected connector: re-route it round any shape it passes through"
@@ -67,4 +72,6 @@ public partial class Designer
     IEditorCommand LanesAcrossCmd => Commands.Get<ArrangeLanesHorizontalCommand>();
     IEditorCommand LanesDownCmd => Commands.Get<ArrangeLanesVerticalCommand>();
     IEditorCommand TidyCmd => Commands.Get<TidyConnectorsCommand>();
+    IEditorCommand LayoutAcrossCmd => Commands.Get<AutoLayoutHorizontalCommand>();
+    IEditorCommand LayoutDownCmd => Commands.Get<AutoLayoutVerticalCommand>();
 }
