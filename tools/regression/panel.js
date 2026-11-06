@@ -6,12 +6,15 @@ const fs = require('fs');
 const [url, out] = process.argv.slice(2);
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1600, height: 1000 } });
+  // Toolbar controls that moved into the menu bar (File → Open / Save / Export …): open the File menu first when the
+  // control isn't on screen. Builds without a menu bar have them on the toolbar, so this does nothing there.
+  const reveal = async (sel) => { if (await p.isVisible(sel)) return; if (await p.$('.menubar')) { await p.click('.menubar button.menu-head:text-is("File")'); await p.waitForTimeout(250); } };
   const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !m.text().includes('404')) errs.push(m.text()); });
   // Opens the test diagram and adds a text box and a comment so their panels exist. Run again whenever a step
   // leaves something that undo can't put back.
   const setup = async () => {
     await p.goto(url); await p.waitForTimeout(2500);
-    await p.click('button[title="Open a saved diagram"]'); await p.waitForTimeout(400);
+    await reveal('button[title="Open a saved diagram"]'); await p.click('button[title="Open a saved diagram"]'); await p.waitForTimeout(400);
     await p.click('.files button.link:text-is("shapes")'); await p.waitForTimeout(800);
     await p.keyboard.press('f'); await p.waitForTimeout(300);
     await p.mouse.click(1250, 950); await p.waitForTimeout(150);

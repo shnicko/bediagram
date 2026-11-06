@@ -16,6 +16,12 @@ public partial class Designer
     [JSInvokable]
     public async Task OnKey(string key, bool ctrl, bool shift)
     {
+        if (openMenu is not null && key == "Escape")
+        {
+            CloseMenus();
+            StateHasChanged();
+            return;
+        }
         if (dialog != Dialog.None)
         {
             if (key == "Escape") CloseDialog();
@@ -34,6 +40,9 @@ public partial class Designer
     }
 
     bool CanRun(IEditorCommand command) => command.CanExecute(this);
+
+    /// <summary>The first shortcut of a command for a menu item, e.g. "Ctrl+S" (empty when it has none).</summary>
+    static string KeyText(IEditorCommand command) => command.Keys.Count == 0 ? "" : command.Keys[0].ToString();
 
     /// <summary>Tooltip with the first shortcut, e.g. "Undo (Ctrl+Z)".</summary>
     static string Tip(IEditorCommand command) =>
@@ -57,6 +66,9 @@ public partial class Designer
 
     // Commands wired to buttons in Designer.razor.
     IEditorCommand SaveCmd => Commands.Get<SaveCommand>();
+    IEditorCommand SelectAllCmd => Commands.Get<SelectAllCommand>();
+    IEditorCommand DuplicateCmd => Commands.Get<DuplicateCommand>();
+    IEditorCommand ResetZoomCmd => Commands.Get<ResetZoomCommand>();
     IEditorCommand SaveAsCmd => Commands.Get<SaveAsCommand>();
     IEditorCommand UndoCmd => Commands.Get<UndoCommand>();
     IEditorCommand RedoCmd => Commands.Get<RedoCommand>();

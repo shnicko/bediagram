@@ -7,6 +7,9 @@ const [url, dir, out] = process.argv.slice(2);
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 1400, height: 850 } });
+  // Toolbar controls that moved into the menu bar (File → Open / Save / Export …): open the File menu first when the
+  // control isn't on screen. Builds without a menu bar have them on the toolbar, so this does nothing there.
+  const reveal = async (sel) => { if (await p.isVisible(sel)) return; if (await p.$('.menubar')) { await p.click('.menubar button.menu-head:text-is("File")'); await p.waitForTimeout(250); } };
   const errs = [];
   p.on('console', m => { if (m.type() === 'error' && !m.text().includes('404')) errs.push(m.text()); });
   p.on('pageerror', e => errs.push(e.message));
@@ -74,10 +77,10 @@ const [url, dir, out] = process.argv.slice(2);
   // Every export, open canvas then A4 page (with a text box and a comment added)
   await p.keyboard.press('t'); await p.waitForTimeout(W); await p.keyboard.press('Escape'); await p.keyboard.press('c'); await p.waitForTimeout(W); await p.keyboard.press('Escape');
   const exportAll = async (tag) => {
-    await p.click('text=Export ▾'); await p.waitForTimeout(300);
+    await reveal('text=Export ▾'); if (await p.isVisible('text=Export ▾')) await p.click('text=Export ▾'); await p.waitForTimeout(300);
     const labels = await p.$$eval('.menu button', bs => bs.map(b => b.textContent));
     for (const l of labels) {
-      if (!(await p.$('.menu'))) { await p.click('text=Export ▾'); await p.waitForTimeout(300); }
+      if (!(await p.$('.menu'))) { await reveal('text=Export ▾'); if (await p.isVisible('text=Export ▾')) await p.click('text=Export ▾'); await p.waitForTimeout(300); }
       await p.click('.menu button:text-is("' + l + '")'); await p.waitForTimeout(1200);
     }
     for (const f of fs.readdirSync(dir)) if (f.startsWith('gest.') && !f.endsWith('.diagram.json')) fs.copyFileSync(`${dir}/${f}`, `${out}/${tag}-${f}`);

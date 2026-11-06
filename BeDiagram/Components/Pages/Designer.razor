@@ -7,12 +7,116 @@
     @* ───────────── Toolbar ───────────── *@
     <header class="toolbar">
         <div class="brand">◆ BeDiagram</div>
-        <div class="group">
-            <button @onclick="NewDiagram" title="New diagram">New</button>
-            <button @onclick="ShowOpen" title="Open a saved diagram">Open</button>
-            <button @onclick="() => Run(SaveCmd)" title="@Tip(SaveCmd)">Save</button>
-            <button @onclick="() => Run(SaveAsCmd)" title="@Tip(SaveAsCmd)">Save as…</button>
-        </div>
+        <nav class="menubar">
+            <DropMenu Title="File" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
+                <button @onclick="NewDiagram" title="New diagram">New</button>
+                <button @onclick="ShowOpen" title="Open a saved diagram">Open…</button>
+                <button @onclick="() => Run(SaveCmd)" title="@Tip(SaveCmd)">Save<span class="menu-key">@KeyText(SaveCmd)</span></button>
+                <button @onclick="() => Run(SaveAsCmd)" title="@Tip(SaveAsCmd)">Save as…<span class="menu-key">@KeyText(SaveAsCmd)</span></button>
+                <hr class="menu-divider" />
+                <div class="menu-heading">Export <span class="muted-label">next to the saved diagram</span></div>
+                @foreach (ExportMenuItem item in ExportMenuItems())
+                {
+                    if (item.StartsGroup)
+                    {
+                        <hr class="menu-divider" />
+                    }
+                    <button @onclick="() => Export(item.Choice)" title="@item.Tip">@item.Label</button>
+                }
+                <div class="menu-settings" @onclick:stopPropagation="true">
+                    <span class="muted-label">PNG settings</span>
+                    <label title="Size of the PNG in pixels">
+                        Resolution
+                        <select value="@exportOptions.PngResolution" @onchange="SetPngResolution">
+                            @for (int i = 0; i < PngResolutions.Count; i++)
+                            {
+                                <option value="@i">@PngResolutions[i].Label</option>
+                            }
+                        </select>
+                    </label>
+                    <label title="No white background — for placing over slides or coloured pages">
+                        <input type="checkbox" checked="@exportOptions.PngTransparent" @onchange="SetPngTransparent" />
+                        Transparent background
+                    </label>
+                </div>
+                <hr class="menu-divider" />
+                <div class="menu-settings" @onclick:stopPropagation="true" title="Canvas size: open canvas or a fixed paper size">
+                    <span class="muted-label">Page</span>
+                    <select class="page-select" value="@D.Page.Size" @onchange="SetPageSize">
+                        <option value="@PageSetup.None">Open canvas</option>
+                        @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
+                        {
+                            <option value="@ps.Key">@ps.Name</option>
+                        }
+                        <option value="@PageSetup.Custom">Custom…</option>
+                    </select>
+                    @if (D.Page.Enabled)
+                    {
+                        <div class="seg">
+                            <button class="@(!PageIsLandscape ? "on" : "")" title="Portrait" @onclick="SetPortrait">@IconSvg("rectangle-vertical", 16) Portrait</button>
+                            <button class="@(PageIsLandscape ? "on" : "")" title="Landscape" @onclick="SetLandscape">@IconSvg("rectangle-horizontal", 16) Landscape</button>
+                        </div>
+                    }
+                </div>
+            </DropMenu>
+            <DropMenu Title="Edit" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
+                <button disabled="@(!CanRun(UndoCmd))" @onclick="() => Run(UndoCmd)">Undo<span class="menu-key">@KeyText(UndoCmd)</span></button>
+                <button disabled="@(!CanRun(RedoCmd))" @onclick="() => Run(RedoCmd)">Redo<span class="menu-key">@KeyText(RedoCmd)</span></button>
+                <hr class="menu-divider" />
+                <button @onclick="() => Run(SelectAllCmd)">Select all<span class="menu-key">@KeyText(SelectAllCmd)</span></button>
+                <button disabled="@(!CanRun(DuplicateCmd))" @onclick="() => Run(DuplicateCmd)">Duplicate<span class="menu-key">@KeyText(DuplicateCmd)</span></button>
+                <button disabled="@(!CanRun(DeleteCmd))" @onclick="() => Run(DeleteCmd)">Delete<span class="menu-key">@KeyText(DeleteCmd)</span></button>
+                <hr class="menu-divider" />
+                <button disabled="@(!CanRun(JoinCmd))" @onclick="() => Run(JoinCmd)">Join in selection order<span class="menu-key">@KeyText(JoinCmd)</span></button>
+                <button disabled="@(!CanRun(GroupCmd))" @onclick="() => Run(GroupCmd)">Group<span class="menu-key">@KeyText(GroupCmd)</span></button>
+                <button disabled="@(!CanRun(UngroupCmd))" @onclick="() => Run(UngroupCmd)">Ungroup<span class="menu-key">@KeyText(UngroupCmd)</span></button>
+                <hr class="menu-divider" />
+                <div class="menu-settings" @onclick:stopPropagation="true">
+                    <label title="New items join to the selected item automatically"><input type="checkbox" @bind="Editor.AutoConnect" /> Auto-join new items</label>
+                    <label title="Snap to a 10px grid"><input type="checkbox" @bind="Editor.Snap" /> Snap to grid</label>
+                    <span class="muted-label">Angle lock</span>
+                    <div class="seg" title="Angle lock when moving items and placing joined steps">
+                        @foreach (IAngleLock a in AngleLocks.All)
+                        {
+                            <button class="@(Editor.AngleLock == a ? "on" : "")" title="@a.Name" @onclick="() => SetAngleLock(a)">@a.Label</button>
+                        }
+                    </div>
+                </div>
+            </DropMenu>
+            <DropMenu Title="Arrange" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
+                <button title="Put the steps in order: drag to reorder, or set steps to run in parallel" @onclick="ShowStepOrder">Step order…</button>
+                <button title="@TidyTip" disabled="@(!CanRun(TidyCmd))" @onclick="() => Run(TidyCmd)">Tidy connectors</button>
+                <hr class="menu-divider" />
+                <div class="menu-heading">Auto-layout</div>
+                <button title="@LayoutTip(LayoutAcrossCmd)" disabled="@(!CanRun(LayoutAcrossCmd))" @onclick="() => Run(LayoutAcrossCmd)">@IconSvg("arrow-right", 16) Left → right</button>
+                <button title="@LayoutTip(LayoutDownCmd)" disabled="@(!CanRun(LayoutDownCmd))" @onclick="() => Run(LayoutDownCmd)">@IconSvg("workflow", 16) Top → down</button>
+                <div class="menu-heading">Swim lanes</div>
+                <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
+                <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
+                <hr class="menu-divider" />
+                <div class="menu-settings" @onclick:stopPropagation="true" title="Line style for new connectors">
+                    <span class="muted-label">New connectors</span>
+                    <div class="seg">
+                        <button class="@(D.DefaultConnector == EdgeStyles.Elbow ? "on" : "")" title="Right-angled connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyles.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
+                        <button class="@(D.DefaultConnector == EdgeStyles.Straight ? "on" : "")" title="Straight connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyles.Straight)">@IconSvg("move-up-right", 16) Straight</button>
+                    </div>
+                </div>
+            </DropMenu>
+            <DropMenu Title="View" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
+                <div class="menu-settings" @onclick:stopPropagation="true">
+                    <label title="Show each shape's step number (the order is kept either way)"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
+                </div>
+                <hr class="menu-divider" />
+                <button @onclick="() => Run(ZoomInCmd)">Zoom in<span class="menu-key">@KeyText(ZoomInCmd)</span></button>
+                <button @onclick="() => Run(ZoomOutCmd)">Zoom out<span class="menu-key">@KeyText(ZoomOutCmd)</span></button>
+                <button @onclick="() => Run(ResetZoomCmd)">Zoom to 100%<span class="menu-key">@KeyText(ResetZoomCmd)</span></button>
+                <button @onclick="() => Run(FitCmd)">Fit to window<span class="menu-key">@KeyText(FitCmd)</span></button>
+                <button disabled="@(!CanRun(FitSelectionCmd))" @onclick="() => Run(FitSelectionCmd)">Zoom to selection<span class="menu-key">@KeyText(FitSelectionCmd)</span></button>
+            </DropMenu>
+            <DropMenu Title="Help" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
+                <button @onclick="ShowShortcuts">Keyboard shortcuts…</button>
+            </DropMenu>
+        </nav>
         @if (trail.Count > 0)
         {
             <div class="group trail" title="You opened this diagram from a link — click a name to go back up">
@@ -24,89 +128,9 @@
                 <span class="crumb-here">@D.Name</span>
             </div>
         }
-        <div class="group menu-host">
-            <button @onclick="ToggleExportMenu" title="Export next to the saved diagram">Export ▾</button>
-            @if (exportMenu)
-            {
-                <div class="menu" @onclick="CloseExportMenu">
-                    @foreach (ExportMenuItem item in ExportMenuItems())
-                    {
-                        if (item.StartsGroup)
-                        {
-                            <hr class="menu-divider" />
-                        }
-                        <button @onclick="() => Export(item.Choice)" title="@item.Tip">@item.Label</button>
-                    }
-                    <hr class="menu-divider" />
-                    <div class="menu-settings" @onclick:stopPropagation="true">
-                        <span class="muted-label">PNG settings</span>
-                        <label title="Size of the PNG in pixels">
-                            Resolution
-                            <select value="@exportOptions.PngResolution" @onchange="SetPngResolution">
-                                @for (int i = 0; i < PngResolutions.Count; i++)
-                                {
-                                    <option value="@i">@PngResolutions[i].Label</option>
-                                }
-                            </select>
-                        </label>
-                        <label title="No white background — for placing over slides or coloured pages">
-                            <input type="checkbox" checked="@exportOptions.PngTransparent" @onchange="SetPngTransparent" />
-                            Transparent background
-                        </label>
-                    </div>
-                </div>
-            }
-        </div>
         <div class="group">
             <button @onclick="() => Run(UndoCmd)" disabled="@(!CanRun(UndoCmd))" title="@Tip(UndoCmd)">↶</button>
             <button @onclick="() => Run(RedoCmd)" disabled="@(!CanRun(RedoCmd))" title="@Tip(RedoCmd)">↷</button>
-        </div>
-        <div class="group" title="Canvas size: open canvas or a fixed paper size">
-            <span class="muted-label">Page</span>
-            <select class="page-select" value="@D.Page.Size" @onchange="SetPageSize">
-                <option value="@PageSetup.None">Open canvas</option>
-                @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
-                {
-                    <option value="@ps.Key">@ps.Name</option>
-                }
-                <option value="@PageSetup.Custom">Custom…</option>
-            </select>
-            @if (D.Page.Enabled)
-            {
-                <div class="seg">
-                    <button class="@(!PageIsLandscape ? "on" : "")" title="Portrait" @onclick="SetPortrait">@IconSvg("rectangle-vertical", 16)</button>
-                    <button class="@(PageIsLandscape ? "on" : "")" title="Landscape" @onclick="SetLandscape">@IconSvg("rectangle-horizontal", 16)</button>
-                </div>
-            }
-        </div>
-        <div class="group" title="Line style for new connectors">
-            <span class="muted-label">Lines</span>
-            <div class="seg">
-                <button class="@(D.DefaultConnector == EdgeStyles.Elbow ? "on" : "")" title="Right-angled connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyles.Elbow)">@IconSvg("corner-down-right", 16)</button>
-                <button class="@(D.DefaultConnector == EdgeStyles.Straight ? "on" : "")" title="Straight connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyles.Straight)">@IconSvg("move-up-right", 16)</button>
-            </div>
-            <button class="small" title="@TidyTip" disabled="@(!CanRun(TidyCmd))" @onclick="() => Run(TidyCmd)">Tidy</button>
-        </div>
-        <div class="group">
-            <label class="toggle" title="New items join to the selected item automatically">
-                <input type="checkbox" @bind="Editor.AutoConnect" /> Auto-join
-            </label>
-            <label class="toggle" title="Snap to a 10px grid">
-                <input type="checkbox" @bind="Editor.Snap" /> Snap
-            </label>
-            <label class="toggle" title="Show each shape's step number (the order is kept either way)">
-                <input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Steps
-            </label>
-            <button class="small" title="Put the steps in order: drag to reorder, or set steps to run in parallel" @onclick="ShowStepOrder">Order…</button>
-        </div>
-        <div class="group" title="Angle lock when moving items and placing joined steps">
-            <span class="muted-label">Angle</span>
-            <div class="seg">
-                @foreach (IAngleLock a in AngleLocks.All)
-                {
-                    <button class="@(Editor.AngleLock == a ? "on" : "")" title="@a.Name" @onclick="() => SetAngleLock(a)">@a.Label</button>
-                }
-            </div>
         </div>
         <div class="group" title="Background grid (screen only, not exported)">
             <span class="muted-label">Grid</span>
@@ -128,6 +152,10 @@
             <span>@D.Name</span>@if (Editor.Dirty) {<span class="dirty" title="Unsaved changes">●</span>}
         </div>
     </header>
+    @if (openMenu is not null)
+    {
+        <div class="menu-backdrop" @onclick="CloseMenus"></div>
+    }
 
     @* ───────────── Palette ───────────── *@
     <aside class="palette">
@@ -1032,24 +1060,6 @@
                     <button @onclick="() => Run(FitCmd)">Show whole page</button>
                 </div>
             }
-            <h4>Shortcuts</h4>
-            <table class="keys">
-                <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Add shape (joined to selection when Auto-join is on)</td></tr>
-                <tr><td><kbd>T</kbd></td><td>Add text box (joined to selection when Auto-join is on)</td></tr>
-                <tr><td><kbd>C</kbd></td><td>Add comment (pinned to selection)</td></tr>
-                <tr><td><kbd>Ctrl</kbd>+<kbd>G</kbd></td><td>Group selection (<kbd>Shift</kbd> to ungroup)</td></tr>
-                <tr><td><kbd>J</kbd></td><td>Join selected items in order</td></tr>
-                <tr><td>Drag a ● port</td><td>Connect · drop on empty space for a new step</td></tr>
-                <tr><td>Shift+click / drag box</td><td>Multi-select (drag inside a group selects its items)</td></tr>
-                <tr><td>Double-click / <kbd>Enter</kbd></td><td>Edit text (also on connectors to label them)</td></tr>
-                <tr><td><kbd>L</kbd></td><td>Toggle selected connector elbow / straight</td></tr>
-                <tr><td><kbd>Del</kbd></td><td>Delete selection</td></tr>
-                <tr><td>Arrows</td><td>Nudge (Shift = 1px)</td></tr>
-                <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></td><td>Undo / redo</td></tr>
-                <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd> / <kbd>A</kbd></td><td>Duplicate / select all</td></tr>
-                <tr><td>Wheel · right-drag</td><td>Pan</td></tr>
-                <tr><td><kbd>Ctrl</kbd>+wheel · <kbd>F</kbd> · <kbd>Shift</kbd>+<kbd>F</kbd></td><td>Zoom · fit · zoom to selection</td></tr>
-            </table>
         }
     </aside>
 
@@ -1138,6 +1148,10 @@ else if (dialog == Dialog.ConfirmLeave && pendingNav is { } nav)
             </div>
         </div>
     </div>
+}
+else if (dialog == Dialog.Shortcuts)
+{
+    <ShortcutsDialog Commands="Commands" OnClose="CloseDialog" />
 }
 else if (dialog == Dialog.StepOrder)
 {

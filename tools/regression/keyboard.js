@@ -7,6 +7,9 @@ const [url, out] = process.argv.slice(2);
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 1400, height: 850 } });
+  // Toolbar controls that moved into the menu bar (File → Open / Save / Export …): open the File menu first when the
+  // control isn't on screen. Builds without a menu bar have them on the toolbar, so this does nothing there.
+  const reveal = async (sel) => { if (await p.isVisible(sel)) return; if (await p.$('.menubar')) { await p.click('.menubar button.menu-head:text-is("File")'); await p.waitForTimeout(250); } };
   const errs = [];
   p.on('console', m => { if (m.type() === 'error' && !m.text().includes('404')) errs.push(m.text()); });
   p.on('pageerror', e => errs.push(e.message));
@@ -75,8 +78,8 @@ const [url, out] = process.argv.slice(2);
   // Dialogs: Ctrl+S on an unsaved diagram opens Save as; Escape closes; Ctrl+Shift+S; save for real
   await key('Control+s'); await key('j', 'j while dialog open'); await key('Escape'); await key('Escape', 'Escape 2');
   await key('Control+Shift+s'); await key('Escape'); await key('Escape', 'Escape 2');
-  await click('button[title^="Save as"]', 'Save as button'); await key('Escape'); await key('Escape', 'Escape 2');
-  await click('button[title^="Save ("]', 'Save button');
+  await reveal('button[title^="Save as"]'); await click('button[title^="Save as"]', 'Save as button'); await key('Escape'); await key('Escape', 'Escape 2');
+  await reveal('button[title^="Save ("]'); await click('button[title^="Save ("]', 'Save button');
   await p.fill('#saveas-name', 'keys'); await p.keyboard.press('Enter'); await p.waitForTimeout(500); await state('saved');
   await key('Control+s', 'Ctrl+S saved');
   fs.writeFileSync(out, JSON.stringify(log, null, 1));

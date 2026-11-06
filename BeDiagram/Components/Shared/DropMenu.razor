@@ -1,0 +1,9 @@
+<div class="menu-host">
+    <button class="@HeadClass" aria-expanded="@Open" @onclick="Toggle">@Title</button>
+    @if (Open)
+    {
+        <div class="menu" @onclick="Close">
+            @ChildContent
+        </div>
+    }
+</div>
