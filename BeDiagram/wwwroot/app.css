@@ -401,3 +401,4 @@ kbd {
 .menu-backdrop { position: fixed; inset: 0; z-index: 15; }
 .modal.shortcuts { max-width: 520px; max-height: 85vh; overflow-y: auto; }
 .modal.shortcuts .keys td:first-child { white-space: nowrap; padding-right: 14px; }
+h4.bulk { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line); }

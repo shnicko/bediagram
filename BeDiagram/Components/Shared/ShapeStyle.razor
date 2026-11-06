@@ -1,0 +1,17 @@
+<label>Colour</label>
+<div class="swatches">
+    <button class="swatch default @On(n => n.Color is null)" title="Type default" @onclick="() => Editor.Restyle(Nodes, n => n.Color = null)">∅</button>
+    @foreach ((string k, Swatch swc) in Palette.All)
+    {
+        <button class="swatch @On(n => n.Color == k)" style="background:@(AllFilled ? swc.Solid : swc.Light);border-color:@swc.Stroke" title="@k"
+                @onclick="() => Editor.Restyle(Nodes, n => n.Color = k)"></button>
+    }
+</div>
+<label class="check" title="@FillTitle"><input type="checkbox" checked="@FillChecked" disabled="@FillForced" @onchange="e => Editor.Restyle(Nodes, n => n.Filled = e.Value is true)" /> Solid fill (presentation style)</label>
+<label>Emphasis</label>
+<div class="seg wide">
+    @foreach (IEmphasis em in Emphases.All)
+    {
+        <button class="@On(n => Emphases.Of(n) == em)" title="@em.Hint" @onclick="() => Editor.SetEmphasis(Nodes, em.Key)">@em.Name</button>
+    }
+</div>

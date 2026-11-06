@@ -25,4 +25,17 @@ public static class UiSvg
         return new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"-1 -1 26 26\"><path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\"/>"
                  + $"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g></svg>");
     }
+
+    /// <summary>A short sample of a line (weight, pattern, arrowheads) for the style buttons in the panels.</summary>
+    public static MarkupString LinePreview(string weight, string pattern, string arrows)
+    {
+        double w = LineLook.Width(weight);
+        string? dash = LineLook.Dash(pattern, w);
+        int x1 = arrows == LineLook.ArrowBoth ? 7 : 2;
+        int x2 = arrows == LineLook.ArrowNone ? 38 : 33;
+        string head = "";
+        if (arrows != LineLook.ArrowNone) head += "<path d=\"M32,2 L40,6 L32,10 z\" fill=\"currentColor\"/>";
+        if (arrows == LineLook.ArrowBoth) head += "<path d=\"M8,2 L0,6 L8,10 z\" fill=\"currentColor\"/>";
+        return new($"<svg width=\"40\" height=\"12\" viewBox=\"0 0 40 12\"><line x1=\"{x1}\" y1=\"6\" x2=\"{x2}\" y2=\"6\" stroke=\"currentColor\" stroke-width=\"{F(w)}\"{(dash is null ? "" : $" stroke-dasharray=\"{dash}\"")} stroke-linecap=\"{LineLook.Cap(pattern)}\"/>{head}</svg>");
+    }
 }

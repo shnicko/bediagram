@@ -606,23 +606,7 @@
                 <div><label>Width</label><input type="number" step="10" @bind="sn.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
                 <div><label>Height</label><input type="number" step="10" @bind="sn.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
             </div>
-            <label>Colour</label>
-            <div class="swatches">
-                <button class="swatch default @(sn.Color is null ? "on" : "")" title="Type default" @onclick="() => Editor.SetNodeColour(sn, null)">∅</button>
-                @foreach ((string k, Swatch swc) in Palette.All)
-                {
-                    <button class="swatch @(sn.Color == k ? "on" : "")" style="background:@(sn.Filled ? swc.Solid : swc.Light);border-color:@swc.Stroke" title="@k"
-                            @onclick="() => Editor.SetNodeColour(sn, k)"></button>
-                }
-            </div>
-            <label class="check" title="@(SolidFillForced(sn) ? "Major steps always have a solid fill" : "")"><input type="checkbox" checked="@(sn.Filled || SolidFillForced(sn))" disabled="@SolidFillForced(sn)" @onchange="e => Editor.SetFilled(sn, e.Value is true)" /> Solid fill (presentation style)</label>
-            <label>Emphasis</label>
-            <div class="seg wide">
-                @foreach (IEmphasis em in Emphases.All)
-                {
-                    <button class="@(Emphases.Of(sn) == em ? "on" : "")" title="@em.Hint" @onclick="() => Editor.SetEmphasis(sn, em.Key)">@em.Name</button>
-                }
-            </div>
+            <ShapeStyle Editor="Editor" Nodes="[sn]" />
 
             @if (sn.Type == NodeTypes.Outcome)
             {
@@ -704,86 +688,7 @@
                 <div class="chips"><button class="chip" @onclick="() => Editor.ResetCommentStyle(st)">Reset to comment style</button></div>
             }
 
-            <h4>Text</h4>
-            <div class="seg wide three">
-                @foreach ((string k, string name) in TextLook.Fonts)
-                {
-                    <button class="@(st.Font == k ? "on" : "")" style="font-family:@TextLook.Family(k)" @onclick="() => Editor.SetTextLook(st, x => x.Font = k)">@name</button>
-                }
-            </div>
-            <div class="row">
-                <div>
-                    <label>Size</label>
-                    <select value="@F(st.FontSize)" @onchange="e => Editor.SetFontSize(st, e.Value)">
-                        @foreach (double sz in FontSizeChoices(st))
-                        {
-                            <option value="@F(sz)">@F(sz)</option>
-                        }
-                    </select>
-                </div>
-                <div>
-                    <label>&nbsp;</label>
-                    <label class="check"><input type="checkbox" checked="@st.Bold" @onchange="e => Editor.SetTextLook(st, x => x.Bold = e.Value is true)" /> Bold</label>
-                </div>
-            </div>
-            <label>Alignment</label>
-            <div class="seg wide three">
-                @foreach ((string k, string name) in HAligns)
-                {
-                    <button class="@(st.Align == k ? "on" : "")" @onclick="() => Editor.SetTextLook(st, x => x.Align = k)">@name</button>
-                }
-            </div>
-            <div class="seg wide three" style="margin-top:6px">
-                @foreach ((string k, string name) in VAligns)
-                {
-                    <button class="@(st.VAlign == k ? "on" : "")" @onclick="() => Editor.SetTextLook(st, x => x.VAlign = k)">@name</button>
-                }
-            </div>
-            <label>Text colour</label>
-            <div class="swatches">
-                <button class="swatch line @(st.TextColor is null ? "on" : "")" title="Default" @onclick="() => Editor.SetTextLook(st, x => x.TextColor = null)"><span style="background:@TextStyle.DefaultText"></span></button>
-                @foreach (string k in TextPalette.Strokes)
-                {
-                    <button class="swatch line @(st.TextColor == k ? "on" : "")" title="@k" @onclick="() => Editor.SetTextLook(st, x => x.TextColor = k)"><span style="background:@TextPalette.StrokeOf(k, TextStyle.DefaultText)"></span></button>
-                }
-            </div>
-
-            <h4>Box</h4>
-            <label>Background</label>
-            <div class="swatches">
-                <button class="swatch default @(st.Fill is null ? "on" : "")" title="None (transparent)" @onclick="() => Editor.SetTextLook(st, x => x.Fill = null)">∅</button>
-                @foreach (string k in TextPalette.Fills)
-                {
-                    <button class="swatch @(st.Fill == k ? "on" : "")" style="background:@TextPalette.All[k].Fill;border-color:@TextPalette.All[k].Stroke" title="@k" @onclick="() => Editor.SetTextLook(st, x => x.Fill = k)"></button>
-                }
-            </div>
-            <label>Border</label>
-            <div class="seg wide patterns">
-                <button class="@(st.Border == TextLook.NoBorder ? "on" : "")" title="No border" @onclick="() => Editor.SetTextLook(st, x => x.Border = TextLook.NoBorder)">None</button>
-                @foreach ((string k, string name) in LineLook.Patterns)
-                {
-                    <button class="@(st.Border == k ? "on" : "")" title="@name" @onclick="() => Editor.SetTextLook(st, x => x.Border = k)">@LinePreview(st.BorderWeight, k, LineLook.ArrowNone)</button>
-                }
-            </div>
-            @if (st.Border != TextLook.NoBorder)
-            {
-                <label>Border weight</label>
-                <div class="seg wide stacked">
-                    @foreach ((string k, string name) in LineLook.Weights)
-                    {
-                        <button class="@(st.BorderWeight == k ? "on" : "")" title="@name" @onclick="() => Editor.SetTextLook(st, x => x.BorderWeight = k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
-                    }
-                </div>
-                <label>Border colour</label>
-                <div class="swatches">
-                    <button class="swatch line @(st.BorderColor is null ? "on" : "")" title="Default grey" @onclick="() => Editor.SetTextLook(st, x => x.BorderColor = null)"><span style="background:@TextStyle.DefaultBorder"></span></button>
-                    @foreach (string k in TextPalette.Strokes)
-                    {
-                        <button class="swatch line @(st.BorderColor == k ? "on" : "")" title="@k" @onclick="() => Editor.SetTextLook(st, x => x.BorderColor = k)"><span style="background:@TextPalette.StrokeOf(k, TextStyle.DefaultBorder)"></span></button>
-                    }
-                </div>
-            }
-            <label class="check"><input type="checkbox" checked="@st.Rounded" @onchange="e => Editor.SetTextLook(st, x => x.Rounded = e.Value is true)" /> Rounded corners</label>
+            <TextBoxStyle Editor="Editor" Boxes="[st]" />
             <div class="row">
                 <div><label>Width</label><input type="number" step="10" @bind="st.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
                 <div><label>Height</label><input type="number" step="10" @bind="st.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
@@ -896,42 +801,7 @@
             <h3>Group</h3>
             <label>Title</label>
             <input @bind="sg.Title" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" />
-            <label>Colour</label>
-            <div class="swatches">
-                @foreach ((string k, Swatch swc) in Palette.All)
-                {
-                    <button class="swatch @(sg.Color == k ? "on" : "")" style="background:@swc.Light;border-color:@swc.Stroke" title="@k"
-                            @onclick="() => Editor.SetGroupColour(sg, k)"></button>
-                }
-            </div>
-            <label class="check"><input type="checkbox" checked="@sg.Filled" @onchange="e => Editor.SetGroupFilled(sg, e.Value is true)" /> Tinted background</label>
-            <label>Border</label>
-            <div class="seg wide patterns">
-                @foreach ((string k, string name) in LineLook.Patterns)
-                {
-                    <button class="@(sg.Border == k ? "on" : "")" title="@name" @onclick="() => Editor.SetGroupBorder(sg, k)">@LinePreview(sg.BorderWeight, k, LineLook.ArrowNone)</button>
-                }
-            </div>
-            <label>Border weight</label>
-            <div class="seg wide stacked">
-                @foreach ((string k, string name) in LineLook.Weights)
-                {
-                    <button class="@(sg.BorderWeight == k ? "on" : "")" title="@name" @onclick="() => Editor.SetGroupBorderWeight(sg, k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
-                }
-            </div>
-            <label>Title position and style</label>
-            <div class="seg wide">
-                @foreach ((string k, string name) in GroupLook.Positions)
-                {
-                    <button class="@(sg.HeaderPos == k ? "on" : "")" @onclick="() => Editor.SetGroupTitleLook(sg, k, null)">@name</button>
-                }
-            </div>
-            <div class="seg wide" style="margin-top:6px">
-                @foreach ((string k, string name) in GroupLook.Styles)
-                {
-                    <button class="@(sg.HeaderStyle == k ? "on" : "")" title="@GroupStyleTip(k)" @onclick="() => Editor.SetGroupTitleLook(sg, null, k)">@name</button>
-                }
-            </div>
+            <GroupStyle Editor="Editor" Groups="[sg]" />
             <p class="muted">@MemberCount(sg) item@(MemberCount(sg) == 1 ? "" : "s") inside <InfoTip>Drag items in or out of the box to change what's in the group.</InfoTip></p>
             @if (Editor.FindGroup(sg.GroupId) is { } pg)
             {
@@ -988,6 +858,22 @@
                 <button @onclick="() => Run(GroupCmd)">Group (Ctrl+G)</button>
                 <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
             </div>
+            @if (SelectedNodes.Count > 0)
+            {
+                <h4 class="bulk">Shapes · @SelectedNodes.Count <InfoTip>Changes here apply to every selected shape at once (one undo step). A setting shows as on when all of them have it.</InfoTip></h4>
+                <ShapeStyle Editor="Editor" Nodes="SelectedNodes" />
+                <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@SelectedNodes.All(n => n.ClearTextBack)" @onchange="e => Editor.Restyle(SelectedNodes, n => n.ClearTextBack = e.Value is true)" /> Transparent text background</label>
+            }
+            @if (SelectedTextBoxes.Count > 0)
+            {
+                <h4 class="bulk">Text boxes · @SelectedTextBoxes.Count</h4>
+                <TextBoxStyle Editor="Editor" Boxes="SelectedTextBoxes" />
+            }
+            @if (SelectedGroups.Count > 0)
+            {
+                <h4 class="bulk">Groups · @SelectedGroups.Count</h4>
+                <GroupStyle Editor="Editor" Groups="SelectedGroups" />
+            }
             @if (SelectedLaneCount >= 2)
             {
                 <label>Swim lanes <InfoTip>Arranges the @SelectedLaneCount selected groups as lanes: edge to edge, with their shapes in columns by step number.</InfoTip></label>

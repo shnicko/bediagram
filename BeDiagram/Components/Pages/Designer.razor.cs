@@ -59,6 +59,10 @@ public partial class Designer
     string iconFilter = "";
     /// <summary>Saved diagrams listed in the Open dialog (read when it opens).</summary>
     IReadOnlyList<(string Name, DateTime Modified)> openFiles = Array.Empty<(string Name, DateTime Modified)>();
+    List<Node> SelectedNodes => D.Nodes.Where(n => Editor.Selection.Contains(n.Id)).ToList();
+    List<TextBox> SelectedTextBoxes => D.TextBoxes.Where(t => Editor.Selection.Contains(t.Id)).ToList();
+    List<Group> SelectedGroups => D.Groups.Where(g => Editor.Selection.Contains(g.Id)).ToList();
+
     /// <summary>The menu bar heading whose drop-down is open ("File", "Edit", …), or null.</summary>
     string? openMenu;
     readonly ExportOptions exportOptions = new();
@@ -269,25 +273,9 @@ public partial class Designer
     // ───────────── Panel helpers ─────────────
 
     /// <summary>Small inline sample of a line look for the panel buttons.</summary>
-    static MarkupString LinePreview(string weight, string pattern, string arrows)
-    {
-        double w = LineLook.Width(weight);
-        string? dash = LineLook.Dash(pattern, w);
-        int x1 = arrows == LineLook.ArrowBoth ? 7 : 2;
-        int x2 = arrows == LineLook.ArrowNone ? 38 : 33;
-        string head = "";
-        if (arrows != LineLook.ArrowNone) head += "<path d=\"M32,2 L40,6 L32,10 z\" fill=\"currentColor\"/>";
-        if (arrows == LineLook.ArrowBoth) head += "<path d=\"M8,2 L0,6 L8,10 z\" fill=\"currentColor\"/>";
-        return new($"<svg width=\"40\" height=\"12\" viewBox=\"0 0 40 12\"><line x1=\"{x1}\" y1=\"6\" x2=\"{x2}\" y2=\"6\" stroke=\"currentColor\" stroke-width=\"{F(w)}\"{(dash is null ? "" : $" stroke-dasharray=\"{dash}\"")} stroke-linecap=\"{LineLook.Cap(pattern)}\"/>{head}</svg>");
-    }
-
     static string LabelPlaceHint(Edge e) => e.LabelOrient == LabelOrients.Along
         ? "Inline sits on the line; above and below set the text beside it, as the text reads."
         : "Inline sits on the line; above and below set the text beside it. On up-down lines above = left, below = right.";
-
-    static string GroupStyleTip(string style) => style == GroupLook.Band
-        ? "Title on a tinted strip inside the group"
-        : "Plain bold title — inside at the top, or centred under the box when the title is at the bottom";
 
     // ───────────── Page (paper size) ─────────────
 
@@ -626,8 +614,6 @@ public partial class Designer
     // ───────────── Render helpers (read by Designer.razor) ─────────────
     // The markup only loops and reads values; anything that needs working out lives here.
 
-    static readonly (string Key, string Name)[] HAligns = { (TextLook.Left, "Left"), (TextLook.Center, "Centre"), (TextLook.Right, "Right") };
-    static readonly (string Key, string Name)[] VAligns = { (TextLook.Top, "Top"), (TextLook.Middle, "Middle"), (TextLook.Bottom, "Bottom") };
     static readonly string[] EdgeLabelChips = { "Yes", "No", "Pass", "Fail", "" };
 
     /// <summary>Palette shapes (outcomes have their own section), numbered for the 1–9 shortcut keys.</summary>
@@ -668,7 +654,6 @@ public partial class Designer
     static MarkupString? HaloMarkup(NodeView v) => Geometry.HaloSvg(v.N, v.Style.Stroke) is { } h ? (MarkupString)h : null;
 
     /// <summary>Major steps are always solid, so the panel's Solid fill box is ticked and greyed out.</summary>
-    static bool SolidFillForced(Node n) => Emphases.Of(n).ForcesSolidFill;
 
     /// <summary>The step-number badge on a shape (same markup as the export).</summary>
     static MarkupString StepBadgeMarkup(NodeView v, int step) => (MarkupString)Geometry.StepBadgeSvg(v.N, step, v.Style.Stroke);
@@ -693,7 +678,6 @@ public partial class Designer
     static string NodePanelTitle(Node n) =>
         n.Type == NodeTypes.Outcome ? $"Outcome · {Outcomes.Get(n.Outcome).Display}" : NodeTypes.Get(n.Type).Display;
 
-    static IEnumerable<double> FontSizeChoices(TextBox t) => TextLook.Sizes.Append(t.FontSize).Distinct().OrderBy(v => v);
 
     string DiagramSummary =>
         $"{D.Nodes.Count} shapes · {D.Edges.Count} connectors · {D.TextBoxes.Count(t => !t.IsComment)} text boxes · " +
