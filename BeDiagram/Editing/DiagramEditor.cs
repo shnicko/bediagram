@@ -973,10 +973,10 @@ public class DiagramEditor
         if (edges.Count == 0) { view.ShowToast("No connectors to tidy"); return; }
         TidyPlan plan = new ConnectorTidier(Diagram, id => FindBox(id)).Plan(edges);
         if (plan.Routes.Count > 0) { Change(); ConnectorTidier.Apply(plan); }
-        int crossing = plan.Crossing, cleared = plan.Cleared;
-        if (crossing == 0) view.ShowToast($"Nothing to tidy — {scope} already miss every shape");
-        else if (cleared == crossing) view.ShowToast($"Tidied {cleared} connector{(cleared == 1 ? "" : "s")} so they go round shapes");
-        else view.ShowToast($"Tidied {plan.Routes.Count} of {crossing} connectors that crossed a shape; {crossing - cleared} still touch one — no clear route (move a shape to make room)");
+        int stuck = plan.Crossing - plan.Cleared;
+        if (plan.Routes.Count == 0 && stuck == 0) view.ShowToast($"Nothing to tidy — {scope} already miss every shape");
+        else if (stuck == 0) view.ShowToast($"Tidied {plan.Routes.Count} connector{(plan.Routes.Count == 1 ? "" : "s")}");
+        else view.ShowToast($"Tidied {plan.Routes.Count} connector{(plan.Routes.Count == 1 ? "" : "s")}; {stuck} still touch a shape — no clear route (move a shape to make room)");
     }
 
     // ───────────── Swim lanes ─────────────

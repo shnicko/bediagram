@@ -146,7 +146,8 @@ tools/regression/                side-by-side regression suites (master vs worki
 - **Tidy connectors is on request, never automatic** (Nick's call, 2026-11-06: auto re-routing would get frustrating).
   `ConnectorTidier` only picks values for the existing route fields (`FromSide` / `ToSide` / `Bend`) by trying candidates
   through `Geometry.Route` and scoring them, so the renderers and file format don't change. It plans first and the
-  editor calls `Change()` only when a route changes. Elbow connectors that cross a shape or text box only.
+  editor calls `Change()` only when a route changes, and keeps a new route only when it scores better. Elbow connectors
+  only; obstacles are shapes, text boxes and the text under shapes (`Geometry.OutsideTextBox`).
 - **Step order is data, not decoration.** Every shape except outcomes has `Node.Step` (1, 2, 3, …, no gaps; parallel
   steps share a number), whether or not `Diagram.ShowSteps` draws the badges. Change numbers only through `StepOrder`
   (`Editor.Steps`): `Normalise` / `Compact` after adding, deleting or retyping shapes, `MoveTo` / `SetParallel` /
