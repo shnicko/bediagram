@@ -929,6 +929,28 @@ public class DiagramEditor
         view.ShowToast($"Steps {start}–{start + nodes.Count - 1} in turn");
     }
 
+    // ───────────── Auto-layout ─────────────
+
+    /// <summary>True when there's anything to lay out.</summary>
+    public bool HasShapes => Diagram.Nodes.Count > 0 || Diagram.TextBoxes.Count > 0;
+
+    /// <summary>
+    /// Auto-layout: lays the whole diagram out by step number in one direction (shapes and notes in no group, and whole
+    /// top-level groups as blocks — see <see cref="LaneArranger.ArrangeAll"/>), then tidies any connector still passing
+    /// through a shape (<see cref="ConnectorTidier"/>). One undo step.
+    /// </summary>
+    public void AutoLayout(ILaneLayout layout)
+    {
+        if (!HasShapes) { view.ShowToast("Nothing to lay out yet"); return; }
+        Change();
+        int placed = new LaneArranger(Diagram, layout).ArrangeAll();
+        TidyPlan plan = new ConnectorTidier(Diagram, id => FindBox(id)).Plan(Diagram.Edges);
+        ConnectorTidier.Apply(plan);
+        string tidied = plan.Routes.Count == 0 ? "" : $", {plan.Routes.Count} connector{(plan.Routes.Count == 1 ? "" : "s")} tidied";
+        string stuck = plan.Crossing > plan.Cleared ? $" ({plan.Crossing - plan.Cleared} still touch a shape)" : "";
+        view.ShowToast($"Laid out {placed} item{(placed == 1 ? "" : "s")} {layout.Direction} by step{tidied}{stuck}");
+    }
+
     // ───────────── Tidy connectors ─────────────
 
     /// <summary>

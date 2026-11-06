@@ -3,7 +3,8 @@ using BeDiagram.Models;
 namespace BeDiagram.Editing.Lanes;
 
 /// <summary>
-/// Arranges groups as swim lanes, once (a one-off command, like Align). Each lane is a group; what sits directly in it
+/// Arranges groups as swim lanes (<see cref="Arrange"/>), or the whole diagram as one lane with no box (auto-layout,
+/// <see cref="ArrangeAll"/>), once (a one-off command, like Align). Each lane is a group; what sits directly in it
 /// (shapes, text boxes, inner groups) is laid out by step number, so step N lands in the same column in every lane:
 /// <list type="number">
 /// <item><b>Slots.</b> A shape takes its own step. An inner group moves as one block and takes the earliest step inside
@@ -55,20 +56,53 @@ public class LaneArranger
         public required double Now { get; init; }
     }
 
-    /// <summary>Arranges <paramref name="lanes"/> (top-level groups). Returns the number of items placed by step.</summary>
+    /// <summary>A lane to lay out: its box (null for auto-layout, which has no box), what sits in it, and the room
+    /// its title takes.</summary>
+    sealed class Lane
+    {
+        public required Group? Box { get; init; }
+        public required List<IGroupable> Items { get; init; }
+        public required (double FlowStart, double FlowEnd, double CrossStart, double CrossEnd) Insets { get; init; }
+    }
+
+    /// <summary>Arranges <paramref name="lanes"/> (top-level groups) as swim lanes. Returns the number of items placed.</summary>
     public int Arrange(List<Group> lanes)
     {
         if (lanes.Count == 0) return 0;
         lanes = InCurrentOrder(lanes);
+        List<Lane> list = lanes.Select(g => new Lane { Box = g, Items = tree.Children(g).ToList(), Insets = layout.Insets(g) }).ToList();
+        (double flow0, double cross0) = layout.ToLane(lanes[0].X, lanes[0].Y);
+        return Place(list, flow0, cross0);
+    }
 
+    /// <summary>
+    /// Auto-layout: everything at the top level (shapes and text boxes in no group, and whole top-level groups as
+    /// blocks) laid out by step as one lane with no box, starting at the drawing's current top-left corner.
+    /// Returns the number of items placed.
+    /// </summary>
+    public int ArrangeAll()
+    {
+        List<IGroupable> items = new List<IGroupable>();
+        items.AddRange(d.Nodes.Where(n => tree.Parent(n) is null));
+        items.AddRange(d.TextBoxes.Where(t => tree.Parent(t) is null));
+        items.AddRange(d.Groups.Where(g => tree.Parent(g) is null));
+        if (items.Count == 0) return 0;
+        (double flow0, double cross0) = layout.ToLane(items.Min(b => b.X), items.Min(b => b.Y));
+        Lane all = new Lane { Box = null, Items = items, Insets = (0, 0, 0, 0) };
+        return Place(new List<Lane> { all }, flow0, cross0);
+    }
+
+    /// <summary>The layout itself, shared by swim lanes and auto-layout (see the class summary for the rules).</summary>
+    int Place(List<Lane> lanes, double flow0, double cross0)
+    {
         // 1. Slots for what sits directly in each lane.
-        Dictionary<Group, List<Placed>> placed = new Dictionary<Group, List<Placed>>();
-        Dictionary<Group, List<IGroupable>> loose = new Dictionary<Group, List<IGroupable>>();
-        foreach (Group lane in lanes)
+        Dictionary<Lane, List<Placed>> placed = new Dictionary<Lane, List<Placed>>();
+        Dictionary<Lane, List<IGroupable>> loose = new Dictionary<Lane, List<IGroupable>>();
+        foreach (Lane lane in lanes)
         {
             placed[lane] = new List<Placed>();
             loose[lane] = new List<IGroupable>();
-            foreach (IGroupable item in tree.Children(lane).ToList())
+            foreach (IGroupable item in lane.Items)
             {
                 if (SlotOf(item) is { } at) placed[lane].Add(Measure(item, at.Slot, at.Anchor));
                 else loose[lane].Add(item);
@@ -77,7 +111,7 @@ public class LaneArranger
 
         // Items with no step to ride with (an unconnected note) get a column of their own after the last step.
         int endSlot = placed.Values.SelectMany(p => p).Select(p => p.Slot).DefaultIfEmpty(0).Max() + 1;
-        foreach (Group lane in lanes)
+        foreach (Lane lane in lanes)
             foreach (IGroupable item in loose[lane]) placed[lane].Add(Measure(item, endSlot, null));
 
         // 2. Columns: every step used in any lane. Shape centres line up on the column's centre line (so connectors run
@@ -92,26 +126,28 @@ public class LaneArranger
         double contentFlow = slots.Count > 0 ? run - ColumnGap : 0;
 
         // 3. Lanes: shared start and length along the flow; depth from the tallest stack.
-        (double flow0, double cross0) = layout.ToLane(lanes[0].X, lanes[0].Y);
-        double maxFlowStart = lanes.Max(g => layout.Insets(g).FlowStart);
-        double maxFlowEnd = lanes.Max(g => layout.Insets(g).FlowEnd);
+        double maxFlowStart = lanes.Max(l => l.Insets.FlowStart);
+        double maxFlowEnd = lanes.Max(l => l.Insets.FlowEnd);
         double laneLength = maxFlowStart + contentFlow + maxFlowEnd;
         double contentFlowStart = flow0 + maxFlowStart;
 
         HashSet<string> moved = new HashSet<string>();
         double crossAt = cross0;
-        foreach (Group lane in lanes)
+        foreach (Lane lane in lanes)
         {
-            (double flowStart, double flowEnd, double crossStart, double crossEnd) = layout.Insets(lane);
+            (double flowStart, double flowEnd, double crossStart, double crossEnd) = lane.Insets;
             Dictionary<int, List<Placed>> stacks = placed[lane].GroupBy(p => p.Slot).ToDictionary(g => g.Key, g => StackOrder(g.ToList()));
             double depth = stacks.Count == 0 ? EmptyLaneDepth
                 : stacks.Values.Max(st => st.Sum(p => p.Cross) + StackGap * (st.Count - 1));
 
-            // The lane box.
-            (double newX, double newY) = layout.FromLane(flow0, crossAt);
-            (double w, double h) = layout.FromLane(laneLength, crossStart + depth + crossEnd);
-            lane.X = newX; lane.Y = newY; lane.W = w; lane.H = h;
-            moved.Add(lane.Id);
+            // The lane box (auto-layout has none).
+            if (lane.Box is Group box)
+            {
+                (double newX, double newY) = layout.FromLane(flow0, crossAt);
+                (double w, double h) = layout.FromLane(laneLength, crossStart + depth + crossEnd);
+                box.X = newX; box.Y = newY; box.W = w; box.H = h;
+                moved.Add(box.Id);
+            }
 
             double contentCross = crossAt + crossStart;
             foreach ((int slot, List<Placed> stack) in stacks)

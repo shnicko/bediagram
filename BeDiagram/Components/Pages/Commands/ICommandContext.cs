@@ -34,6 +34,11 @@ public interface ICommandContext
     void Nudge(double dx, double dy);
     void ToggleSelectedConnectorStyle();
 
+    /// <summary>The diagram has shapes or text boxes to lay out.</summary>
+    bool HasShapes { get; }
+    /// <summary>Lays the whole diagram out by step in one direction, then tidies the connectors.</summary>
+    void AutoLayout(ILaneLayout layout);
+
     /// <summary>The diagram has at least one connector.</summary>
     bool HasConnectors { get; }
     /// <summary>Re-routes connectors that pass through shapes (selected connector, those on the selection, or all).</summary>

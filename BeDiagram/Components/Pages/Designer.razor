@@ -992,6 +992,13 @@
                 <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
             </div>
 
+            <h4>Auto-layout</h4>
+            <p class="muted">Lays out the whole diagram by step number — step 1, then 2, then 3, with parallel steps side by side — then tidies the connectors. Shapes inside a group stay put and the group moves as one block (use <em>Swim lanes</em> to lay out inside groups). Undo puts everything back.</p>
+            <div class="seg wide">
+                <button title="@LayoutTip(LayoutAcrossCmd)" disabled="@(!CanRun(LayoutAcrossCmd))" @onclick="() => Run(LayoutAcrossCmd)">@IconSvg("arrow-right", 16) Left → right</button>
+                <button title="@LayoutTip(LayoutDownCmd)" disabled="@(!CanRun(LayoutDownCmd))" @onclick="() => Run(LayoutDownCmd)">@IconSvg("workflow", 16) Top → down</button>
+            </div>
+
             <h4>Page</h4>
             <select value="@D.Page.Size" @onchange="SetPageSize">
                 <option value="@PageSetup.None">Open canvas (no fixed size)</option>
