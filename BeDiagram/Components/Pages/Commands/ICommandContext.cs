@@ -1,3 +1,4 @@
+using BeDiagram.Editing.Lanes;
 using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Components.Pages.Commands;
@@ -32,6 +33,11 @@ public interface ICommandContext
     void JoinSelected();
     void Nudge(double dx, double dy);
     void ToggleSelectedConnectorStyle();
+
+    /// <summary>There is at least one top-level group to arrange as a swim lane.</summary>
+    bool HasLanes { get; }
+    /// <summary>Arranges the top-level groups (or the selected ones) as swim lanes.</summary>
+    void ArrangeLanes(ILaneLayout layout);
 
     /// <summary>Adds a shape of <paramref name="type"/> (see <see cref="NodeTypes"/>) below the selection.</summary>
     void AddShape(string type);

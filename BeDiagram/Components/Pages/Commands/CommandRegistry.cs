@@ -28,7 +28,7 @@ public class CommandRegistry
             new SaveCommand(), new SaveAsCommand(), new UndoCommand(), new RedoCommand(),
             new SelectAllCommand(), new CancelCommand(), new EditTextCommand(),
             new DuplicateCommand(), new DeleteCommand(), new GroupCommand(), new UngroupCommand(), new JoinCommand(),
-            new ToggleConnectorStyleCommand(),
+            new ToggleConnectorStyleCommand(), new ArrangeLanesHorizontalCommand(), new ArrangeLanesVerticalCommand(),
             new AddTextCommand(), new AddCommentCommand(), new AddGroupCommand(),
             new FitCommand(), new FitSelectionCommand(), new ZoomInCommand(), new ZoomOutCommand(), new ResetZoomCommand(),
         };
