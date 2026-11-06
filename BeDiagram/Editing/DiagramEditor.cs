@@ -3,6 +3,7 @@ using System.Text.Json;
 using BeDiagram.Editing.Angles;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Editing;
@@ -677,7 +678,7 @@ public class DiagramEditor
                     Node nn = new Node
                     {
                         Type = n.Type, Label = n.Label, X = n.X + 30, Y = n.Y + 30, W = n.W, H = n.H,
-                        Icon = n.Icon, Color = n.Color, Filled = n.Filled, Outcome = n.Outcome, GroupId = NewGroup(n.GroupId),
+                        Icon = n.Icon, Color = n.Color, Filled = n.Filled, Outcome = n.Outcome, Emphasis = n.Emphasis, GroupId = NewGroup(n.GroupId),
                         Description = n.Description, TextWidth = n.TextWidth, ClearTextBack = n.ClearTextBack,
                         Step = n.Step is int s ? stepBase + s - firstCopied + 1 : null,
                         Properties = new(n.Properties),
@@ -870,6 +871,14 @@ public class DiagramEditor
     }
 
     public void SetIcon(Node n, string? icon) { Change(); n.Icon = icon; }
+
+    /// <summary>Major / normal / minor look (see <see cref="Emphases"/>).</summary>
+    public void SetEmphasis(Node n, string key)
+    {
+        if (Emphases.Get(key) == Emphases.Of(n)) return;
+        Change();
+        n.Emphasis = key;
+    }
 
     // ───────────── Step order ─────────────
 
