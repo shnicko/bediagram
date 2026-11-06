@@ -30,17 +30,17 @@ const [url, dir, out] = process.argv.slice(2);
   for (const k of ['1', '2', '3']) { await p.keyboard.press(k); await p.waitForTimeout(W); }
   await snap('added');
   // 1 Move one shape (Move gesture)
-  await drag(await centre('.node path', 1), (c => [c[0] + 160, c[1] + 33])(await centre('.node path', 1)));
+  await drag(await centre('.node > path:not(.node-shadow)', 1), (c => [c[0] + 160, c[1] + 33])(await centre('.node > path:not(.node-shadow)', 1)));
   await snap('move');
   // 2 Click without drag (no undo step, no change)
-  await drag(await centre('.node path', 0), await centre('.node path', 0));
+  await drag(await centre('.node > path:not(.node-shadow)', 0), await centre('.node > path:not(.node-shadow)', 0));
   // 3 Shift multi-select + move
-  await p.keyboard.down('Shift'); await p.mouse.click(...await centre('.node path', 2)); await p.keyboard.up('Shift');
-  await drag(await centre('.node path', 2), (c => [c[0] - 90, c[1] + 47])(await centre('.node path', 2)));
+  await p.keyboard.down('Shift'); await p.mouse.click(...await centre('.node > path:not(.node-shadow)', 2)); await p.keyboard.up('Shift');
+  await drag(await centre('.node > path:not(.node-shadow)', 2), (c => [c[0] - 90, c[1] + 47])(await centre('.node > path:not(.node-shadow)', 2)));
   await snap('multimove');
   // 4 Connect: port of node 0 onto node 2
-  await p.mouse.click(...await centre('.node path', 0)); await p.waitForTimeout(W);
-  await drag(await centre('.node .port', 1), await centre('.node path', 2), { shot: `${out}/connect-preview.png` });
+  await p.mouse.click(...await centre('.node > path:not(.node-shadow)', 0)); await p.waitForTimeout(W);
+  await drag(await centre('.node .port', 1), await centre('.node > path:not(.node-shadow)', 2), { shot: `${out}/connect-preview.png` });
   await snap('connect');
   // 5 Connect to empty canvas -> new joined step
   await drag(await centre('.node .port', 2), (c => [c[0] + 20, c[1] + 160])(await centre('.node .port', 2)));
@@ -64,7 +64,7 @@ const [url, dir, out] = process.argv.slice(2);
   await snap('bend');
   // 10 Right-button pan, then move with Escape mid-drag
   await drag([1000, 700], [900, 650], { button: 'right' });
-  await drag(await centre('.node path', 0), (c => [c[0] + 50, c[1]])(await centre('.node path', 0)), { escape: true });
+  await drag(await centre('.node > path:not(.node-shadow)', 0), (c => [c[0] + 50, c[1]])(await centre('.node > path:not(.node-shadow)', 0)), { escape: true });
   await snap('pan-escape');
   // 11 Undo x3, redo x1
   for (let i = 0; i < 3; i++) { await p.keyboard.press('Control+z'); await p.waitForTimeout(W); }

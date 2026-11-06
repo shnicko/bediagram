@@ -32,7 +32,7 @@ const [url, out] = process.argv.slice(2);
   const edgeMid = async (i) => p.evaluate(i => { const pth = document.querySelectorAll('.edge-hit')[i]; if (!pth) return null; const pt = pth.getPointAtLength(pth.getTotalLength() / 2); const m = pth.getScreenCTM(); return [pt.x * m.a + m.e, pt.y * m.d + m.f]; }, i);
   const contexts = [
     ['nothing', async () => { await p.keyboard.press('Escape'); await p.keyboard.press('Escape'); }],
-    ...[0, 2, 3, 4, 5, 6, 8, 9, 13, 19, 20, 22].map(i => [`node ${i}`, async () => { const c = await centreOf('.node path', i); if (c) await p.mouse.click(...c); }]),
+    ...[0, 2, 3, 4, 5, 6, 8, 9, 13, 19, 20, 22].map(i => [`node ${i}`, async () => { const c = await centreOf('.node > path:not(.node-shadow)', i); if (c) await p.mouse.click(...c); }]),
     ['text box', async () => { const c = await centreOf('g.textbox:not(.comment) rect, g.textbox:not(.comment) path', 0); if (c) await p.mouse.click(...c); }],
     ['comment', async () => { const c = await centreOf('g.textbox.comment rect, g.textbox.comment path', 0); if (c) await p.mouse.click(...c); }],
     ['edge 0', async () => { const c = await edgeMid(0); if (c) await p.mouse.click(...c); }],

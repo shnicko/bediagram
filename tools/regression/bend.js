@@ -9,7 +9,7 @@ const [url, dir, out] = process.argv.slice(2);
   const centre = async (sel, i = 0) => p.evaluate(([s, i]) => { const r = document.querySelectorAll(s)[i].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, [sel, i]);
   const drag = async (f, t) => { await p.mouse.move(...f); await p.mouse.down(); for (let k = 1; k <= 8; k++) await p.mouse.move(f[0] + (t[0] - f[0]) * k / 8, f[1] + (t[1] - f[1]) * k / 8); await p.mouse.up(); await p.waitForTimeout(250); };
   await p.mouse.click(700, 300); await p.keyboard.press('1'); await p.waitForTimeout(250); await p.keyboard.press('2'); await p.waitForTimeout(250);
-  const c = await centre('.node path', 1); await drag(c, [c[0] + 230, c[1] + 90]);
+  const c = await centre('.node > path:not(.node-shadow)', 1); await drag(c, [c[0] + 230, c[1] + 90]);
   const ec = await p.evaluate(() => { const pth = document.querySelectorAll('.edge-hit')[0]; const pt = pth.getPointAtLength(pth.getTotalLength() / 2); const m = pth.getScreenCTM(); return [pt.x * m.a + m.e, pt.y * m.d + m.f]; });
   await p.mouse.click(...ec); await p.waitForTimeout(300);
   console.log('bend handle:', !!(await p.$('.bend-handle')));

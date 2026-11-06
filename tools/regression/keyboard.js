@@ -34,7 +34,7 @@ const [url, out] = process.argv.slice(2);
   };
   const key = async (k, label) => { await p.keyboard.press(k); await p.waitForTimeout(W); await state(label || k); };
   const click = async (sel, label) => { await p.click(sel); await p.waitForTimeout(W); await state(label || sel); };
-  const node = async i => p.evaluate(i => { const r = document.querySelectorAll('.node path')[i].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, i);
+  const node = async i => p.evaluate(i => { const r = document.querySelectorAll('.node > path:not(.node-shadow)')[i].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, i);
 
   await p.mouse.click(700, 300); await p.waitForTimeout(W); await state('start');
   for (const k of ['1', '2', '3', '4']) await key(k);

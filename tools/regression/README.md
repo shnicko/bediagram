@@ -22,6 +22,8 @@ refactor should come out **ALL THE SAME**, while a new feature will (correctly) 
 | `all-shapes.js` | Opens a test diagram with every shape type (with and without an icon), all 5 outcomes, link badges, descriptions, fills, a group and 30 straight / elbow connectors (made by `make-shapes-diagram.py`) | The canvas drawing and every export, on an open canvas and on A3 |
 | `panel.js` | For 19 selections (nothing, 12 shapes, text box, comment, 2 connectors, group, several items), clicks every button, checkbox, dropdown and slider in the side panel | After each of ~830 steps: the canvas, panel text, selection, edit state, toast and Undo state |
 
+Scripts find a shape by its outline path with `.node > path:not(.node-shadow)` (each shape's first direct path that isn't its shadow), so the extra shadow / halo paths drawn since the presentation look don't shift which shape is clicked.
+
 `compare.py` does the comparing. It explains its rules at the top: random ids are ignored, PDFs ignore their timestamp,
 and PNGs are compared pixel by pixel.
 
