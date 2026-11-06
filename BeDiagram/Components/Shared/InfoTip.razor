@@ -1,0 +1,7 @@
+<span class="info-tip">
+    <button type="button" class="@ButtonClass" title="@ButtonTitle" aria-expanded="@Open" @onclick="Toggle" @onclick:preventDefault="true" @onclick:stopPropagation="true">i</button>
+    @if (Open)
+    {
+        <span class="info-pop">@ChildContent</span>
+    }
+</span>

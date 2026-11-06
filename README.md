@@ -45,7 +45,8 @@ The PNG is drawn by your browser from the SVG export, so it matches the SVG and 
 
 ## Using it
 
-- **Add shapes:** drag from the sidebar, click a sidebar item, or press `1`–`9`.
+- **Add shapes:** drag from the sidebar, click a sidebar item, or press `1`–`9`. The sidebar shows icons only — shapes in a 3 × 3 grid (each with its number key), the five outcomes in one row, then text box, comment and group; hover a tile to see its name.
+- **Help notes:** the panels keep their explanations behind small *i* buttons. Click one to show the note under that line; click again to hide it.
 - **Auto-join:** with *Auto-join* on, a new shape (sidebar click or drag, number key, `T`) is connected from the currently selected item. Number keys and sidebar clicks place the new step below the selection (side by side for a second branch) — joined when *Auto-join* is on, unjoined when it's off. The panel's *+ Next step* button always joins, and dropping a port drag on empty canvas always creates a joined step.
 - **Quick join:** select items (Shift+click or drag a box around them) and press `J` — they are joined in the order you selected them.
 - **Connect by dragging:** hover a shape, drag from one of its ● ports onto another shape. Drop on empty canvas to create a new step there, already joined.

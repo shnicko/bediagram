@@ -132,66 +132,63 @@
     @* ───────────── Palette ───────────── *@
     <aside class="palette">
         <div class="section">Shapes</div>
-        @foreach (PaletteShape p in PaletteShapes)
-        {
-            <div class="item" draggable="true" data-palette="@p.Type.Key"
-                 @ondragstart="() => StartPaletteDrag(p.Type.Key)"
-                 @onclick="() => Editor.QuickAdd(p.Type.Key)"
-                 title="Drag onto the canvas, click to add, or press @p.Number">
-                <svg width="52" height="32" viewBox="-2 -2 52 32">
-                    <path d="@PaletteShapePath(p.Type.Key)" fill="@p.Type.Fill" stroke="@p.Type.Stroke" stroke-width="1.5" />
-                </svg>
-                <span>@p.Type.Display</span>
-                <kbd>@p.Number</kbd>
-            </div>
-        }
+        <div class="tiles three">
+            @foreach (PaletteShape p in PaletteShapes)
+            {
+                <div class="tile" draggable="true" data-palette="@p.Type.Key" data-tip="@PaletteShapeTip(p)" aria-label="@p.Type.Display"
+                     @ondragstart="() => StartPaletteDrag(p.Type.Key)"
+                     @onclick="() => Editor.QuickAdd(p.Type.Key)">
+                    <svg width="48" height="30" viewBox="-2 -2 52 32">
+                        <path d="@PaletteShapePath(p.Type.Key)" fill="@p.Type.Fill" stroke="@p.Type.Stroke" stroke-width="1.5" />
+                    </svg>
+                    <kbd>@p.Number</kbd>
+                </div>
+            }
+        </div>
         <div class="section">Outcomes</div>
-        @foreach (OutcomeInfo o in Outcomes.All)
-        {
-            <div class="item" draggable="true" data-palette="@OutcomePaletteKey(o)"
-                 @ondragstart="() => StartPaletteDrag(OutcomePaletteKey(o))"
-                 @onclick="() => Editor.QuickAdd(OutcomePaletteKey(o))"
-                 title="@OutcomePaletteTip(o)">
-                @OutcomeSwatch(o.Key, 30)
-                <span>@o.Display</span>
-            </div>
-        }
+        <div class="tiles five">
+            @foreach (OutcomeInfo o in Outcomes.All)
+            {
+                <div class="tile" draggable="true" data-palette="@OutcomePaletteKey(o)" data-tip="@OutcomePaletteTip(o)" aria-label="@o.Display"
+                     @ondragstart="() => StartPaletteDrag(OutcomePaletteKey(o))"
+                     @onclick="() => Editor.QuickAdd(OutcomePaletteKey(o))">
+                    @OutcomeSwatch(o.Key, 24)
+                </div>
+            }
+        </div>
         <div class="section">Text &amp; groups</div>
-        <div class="item" draggable="true" data-palette="text"
-             @ondragstart="StartTextDrag"
-             @onclick="Editor.AddTextQuick" title="Drag onto the canvas, click to add, or press T">
-            <svg width="52" height="32" viewBox="-2 -2 52 32">
-                <rect x="4" y="2" width="40" height="24" rx="3" fill="#ffffff" stroke="#9aa3ad" stroke-width="1.2" stroke-dasharray="3 2" />
-                <path d="M12,9 H36 M24,9 V21" stroke="#55606e" stroke-width="2" stroke-linecap="round" />
-            </svg>
-            <span>Text box</span>
-            <kbd>T</kbd>
+        <div class="tiles three">
+            <div class="tile" draggable="true" data-palette="text" data-tip="Text box: drag onto the canvas, click to add, or press T" aria-label="Text box"
+                 @ondragstart="StartTextDrag"
+                 @onclick="Editor.AddTextQuick">
+                <svg width="48" height="30" viewBox="-2 -2 52 32">
+                    <rect x="4" y="2" width="40" height="24" rx="3" fill="#ffffff" stroke="#9aa3ad" stroke-width="1.2" stroke-dasharray="3 2" />
+                    <path d="M12,9 H36 M24,9 V21" stroke="#55606e" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <kbd>T</kbd>
+            </div>
+            <div class="tile" draggable="true" data-palette="comment" data-tip="Comment: drag onto the canvas, click to add, or press C" aria-label="Comment"
+                 @ondragstart="StartCommentDrag"
+                 @onclick="Editor.AddCommentQuick">
+                <svg width="48" height="30" viewBox="-2 -2 52 32">
+                    <rect x="4" y="0" width="40" height="28" rx="3" fill="#fff7c2" stroke="#d9c255" stroke-width="1.5" />
+                    <path d="M10,9 H38 M10,15 H34 M10,21 H26" stroke="#b9a64a" stroke-width="1.5" />
+                </svg>
+                <kbd>C</kbd>
+            </div>
+            <div class="tile" draggable="true" data-palette="group" data-tip="Group: drag onto the canvas, or select items and press Ctrl+G" aria-label="Group"
+                 @ondragstart="StartGroupDrag"
+                 @onclick="Editor.AddGroupQuick">
+                <svg width="48" height="30" viewBox="-2 -2 52 32">
+                    <rect x="1" y="1" width="46" height="26" rx="4" fill="#eef3fb" stroke="#3b6fb6" stroke-width="1.5" />
+                    <path d="M1,9 H47" stroke="#3b6fb6" stroke-width="1.2" />
+                    <rect x="8" y="14" width="12" height="8" rx="2" fill="#fff" stroke="#3b6fb6" />
+                    <rect x="28" y="14" width="12" height="8" rx="2" fill="#fff" stroke="#3b6fb6" />
+                </svg>
+                <kbd>G</kbd>
+            </div>
         </div>
-        <div class="item" draggable="true" data-palette="comment"
-             @ondragstart="StartCommentDrag"
-             @onclick="Editor.AddCommentQuick" title="Drag onto the canvas, click to add, or press C">
-            <svg width="52" height="32" viewBox="-2 -2 52 32">
-                <rect x="4" y="0" width="40" height="28" rx="3" fill="#fff7c2" stroke="#d9c255" stroke-width="1.5" />
-                <path d="M10,9 H38 M10,15 H34 M10,21 H26" stroke="#b9a64a" stroke-width="1.5" />
-            </svg>
-            <span>Comment</span>
-            <kbd>C</kbd>
-        </div>
-        <div class="item" draggable="true" data-palette="group"
-             @ondragstart="StartGroupDrag"
-             @onclick="Editor.AddGroupQuick" title="Drag onto the canvas, or select items and press Ctrl+G">
-            <svg width="52" height="32" viewBox="-2 -2 52 32">
-                <rect x="1" y="1" width="46" height="26" rx="4" fill="#eef3fb" stroke="#3b6fb6" stroke-width="1.5" />
-                <path d="M1,9 H47" stroke="#3b6fb6" stroke-width="1.2" />
-                <rect x="8" y="14" width="12" height="8" rx="2" fill="#fff" stroke="#3b6fb6" />
-                <rect x="28" y="14" width="12" height="8" rx="2" fill="#fff" stroke="#3b6fb6" />
-            </svg>
-            <span>Group</span>
-            <kbd>G</kbd>
-        </div>
-        <div class="hint">
-            Select an item, then press a number to add the next step below it (joined to it when Auto-join is on).
-        </div>
+        <div class="section">Quick add <InfoTip>Hover a tile to see what it is. Select an item, then press a number to add the next step below it (joined to it when Auto-join is on).</InfoTip></div>
     </aside>
 
     @* ───────────── Canvas ───────────── *@
@@ -550,14 +547,14 @@
             <h3>@NodePanelTitle(sn)</h3>
             <label>Label</label>
             <textarea id="prop-label" rows="2" @bind="sn.Label" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint"></textarea>
-            <label>Description <span class="muted">(smaller text under the label)</span></label>
+            <label>Description <InfoTip>Smaller text under the label, e.g. who does this step and how.</InfoTip></label>
             <textarea id="prop-desc" rows="3" placeholder="Optional — e.g. who does this step and how" @bind="sn.Description" @bind:event="oninput" @bind:after="() => Editor.OutsideTextChanged(sn)" @onfocus="Editor.Checkpoint"></textarea>
             <label>Text width <span class="muted">(px — @TextWidthHint(sn))</span></label>
             <input type="number" min="40" step="10" placeholder="@TextWidthPlaceholder(sn)" @bind="sn.TextWidth" @bind:after="() => Editor.OutsideTextChanged(sn)" @onfocus="Editor.Checkpoint" />
             <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@sn.ClearTextBack" @onchange="e => Editor.SetClearTextBack(sn, e.Value is true)" /> Transparent text background</label>
             @if (StepOrder.IsStep(sn))
             {
-                <label>Step <span class="muted">(place in the flow@(D.ShowSteps ? "" : " — numbers hidden"))</span></label>
+                <label>Step <InfoTip>The shape's place in the flow (1, 2, 3, …), kept whether or not the numbers are shown. Type a number to move it there, or tick <em>Runs in parallel</em> to share the number of the step before it.</InfoTip></label>
                 <div class="step-row">
                     <input id="prop-step" type="number" min="1" max="@Editor.Steps.Next" value="@sn.Step" @onchange="e => StepTyped(sn, e)" />
                     <label class="check" title="Shares its step number with the step before it — tasks that happen at the same time">
@@ -614,7 +611,7 @@
             }
             else
             {
-            <label>Icon @if (sn.Type != NodeTypes.Circle) {<span class="muted">(shown beside the label)</span>}</label>
+            <label>Icon <InfoTip>On a circle the icon sits in the middle and the label goes underneath; on other shapes it's shown beside the label.</InfoTip></label>
             <div class="icon-current">
                 @if (Icons.Exists(sn.Icon))
                 {
@@ -648,7 +645,7 @@
                 <p class="muted">In group “@ng.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(sn)">remove from group</button></p>
             }
 
-            <label>Properties <span class="muted">(for future rule building)</span></label>
+            <label>Properties <InfoTip>Name / value pairs saved with the shape, for future rule building (rule checks start with ruleId, ifcEntity, property, operator and value).</InfoTip></label>
             <div class="props">
                 @foreach (string key in sn.Properties.Keys.ToList())
                 {
@@ -669,7 +666,7 @@
         else if (Editor.SelectedText is { } st)
         {
             <h3>@(st.IsComment ? "Comment" : "Text box")</h3>
-            <label>Text <span class="muted">(or double-click the box · Enter = new line)</span></label>
+            <label>Text <InfoTip>Or double-click the box on the canvas. Enter starts a new line.</InfoTip></label>
             <textarea rows="5" @bind="st.Text" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" @onblur="() => Editor.GrowToText(st)"></textarea>
             <label class="check" title="Comments are annotations: sticky-note look and dashed pin lines">
                 <input type="checkbox" checked="@st.IsComment" @onchange="e => Editor.SetComment(st, e.Value is true)" /> Comment
@@ -769,7 +766,7 @@
             {
                 <p class="muted">In group “@tg.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(st)">remove from group</button></p>
             }
-            <p class="muted">Connect it like a shape: drag from a ● port, or select it with another item and press J.@(st.IsComment ? " Lines to a comment are dashed pins — restyle them like any connector." : "")</p>
+            <p class="muted">Connecting <InfoTip>Connect it like a shape: drag from a ● port, or select it with another item and press J.@(st.IsComment ? " Lines to a comment are dashed pins — restyle them like any connector." : "")</InfoTip></p>
             <div class="actions">
                 @if (!st.IsComment)
                 {
@@ -783,13 +780,12 @@
         {
             <h3>Connector</h3>
             <p class="muted">@Editor.LabelOf(se.From) → @Editor.LabelOf(se.To)</p>
-            <label>Line</label>
+            <label>Line <InfoTip>Drag a ● end on the canvas to move it to another side@(se.Style == EdgeStyles.Straight ? "" : "; drag the ■ on the middle segment to move the bend").</InfoTip></label>
             <div class="seg wide">
                 <button class="@(se.Style == EdgeStyles.Elbow ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(se, EdgeStyles.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
                 <button class="@(se.Style == EdgeStyles.Straight ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(se, EdgeStyles.Straight)">@IconSvg("move-up-right", 16) Straight</button>
             </div>
 
-            <p class="muted">Drag a ● end on the canvas to move it to another side@(se.Style == EdgeStyles.Straight ? "" : "; drag the ■ on the middle segment to move the bend").</p>
             @if (se.IsManual)
             {
                 <div class="chips">
@@ -827,7 +823,7 @@
                 }
             </div>
 
-            <label>Label <span class="muted">(or double-click the line)</span></label>
+            <label>Label <InfoTip>Or double-click the line. Up to two lines: Shift+Enter starts the second.</InfoTip></label>
             <textarea id="prop-edge" class="two-line" rows="2" @bind="se.Label" @bind:event="oninput" @bind:after="Editor.EdgeLabelTyped" @onfocus="Editor.Checkpoint" placeholder="Type a label… (2 lines max)"></textarea>
             <div class="chips">
                 @foreach (string lab in EdgeLabelChips)
@@ -843,7 +839,7 @@
                 <button class="@(se.LabelOrient == LabelOrients.Perpendicular ? "on" : "")" title="At 90° to the line" @onclick="() => Editor.SetLabelOrient(se, LabelOrients.Perpendicular)">90° to line</button>
             </div>
 
-            <label>Label placement <span class="muted">@LabelPlaceHint(se)</span></label>
+            <label>Label placement <InfoTip>@LabelPlaceHint(se)</InfoTip></label>
             <div class="seg wide three">
                 @foreach ((string k, string name) in LabelPlaces.All)
                 {
@@ -908,7 +904,7 @@
                     <button class="@(sg.HeaderStyle == k ? "on" : "")" title="@GroupStyleTip(k)" @onclick="() => Editor.SetGroupTitleLook(sg, null, k)">@name</button>
                 }
             </div>
-            <p class="muted">@MemberCount(sg) item@(MemberCount(sg) == 1 ? "" : "s") inside · drag items in or out to change membership</p>
+            <p class="muted">@MemberCount(sg) item@(MemberCount(sg) == 1 ? "" : "s") inside <InfoTip>Drag items in or out of the box to change what's in the group.</InfoTip></p>
             @if (Editor.FindGroup(sg.GroupId) is { } pg)
             {
                 <p class="muted">In group “@pg.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(sg)">remove from group</button></p>
@@ -923,14 +919,14 @@
                 <button disabled="@(MemberCount(sg) == 0)" title="Move the group box (same size) so the items sit in its middle — the items stay put" @onclick="() => Editor.CentreGroupOnContents(sg)">Centre box on items</button>
                 <button disabled="@(MemberCount(sg) == 0)" title="Move the items together to the middle of the group — the box stays put" @onclick="() => Editor.CentreContentsInGroup(sg)">Centre items in box</button>
             </div>
-            <p class="muted">Connect a group like any shape: drag from its ● port, or select it with another item and press J.</p>
+            <p class="muted">Connecting <InfoTip>Connect a group like any shape: drag from its ● port, or select it with another item and press J.</InfoTip></p>
             <div class="actions">
                 <button @onclick="() => Run(UngroupCmd)" title="Ctrl+Shift+G">Ungroup</button>
                 <button class="danger" @onclick="() => Run(DeleteCmd)">Delete group &amp; contents</button>
             </div>
             @if (IsTopLevel(sg))
             {
-                <label>Swim lanes <span class="muted">(every top-level group is a lane)</span></label>
+                <label>Swim lanes <InfoTip>Every top-level group is a lane. <em>Arrange</em> lines the lanes up edge to edge and puts their shapes in columns by step number. Select two or more groups to arrange just those.</InfoTip></label>
                 <div class="seg wide">
                     <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
                     <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
@@ -966,7 +962,7 @@
             </div>
             @if (SelectedLaneCount >= 2)
             {
-                <label>Swim lanes <span class="muted">(the @SelectedLaneCount selected groups)</span></label>
+                <label>Swim lanes <InfoTip>Arranges the @SelectedLaneCount selected groups as lanes: edge to edge, with their shapes in columns by step number.</InfoTip></label>
                 <div class="seg wide">
                     <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
                     <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
@@ -980,26 +976,23 @@
             <input value="@D.Name" @onchange="RenameDiagram" />
             <p class="muted">@DiagramSummary</p>
 
-            <h4>Steps</h4>
+            <h4>Steps <InfoTip>Every shape except outcomes has a step number, shown or not — new shapes go on the end. Reorder them all in <em>Step order…</em>, or change one shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</InfoTip></h4>
             <label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
-            <p class="muted">Every shape except outcomes has a step number, shown or not — new shapes go on the end. Reorder them all in <em>Step order…</em>, or change one shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</p>
             <button class="small" @onclick="ShowStepOrder">Step order…</button>
 
-            <h4>Swim lanes</h4>
-            <p class="muted">Each top-level group is a lane. <em>Arrange</em> lines the lanes up edge to edge and puts their shapes in columns by step number, so step 3 sits in the same column in every lane. Select two or more groups to arrange just those. Undo puts everything back.</p>
+            <h4>Swim lanes <InfoTip>Each top-level group is a lane. <em>Arrange</em> lines the lanes up edge to edge and puts their shapes in columns by step number, so step 3 sits in the same column in every lane. Select two or more groups to arrange just those. Undo puts everything back.</InfoTip></h4>
             <div class="seg wide">
                 <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
                 <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
             </div>
 
-            <h4>Auto-layout</h4>
-            <p class="muted">Lays out the whole diagram by step number — step 1, then 2, then 3, with parallel steps side by side — then tidies the connectors. Shapes inside a group stay put and the group moves as one block (use <em>Swim lanes</em> to lay out inside groups). Undo puts everything back.</p>
+            <h4>Auto-layout <InfoTip>Lays out the whole diagram by step number — step 1, then 2, then 3, with parallel steps side by side — then tidies the connectors. Shapes inside a group stay put and the group moves as one block (use <em>Swim lanes</em> to lay out inside groups). Undo puts everything back.</InfoTip></h4>
             <div class="seg wide">
                 <button title="@LayoutTip(LayoutAcrossCmd)" disabled="@(!CanRun(LayoutAcrossCmd))" @onclick="() => Run(LayoutAcrossCmd)">@IconSvg("arrow-right", 16) Left → right</button>
                 <button title="@LayoutTip(LayoutDownCmd)" disabled="@(!CanRun(LayoutDownCmd))" @onclick="() => Run(LayoutDownCmd)">@IconSvg("workflow", 16) Top → down</button>
             </div>
 
-            <h4>Page</h4>
+            <h4>Page <InfoTip>Pick a paper size to get a fixed page for documents; Export SVG or PDF then produces a file exactly that paper size (in mm), ready to insert into Word or PowerPoint or to print. The open canvas stays available — switch back any time.</InfoTip></h4>
             <select value="@D.Page.Size" @onchange="SetPageSize">
                 <option value="@PageSetup.None">Open canvas (no fixed size)</option>
                 @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
@@ -1038,11 +1031,6 @@
                     <button @onclick="Editor.CentreOnPage">Centre drawing on page</button>
                     <button @onclick="() => Run(FitCmd)">Show whole page</button>
                 </div>
-                <p class="muted">Export SVG or PDF produces a file exactly this paper size (in mm), ready to insert into Word or PowerPoint or to print.</p>
-            }
-            else
-            {
-                <p class="muted">Pick a paper size to get a fixed page for documents. The open canvas stays available — switch back any time.</p>
             }
             <h4>Shortcuts</h4>
             <table class="keys">

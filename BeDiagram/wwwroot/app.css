@@ -17,7 +17,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
 
 .app {
     display: grid;
-    grid-template-columns: 190px 1fr 290px;
+    grid-template-columns: 196px 1fr 290px;
     grid-template-rows: 48px 1fr 26px;
     grid-template-areas: "tb tb tb" "pal canvas panel" "st st st";
     height: 100vh;
@@ -317,7 +317,6 @@ kbd {
 .seg.stacked button { flex-direction: column; gap: 2px; font-size: 11.5px; padding: 5px 2px; }
 
 /* Outcome nodes: picker in the panel, symbol in the palette */
-.palette .item > svg[width="30"] { margin: 0 11px; }
 .outcome-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .outcome-picker button { display: flex; align-items: center; gap: 6px; padding: 3px 6px; text-align: left; }
 .outcome-picker button.on { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
@@ -355,3 +354,36 @@ kbd {
 .step-item .step-btn { padding: 2px 5px; font-size: 14px; line-height: 1; }
 .step-order label.check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: inherit; margin: 4px 0; }
 .step-order label.check input { width: auto; margin: 0; }
+
+/* Palette tiles: icons only, name in a tooltip (data-tip) that shows straight away */
+.palette .tiles { display: grid; gap: 4px; }
+.palette .tiles.three { grid-template-columns: repeat(3, 1fr); }
+.palette .tiles.five { grid-template-columns: repeat(5, 1fr); }
+.palette .tile {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    height: 44px; border-radius: 8px; cursor: grab; border: 1px solid transparent;
+}
+.palette .tile:hover { background: #f3f6fa; border-color: var(--line); }
+.palette .tile:active { cursor: grabbing; }
+.palette .tile kbd { position: absolute; right: 1px; bottom: 1px; font-size: 9px; padding: 0 3px; min-width: 0; line-height: 13px; }
+.palette .tile[data-tip]:hover::after {
+    content: attr(data-tip); position: fixed; z-index: 50; left: 200px; width: 190px;
+    background: #1f2933; color: #fff; font-size: 12px; line-height: 1.35; padding: 6px 8px; border-radius: 6px;
+    pointer-events: none; white-space: normal;
+}
+.palette .section .info-pop { text-transform: none; letter-spacing: normal; }
+
+/* "i" info buttons: help text on a click instead of always on screen */
+.info-tip { display: inline; }
+.info-btn {
+    display: inline-flex; align-items: center; justify-content: center; vertical-align: 1px;
+    width: 15px; height: 15px; padding: 0; margin-left: 4px; border-radius: 50%;
+    border: 1px solid #b8c2cc; background: #fff; color: #6b7785;
+    font: italic 600 10px/1 Georgia, serif; cursor: pointer;
+}
+.info-btn:hover, .info-btn.on { border-color: var(--accent, #3b6fb6); color: var(--accent, #3b6fb6); }
+.info-pop {
+    display: block; margin: 4px 0 2px; padding: 7px 9px; border-radius: 6px;
+    background: #f3f6fa; border: 1px solid var(--line); color: #4b5563;
+    font-size: 12px; font-weight: normal; line-height: 1.4; text-align: left;
+}
