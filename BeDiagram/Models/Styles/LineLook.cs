@@ -6,14 +6,14 @@ public static class LineLook
     public const string Light = "light", Regular = "regular", Heavy = "heavy";
     public const string Solid = "solid", Dashed = "dashed", Dotted = "dotted", DashDot = "dashdot", LongDash = "longdash";
     public const string ArrowEnd = "end", ArrowBoth = "both", ArrowNone = "none";
-    public const string DefaultColor = "#55606e";
+    public const string DefaultColor = "#454e5b";
 
     public static readonly (string Key, string Name)[] Weights = { (Light, "Light"), (Regular, "Regular"), (Heavy, "Heavy") };
     public static readonly (string Key, string Name)[] Patterns =
         { (Solid, "Solid"), (Dashed, "Dashed"), (Dotted, "Dotted"), (DashDot, "Dash-dot"), (LongDash, "Long dash") };
     public static readonly (string Key, string Name)[] ArrowModes = { (ArrowEnd, "End"), (ArrowBoth, "Both"), (ArrowNone, "None") };
 
-    public static double Width(string weight) => weight switch { Light => 1, Heavy => 3, _ => 1.6 };
+    public static double Width(string weight) => weight switch { Light => 1, Heavy => 3, _ => 2 };
 
     public static string? Dash(string pattern, double w) => pattern switch
     {
@@ -36,7 +36,7 @@ public static class LineLook
     /// <summary>Arrowhead marker sized in user units so heavy lines don't get giant arrows.</summary>
     public static string MarkerDef(string colour, string weight)
     {
-        int size = weight switch { Light => 8, Heavy => 13, _ => 10 };
+        int size = weight switch { Light => 9, Heavy => 14, _ => 12 };
         return $"<marker id=\"{MarkerId(colour, weight)}\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"{size}\" markerHeight=\"{size}\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"{colour}\"/></marker>";
     }
 

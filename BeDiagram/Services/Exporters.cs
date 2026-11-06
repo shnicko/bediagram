@@ -134,7 +134,9 @@ public static class Exporters
         foreach (Node n in d.Nodes)
         {
             NodeStyle st = NodeStyle.For(n);
-            sb.Append($"<path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"1.6\"/>\n");
+            string shape = Geometry.ShapePath(n);
+            sb.Append($"<path d=\"{shape}\" transform=\"{Geometry.ShadowTransform}\" fill=\"{st.Stroke}\" fill-opacity=\"{F(Geometry.ShadowOpacity)}\"/>\n");
+            sb.Append($"<path d=\"{shape}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"{F(Geometry.ShapeStroke)}\"/>\n");
             if (Geometry.OutlineOf(n).HasSideStripe)
                 sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
             LabelLayout lay = Geometry.Layout(n);

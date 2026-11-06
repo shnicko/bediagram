@@ -38,6 +38,20 @@ public static class Geometry
 
     public static string ShapePath(Node n) => OutlineOf(n).Path(n);
 
+    /// <summary>Outline width of every shape (the presentation look: a firm ring that holds up on slides and prints).</summary>
+    public const double ShapeStroke = 2.4;
+
+    /// <summary>Soft shadow under each shape: the same outline moved down, in the shape's own colour, faint.
+    /// Drawn as a plain shape (no SVG blur filter), so the PDF export and greyscale prints show it too.</summary>
+    public const double ShadowDy = 4;
+    public const double ShadowOpacity = 0.22;
+
+    /// <summary>The SVG transform that moves a shape's outline to where its shadow is drawn.</summary>
+    public static string ShadowTransform => $"translate(0,{F(ShadowDy)})";
+
+    /// <summary>Radius of the rounded bends on elbow connectors.</summary>
+    public const double BendRadius = 6;
+
     /// <summary>Scalloped seal: a ring of semicircular bumps whose tips touch radius <paramref name="r"/>.</summary>
     public static string SealPath(double cx, double cy, double r)
     {
@@ -322,7 +336,7 @@ public static class Geometry
     {
         List<(double X, double Y)> pts = Route(a, b, style);
         (double x, double y, double seg) = PointAt(pts, labelPos);
-        return new EdgeGeom(PathD(pts), x, y, LabelAngle(labelOrient, seg), seg);
+        return new EdgeGeom(RoundedPathD(pts), x, y, LabelAngle(labelOrient, seg), seg);
     }
 
     /// <summary>Connector geometry for a stored edge, honouring pinned sides and a dragged bend.</summary>
@@ -330,7 +344,7 @@ public static class Geometry
     {
         EdgeRoute r = Route(a, b, e);
         (double x, double y, double seg) = PointAt(r.Points, e.LabelPos);
-        return new EdgeGeom(PathD(r.Points), x, y, LabelAngle(e.LabelOrient, seg), seg);
+        return new EdgeGeom(RoundedPathD(r.Points), x, y, LabelAngle(e.LabelOrient, seg), seg);
     }
 
     public static EdgeRoute Route(IBox a, IBox b, Edge e) =>
@@ -515,6 +529,31 @@ public static class Geometry
 
     public static string PathD(List<(double X, double Y)> pts) =>
         "M" + string.Join(" L", pts.Select(p => $"{F(p.X)},{F(p.Y)}"));
+
+    /// <summary>A connector polyline with each bend rounded by a small curve (<see cref="BendRadius"/>, less on short
+    /// segments). A straight line has no bends, so it comes out the same as <see cref="PathD"/>.</summary>
+    public static string RoundedPathD(List<(double X, double Y)> pts)
+    {
+        if (pts.Count < 3) return PathD(pts);
+        StringBuilder sb = new StringBuilder($"M{F(pts[0].X)},{F(pts[0].Y)}");
+        for (int i = 1; i < pts.Count - 1; i++)
+        {
+            (double X, double Y) prev = pts[i - 1], cur = pts[i], next = pts[i + 1];
+            double inLen = Math.Sqrt(Math.Pow(cur.X - prev.X, 2) + Math.Pow(cur.Y - prev.Y, 2));
+            double outLen = Math.Sqrt(Math.Pow(next.X - cur.X, 2) + Math.Pow(next.Y - cur.Y, 2));
+            double r = Math.Min(BendRadius, Math.Min(inLen, outLen) / 2);
+            if (r < 0.5)
+            {
+                sb.Append($" L{F(cur.X)},{F(cur.Y)}");
+                continue;
+            }
+            (double X, double Y) a = (cur.X - (cur.X - prev.X) / inLen * r, cur.Y - (cur.Y - prev.Y) / inLen * r);
+            (double X, double Y) b = (cur.X + (next.X - cur.X) / outLen * r, cur.Y + (next.Y - cur.Y) / outLen * r);
+            sb.Append($" L{F(a.X)},{F(a.Y)} Q{F(cur.X)},{F(cur.Y)} {F(b.X)},{F(b.Y)}");
+        }
+        (double X, double Y) last = pts[^1];
+        return sb.Append($" L{F(last.X)},{F(last.Y)}").ToString();
+    }
 
     /// <summary>Point at fraction t of the polyline's length, plus that segment's angle in degrees.</summary>
     public static (double X, double Y, double Angle) PointAt(List<(double X, double Y)> pts, double t)

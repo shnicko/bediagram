@@ -382,7 +382,8 @@
                         {
                             <rect x="@F(v.N.X - 5)" y="@F(v.N.Y - 5)" width="@F(v.N.W + 10)" height="@F(v.N.H + 10 + v.Below)" rx="8" class="sel-outline" />
                         }
-                        <path d="@Geometry.ShapePath(v.N)" fill="@v.Style.Fill" stroke="@v.Style.Stroke" stroke-width="1.6" />
+                        <path d="@Geometry.ShapePath(v.N)" class="node-shadow" transform="@Geometry.ShadowTransform" fill="@v.Style.Stroke" fill-opacity="@F(Geometry.ShadowOpacity)" />
+                        <path d="@Geometry.ShapePath(v.N)" fill="@v.Style.Fill" stroke="@v.Style.Stroke" stroke-width="@F(Geometry.ShapeStroke)" />
                         @if (v.Outline.HasSideStripe)
                         {
                             <rect x="@F(v.N.X)" y="@F(v.N.Y)" width="6" height="@F(v.N.H)" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" fill-opacity="@(v.N.Filled ? "0.5" : "1")" />
