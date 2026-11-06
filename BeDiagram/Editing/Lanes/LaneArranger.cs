@@ -12,7 +12,9 @@ namespace BeDiagram.Editing.Lanes;
 /// it first) and sits next to that shape. Anything else (an unconnected note) goes in a column after the last step.</item>
 /// <item><b>Columns.</b> One column per step used in any lane; shape centres sit on the column's centre line, with
 /// room for the widest item (and any label below it).
-/// Items sharing a step in a lane (parallel steps, outcomes) stack across the lane, centred.</item>
+/// Items sharing a step in a lane (parallel steps, outcomes) stack across the lane, centred; a decision's outcomes go
+/// one each side of it, with room for the Yes / No labels; steps sharing a column follow the steps that lead into them,
+/// so branches don't cross.</item>
 /// <item><b>Lanes.</b> In their current order (see <see cref="InCurrentOrder"/>), edge to edge, all the same length along the flow, each as deep as
 /// its tallest stack. The first lane stays where it starts.</item>
 /// </list>
@@ -25,6 +27,8 @@ public class LaneArranger
     public const double ColumnGap = 70;
     /// <summary>Space between items stacked in one column of a lane.</summary>
     public const double StackGap = 30;
+    /// <summary>Extra space between stacked neighbours joined by a labelled connector, so the label isn't squeezed.</summary>
+    public const double LabelRoom = 26;
     /// <summary>Content depth of a lane with nothing in its columns.</summary>
     public const double EmptyLaneDepth = 60;
 
@@ -131,14 +135,36 @@ public class LaneArranger
         double laneLength = maxFlowStart + contentFlow + maxFlowEnd;
         double contentFlowStart = flow0 + maxFlowStart;
 
+        // Order inside each stack, column by column from the start of the flow: steps follow the steps that lead into
+        // them (the average position of their predecessors, already placed in earlier columns), so branches don't cross.
+        Dictionary<Lane, Dictionary<int, List<Placed>>> orders = lanes.ToDictionary(l => l, _ => new Dictionary<int, List<Placed>>());
+        Dictionary<string, double> across = new Dictionary<string, double>();
+        foreach (int slot in slots)
+            for (int li = 0; li < lanes.Count; li++)
+            {
+                List<Placed> items = placed[lanes[li]].Where(p => p.Slot == slot).ToList();
+                if (items.Count == 0) continue;
+                List<Placed> stack = StackOrder(items, p => Barycentre(p, across));
+                orders[lanes[li]][slot] = stack;
+                // Where each item sits across its lane, relative to the stack's centre (stacks are centred), with the
+                // lane's place in the order so items in different lanes compare the right way round.
+                double c = -DepthOf(stack) / 2;
+                for (int i = 0; i < stack.Count; i++)
+                {
+                    double centre = li * 1e6 + c + stack[i].Cross / 2;
+                    foreach (string id in IdsOf(stack[i].Item)) across[id] = centre;
+                    if (i + 1 < stack.Count) c += stack[i].Cross + GapBetween(stack[i], stack[i + 1]);
+                }
+            }
+
         HashSet<string> moved = new HashSet<string>();
         double crossAt = cross0;
         foreach (Lane lane in lanes)
         {
             (double flowStart, double flowEnd, double crossStart, double crossEnd) = lane.Insets;
-            Dictionary<int, List<Placed>> stacks = placed[lane].GroupBy(p => p.Slot).ToDictionary(g => g.Key, g => StackOrder(g.ToList()));
+            Dictionary<int, List<Placed>> stacks = orders[lane];
             double depth = stacks.Count == 0 ? EmptyLaneDepth
-                : stacks.Values.Max(st => st.Sum(p => p.Cross) + StackGap * (st.Count - 1));
+                : stacks.Values.Max(DepthOf);
 
             // The lane box (auto-layout has none).
             if (lane.Box is Group box)
@@ -152,14 +178,15 @@ public class LaneArranger
             double contentCross = crossAt + crossStart;
             foreach ((int slot, List<Placed> stack) in stacks)
             {
-                double stackDepth = stack.Sum(p => p.Cross) + StackGap * (stack.Count - 1);
+                double stackDepth = DepthOf(stack);
                 double c = contentCross + (depth - stackDepth) / 2;
-                foreach (Placed p in stack)
+                for (int i = 0; i < stack.Count; i++)
                 {
+                    Placed p = stack[i];
                     double f = contentFlowStart + colStart[slot] + colBefore[slot] - p.CentreFlow;
                     (double fx, double fy) = layout.FromLane(f, c);
                     MoveTo(p.Item, Math.Round(fx + p.OffsetX), Math.Round(fy), moved);
-                    c += p.Cross + StackGap;
+                    if (i + 1 < stack.Count) c += p.Cross + GapBetween(p, stack[i + 1]);
                 }
             }
             crossAt += crossStart + depth + crossEnd;
@@ -171,19 +198,72 @@ public class LaneArranger
     }
 
     /// <summary>
-    /// Order within one column of a lane: items with their own step in their current order across the lane, each
-    /// followed straight away by what rides with it (an outcome next to its decision), then anything else.
+    /// Order within one column of a lane: items with their own step follow what leads into them (see
+    /// <see cref="Barycentre"/>; the first column keeps its current order across the lane), with what
+    /// rides with each one placed right beside it — on alternate sides, so a decision's two outcomes go one each side
+    /// (Yes one way, No the other) and neither branch has to loop round the other. Anything else goes at the end.
     /// </summary>
-    static List<Placed> StackOrder(List<Placed> stack)
+    static List<Placed> StackOrder(List<Placed> stack, Func<Placed, double?> barycentre)
     {
-        List<Placed> order = stack.Where(p => p.Anchor is null).OrderBy(p => p.Now).ToList();
+        // Steps with something leading into them follow it; the rest (the start of the flow) keep their current order.
+        List<Placed> steps = stack.Where(p => p.Anchor is null).ToList();
+        List<Placed> order = steps.Where(p => barycentre(p) is not null).OrderBy(p => barycentre(p)).ThenBy(p => p.Now)
+            .Concat(steps.Where(p => barycentre(p) is null).OrderBy(p => p.Now)).ToList();
+        Dictionary<string, int> ridersSoFar = new Dictionary<string, int>();
         foreach (Placed rider in stack.Where(p => p.Anchor is not null).OrderBy(p => p.Now))
         {
-            int at = order.FindLastIndex(p => p.Item.Id == rider.Anchor || p.Anchor == rider.Anchor);
-            if (at >= 0) order.Insert(at + 1, rider);
-            else order.Add(rider);
+            int anchorAt = order.FindIndex(p => p.Item.Id == rider.Anchor);
+            if (anchorAt < 0) { order.Add(rider); continue; }
+            int n = ridersSoFar.TryGetValue(rider.Anchor!, out int k) ? k : 0;
+            ridersSoFar[rider.Anchor!] = n + 1;
+            if (n % 2 == 0)
+            {
+                // After the anchor, beyond any earlier riders already on that side.
+                int at = anchorAt + 1;
+                while (at < order.Count && order[at].Anchor == rider.Anchor) at++;
+                order.Insert(at, rider);
+            }
+            else
+            {
+                // Before the anchor, beyond any earlier riders already on that side.
+                int at = anchorAt;
+                while (at > 0 && order[at - 1].Anchor == rider.Anchor) at--;
+                order.Insert(at, rider);
+            }
         }
         return order;
+    }
+
+    /// <summary>The average position across the lanes of what leads into <paramref name="p"/> (connectors into it, or
+    /// into anything inside it when it's a group), from items already placed; null when nothing placed leads into it.</summary>
+    double? Barycentre(Placed p, Dictionary<string, double> across)
+    {
+        HashSet<string> ids = IdsOf(p.Item).ToHashSet();
+        List<double> from = d.Edges.Where(e => ids.Contains(e.To) && !ids.Contains(e.From) && across.ContainsKey(e.From))
+            .Select(e => across[e.From]).ToList();
+        return from.Count > 0 ? from.Average() : null;
+    }
+
+    /// <summary>The item's id, plus everything inside it when it's a group.</summary>
+    IEnumerable<string> IdsOf(IGroupable item)
+    {
+        yield return item.Id;
+        if (item is Group g)
+            foreach (IGroupable m in tree.Descendants(g)) yield return m.Id;
+    }
+
+    /// <summary>Space between two neighbours in a stack: <see cref="StackGap"/>, plus room for a label when a labelled
+    /// connector joins them (a decision's "Yes" next to its outcome).</summary>
+    double GapBetween(Placed x, Placed y) =>
+        StackGap + (d.Edges.Any(e => !string.IsNullOrWhiteSpace(e.Label)
+                                    && (e.From == x.Item.Id && e.To == y.Item.Id || e.From == y.Item.Id && e.To == x.Item.Id)) ? LabelRoom : 0);
+
+    /// <summary>How deep a stack is across the lane, items plus the gaps between them.</summary>
+    double DepthOf(List<Placed> stack)
+    {
+        double depth = stack.Sum(p => p.Cross);
+        for (int i = 0; i + 1 < stack.Count; i++) depth += GapBetween(stack[i], stack[i + 1]);
+        return depth;
     }
 
     /// <summary>
