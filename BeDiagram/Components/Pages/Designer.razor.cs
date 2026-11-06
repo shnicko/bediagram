@@ -10,6 +10,7 @@ using BeDiagram.Components.Pages.Views;
 using BeDiagram.Editing;
 using BeDiagram.Editing.Angles;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
 
@@ -647,6 +648,12 @@ public partial class Designer
         $"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})";
 
     static MarkupString NodeIconMarkup(Node n) => (MarkupString)Icons.Get(Geometry.IconOf(n));
+
+    /// <summary>The halo ring around a major step (same markup as the export), or null.</summary>
+    static MarkupString? HaloMarkup(NodeView v) => Geometry.HaloSvg(v.N, v.Style.Stroke) is { } h ? (MarkupString)h : null;
+
+    /// <summary>Major steps are always solid, so the panel's Solid fill box is ticked and greyed out.</summary>
+    static bool SolidFillForced(Node n) => Emphases.Of(n).ForcesSolidFill;
 
     /// <summary>The step-number badge on a shape (same markup as the export).</summary>
     static MarkupString StepBadgeMarkup(NodeView v, int step) => (MarkupString)Geometry.StepBadgeSvg(v.N, step, v.Style.Stroke);

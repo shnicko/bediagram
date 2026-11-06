@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Emphasis;
 
 namespace BeDiagram.Models;
 
@@ -27,6 +28,15 @@ public class Node : IGroupable
     /// Always kept, whether or not the numbers are shown; null only on outcomes, which are results rather than steps.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Step { get; set; }
+    /// <summary>"major" (key step: solid fill and a ring), "minor" (supporting step: lighter) or null for normal.
+    /// A look only — see <see cref="Emphases"/>. "normal" is stored as null (left out of the file).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Emphasis
+    {
+        get => emphasis;
+        set => emphasis = value is null || value == Emphases.Normal ? null : value;
+    }
+    string? emphasis;
     public Dictionary<string, string> Properties { get; set; } = new();
     /// <summary>Optional longer note drawn in smaller text under the label. For shapes with the label inside,
     /// it sits under the shape. A blank description is stored as null (left out of the file).</summary>
