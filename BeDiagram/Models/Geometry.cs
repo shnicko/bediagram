@@ -55,13 +55,25 @@ public static class Geometry
 
     /// <summary>
     /// The halo ring around a major step, or null for other steps: the shape's own outline drawn <see cref="HaloGap"/>
-    /// further out, as a thin line. It leaves the gap open, so connectors still reach the shape and keep their arrowheads.
+    /// further out, as a thin line. Connectors stop on the outside of the ring (<see cref="HaloOut"/>), so their arrowheads stay visible.
     /// </summary>
     public static string? HaloSvg(Node n, string colour)
     {
         if (!Emphases.Of(n).HasHalo) return null;
         AreaBox ring = new AreaBox(n.X - HaloGap, n.Y - HaloGap, n.W + 2 * HaloGap, n.H + 2 * HaloGap);
         return $"<path d=\"{OutlineOf(n).Path(ring)}\" fill=\"none\" stroke=\"{colour}\" stroke-width=\"{F(HaloRing)}\"/>";
+    }
+
+    /// <summary>How far a box's outer edge sits beyond its outline: the halo ring's outside edge for a major step,
+    /// 0 for everything else. Connectors stop here (so arrowheads land on the ring, not under it) and text under the
+    /// shape starts this much lower.</summary>
+    public static double HaloOut(IBox b) => b is Node n && Emphases.Of(n).HasHalo ? HaloGap + HaloRing : 0;
+
+    /// <summary>The box connectors attach to: the box itself, or for a major step the box out to its halo ring.</summary>
+    static IBox ConnectBox(IBox b)
+    {
+        double h = HaloOut(b);
+        return h == 0 ? b : new AreaBox(b.X - h, b.Y - h, b.W + 2 * h, b.H + 2 * h);
     }
 
     /// <summary>Soft shadow under each shape: the same outline moved down, in the shape's own colour, faint.
@@ -174,7 +186,7 @@ public static class Geometry
         List<string> lines = Wrap(desc, TextWidth(n), DescCharWidth);
         double firstBaseline = lay.Below
             ? lay.TextY + (lay.Lines.Count - 1) * LineHeight + 4 + DescLineHeight
-            : n.Y + n.H + 6 + DescLineHeight;
+            : n.Y + n.H + HaloOut(n) + 6 + DescLineHeight;
         return lay with { Desc = lines, DescX = n.X + n.W / 2, DescY = firstBaseline };
     }
 
@@ -201,7 +213,7 @@ public static class Geometry
         }
         else
         {
-            top = n.Y + n.H + 4;
+            top = n.Y + n.H + HaloOut(n) + 4;
             bottom = top;
         }
         if (lay.Desc.Count > 0)
@@ -224,7 +236,7 @@ public static class Geometry
             double size = Math.Min(n.W, n.H) * outline.GlyphScale;
             double gy = n.Y + n.H * outline.GlyphCentreY;
             List<string> lines = Wrap(label, TextWidth(n));
-            return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, gy - size / 2, size);
+            return new(lines, cx, n.Y + n.H + HaloOut(n) + 18, true, true, cx - size / 2, gy - size / 2, size);
         }
 
         if (icon && outline.IconMovesLabelBelow)
@@ -232,7 +244,7 @@ public static class Geometry
             // Presentation style: icon centred in the circle, label underneath.
             double size = Math.Min(n.W, n.H) * 0.46;
             List<string> lines = Wrap(label, TextWidth(n));
-            return new(lines, cx, n.Y + n.H + 18, true, true, cx - size / 2, cy - size / 2, size);
+            return new(lines, cx, n.Y + n.H + HaloOut(n) + 18, true, true, cx - size / 2, cy - size / 2, size);
         }
 
         if (icon && outline.IconAboveTextWrap is double aboveWrap)
@@ -433,12 +445,12 @@ public static class Geometry
     static EdgeRoute StraightRoute(IBox a, IBox b, string? fromSide, string? toSide)
     {
         (double X, double Y) ca = (a.X + a.W / 2, a.Y + a.H / 2), cb = (b.X + b.W / 2, b.Y + b.H / 2);
-        (double X, double Y)? p1 = fromSide is null ? null : SidePoint(a, fromSide);
-        (double X, double Y)? p2 = toSide is null ? null : SidePoint(b, toSide);
+        (double X, double Y)? p1 = fromSide is null ? null : SidePoint(ConnectBox(a), fromSide);
+        (double X, double Y)? p2 = toSide is null ? null : SidePoint(ConnectBox(b), toSide);
         (double X, double Y) aimA = p2 ?? cb;
         (double X, double Y) aimB = p1 ?? ca;
-        (double X, double Y) start = p1 ?? Boundary(a, aimA.X, aimA.Y);
-        (double X, double Y) end = p2 ?? Boundary(b, aimB.X, aimB.Y);
+        (double X, double Y) start = p1 ?? ConnectBoundary(a, aimA.X, aimA.Y);
+        (double X, double Y) end = p2 ?? ConnectBoundary(b, aimB.X, aimB.Y);
         return new EdgeRoute(new() { start, end }, -1, fromSide, toSide);
     }
 
@@ -463,6 +475,8 @@ public static class Geometry
     /// </summary>
     static EdgeRoute ElbowRoute(IBox a, IBox b, string s1, string s2, double bend, bool legacy)
     {
+        a = ConnectBox(a);
+        b = ConnectBox(b);
         (double X, double Y) p1 = SidePoint(a, s1);
         (double X, double Y) p2 = SidePoint(b, s2);
         (double X, double Y) d1 = Sides.Dir(s1);
@@ -571,6 +585,14 @@ public static class Geometry
         double cx = box.X + box.W / 2, cy = box.Y + box.H / 2;
         if (Math.Abs(tx - cx) < 1e-6 && Math.Abs(ty - cy) < 1e-6) return (cx, cy);
         return OutlineOf(box).Boundary(box, tx, ty);
+    }
+
+    /// <summary><see cref="Boundary"/> on the box connectors attach to (out to a major step's halo ring), keeping the shape's outline.</summary>
+    static (double X, double Y) ConnectBoundary(IBox box, double tx, double ty)
+    {
+        double cx = box.X + box.W / 2, cy = box.Y + box.H / 2;
+        if (Math.Abs(tx - cx) < 1e-6 && Math.Abs(ty - cy) < 1e-6) return (cx, cy);
+        return OutlineOf(box).Boundary(ConnectBox(box), tx, ty);
     }
 
     public static string PathD(List<(double X, double Y)> pts) =>

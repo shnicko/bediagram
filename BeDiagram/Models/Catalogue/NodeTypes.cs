@@ -22,7 +22,7 @@ public static class NodeTypes
         new(Action,   "Action",        "rect-rounded",  "#e8f6f8", "#1f8796", 160, 64),
         new(Data,     "Data / IFC",    "parallelogram", "#f4f4f2", "#6b6b66", 170, 64),
         new(Status,   "Status",        "hexagon",       "#fdeef0", "#b8475a", 150, 56),
-        new(End,      "End",           "pill",          "#fbe9e7", "#b4472f", 140, 52),
+        new(End,      "End",           "pill",          "#e7f5ec", "#2f8f5b", 140, 52),
         new(Circle,   "Circle",        "circle",        "#eef3fb", "#3b6fb6", 84, 84),
         new(Outcome,  "Outcome",       "outcome",       "#e7f5ec", "#2f8f5b", 50, 50),
     };
