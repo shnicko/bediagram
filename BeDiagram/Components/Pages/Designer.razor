@@ -960,6 +960,10 @@
                 </div>
             }
             <div class="actions col">
+                @if (Editor.SwapPair() is not null)
+                {
+                    <button title="Each shape moves to the other's place; connectors and step numbers stay where they are" @onclick="Editor.SwapSelection">@IconSvg("arrow-right-left", 16) Swap places</button>
+                }
                 <button @onclick="() => Run(JoinCmd)">Join in selection order (J)</button>
                 <button @onclick="() => Run(GroupCmd)">Group (Ctrl+G)</button>
                 <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
