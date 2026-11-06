@@ -22,6 +22,9 @@ public interface IShapeOutline
     /// <summary>Centre of the 🔗 badge: the bottom-right of the drawn outline.</summary>
     (double X, double Y) LinkBadgeCentre(IBox b);
 
+    /// <summary>Centre of the step-number badge: the top-left of the drawn outline (opposite the link badge).</summary>
+    (double X, double Y) StepBadgeCentre(IBox b);
+
     /// <summary>Label wrap width as a fraction of the shape width (no icon).</summary>
     double TextWrap { get; }
 

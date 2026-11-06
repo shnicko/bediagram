@@ -61,6 +61,8 @@ public class DiagramEditor
     public void Load(Diagram diagram)
     {
         Diagram = diagram;
+        // Every shape has a place in the flow; older files (or hand-edited ones) get numbers here.
+        Steps.Normalise();
         Dirty = false;
         undo.Clear();
         redo.Clear();
@@ -80,6 +82,9 @@ public class DiagramEditor
 
     /// <summary>The group hierarchy (Composite) of the open diagram, worked out from the GroupId fields.</summary>
     public GroupTree Tree => new GroupTree(Diagram);
+
+    /// <summary>The step order of the open diagram (see <see cref="StepOrder"/>).</summary>
+    public StepOrder Steps => new StepOrder(Diagram);
 
     /// <summary>A group's direct members: shapes, text boxes and the groups nested in it.</summary>
     public IEnumerable<IGroupable> Members(Group g) => Tree.Children(g);
@@ -578,6 +583,8 @@ public class DiagramEditor
     Node CreateNode(string key, double cx, double cy, bool exact = false)
     {
         Node n = exact ? NodeFactory.Create(key, cx, cy) : NodeFactory.Create(key, SnapV(cx), SnapV(cy));
+        // A new step goes on the end of the flow; reorder it in the panel.
+        if (StepOrder.IsStep(n)) n.Step = Steps.Next;
         Diagram.Nodes.Add(n);
         return n;
     }
@@ -638,6 +645,7 @@ public class DiagramEditor
         Diagram.TextBoxes.RemoveAll(c => ids.Contains(c.Id));
         Diagram.Groups.RemoveAll(g => ids.Contains(g.Id));
         Diagram.Edges.RemoveAll(e => ids.Contains(e.From) || ids.Contains(e.To));
+        Steps.Compact();
         ClearSelection();
         EditingId = null;
     }
@@ -657,6 +665,9 @@ public class DiagramEditor
             groupCopies.Add((g, gg));
         }
         string? NewGroup(string? old) => old is not null && map.TryGetValue(old, out string? ng) ? ng : old;
+        // Copies go on the end of the flow in the originals' order; originals that ran in parallel stay parallel.
+        int stepBase = Steps.Last;
+        int firstCopied = items.OfType<Node>().Where(n => n.Step is not null).Select(n => n.Step!.Value).DefaultIfEmpty(1).Min();
         foreach ((Group g, Group gg) in groupCopies) gg.GroupId = NewGroup(g.GroupId);
         foreach (IBox b in items)
         {
@@ -668,6 +679,7 @@ public class DiagramEditor
                         Type = n.Type, Label = n.Label, X = n.X + 30, Y = n.Y + 30, W = n.W, H = n.H,
                         Icon = n.Icon, Color = n.Color, Filled = n.Filled, Outcome = n.Outcome, GroupId = NewGroup(n.GroupId),
                         Description = n.Description, TextWidth = n.TextWidth, ClearTextBack = n.ClearTextBack,
+                        Step = n.Step is int s ? stepBase + s - firstCopied + 1 : null,
                         Properties = new(n.Properties),
                     };
                     Diagram.Nodes.Add(nn); map[n.Id] = nn.Id; break;
@@ -685,6 +697,7 @@ public class DiagramEditor
                 copy.CopyRouteFrom(e);
                 Diagram.Edges.Add(copy);
             }
+        Steps.Compact();
         List<string> newSel = Selection.Where(map.ContainsKey).Select(id => map[id]).ToList();
         Selection.Clear();
         Selection.AddRange(newSel);
@@ -831,6 +844,8 @@ public class DiagramEditor
         n.X = SnapV(cx) - t.W / 2; n.Y = SnapV(cy) - t.H / 2;
         if (t.Key == NodeTypes.Circle && n.Icon is null) n.Icon = "layers";
         foreach ((string k, string v) in NodeFactory.DefaultProperties(t.Key)) n.Properties.TryAdd(k, v);
+        // Becoming an outcome drops the number (and closes the gap); leaving one goes on the end of the flow.
+        Steps.Normalise();
     }
 
     /// <summary>Description or text width edited: the text under the shape changed size, so its group may need to grow.</summary>
@@ -855,6 +870,44 @@ public class DiagramEditor
     }
 
     public void SetIcon(Node n, string? icon) { Change(); n.Icon = icon; }
+
+    // ───────────── Step order ─────────────
+
+    /// <summary>Show or hide the step-number badges. The order itself is kept either way.</summary>
+    public void SetShowSteps(bool show) { if (Diagram.ShowSteps == show) return; Change(); Diagram.ShowSteps = show; }
+
+    /// <summary>Makes the shape step <paramref name="step"/> on its own; the steps from there on move down one.</summary>
+    public void SetStep(Node n, int? step)
+    {
+        if (step is not int s || s == n.Step && !Steps.IsParallel(n)) return;
+        Change();
+        Steps.MoveTo(n, s);
+    }
+
+    /// <summary>Runs the shape in parallel with the step before it (shares that number), or back on its own.</summary>
+    public void SetParallel(Node n, bool parallel) { if (parallel == Steps.IsParallel(n)) return; Change(); Steps.SetParallel(n, parallel); }
+
+    /// <summary>The selected shapes all take the earliest of their step numbers, so they run in parallel.</summary>
+    public void MakeSelectionParallel()
+    {
+        List<Node> nodes = Diagram.Nodes.Where(n => Selection.Contains(n.Id) && StepOrder.IsStep(n)).ToList();
+        if (nodes.Count < 2) { view.ShowToast("Select two or more steps to run in parallel"); return; }
+        Change();
+        Steps.MakeParallel(nodes);
+        view.ShowToast($"{nodes.Count} steps now share step {nodes[0].Step}");
+    }
+
+    /// <summary>The selected shapes become separate steps in turn (by position), starting where the first of them is.</summary>
+    public void MakeSelectionSequential()
+    {
+        List<Node> nodes = Diagram.Nodes.Where(n => Selection.Contains(n.Id) && StepOrder.IsStep(n) && n.Step is not null)
+            .OrderBy(n => n.Step).ThenBy(n => n.Y).ThenBy(n => n.X).ToList();
+        if (nodes.Count < 2) { view.ShowToast("Select two or more steps"); return; }
+        Change();
+        int start = nodes[0].Step!.Value;
+        for (int i = 0; i < nodes.Count; i++) Steps.MoveTo(nodes[i], start + i);
+        view.ShowToast($"Steps {start}–{start + nodes.Count - 1} in turn");
+    }
 
     public void SetGroupColour(Group g, string colour) { Change(); g.Color = colour; }
 

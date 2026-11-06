@@ -648,6 +648,9 @@ public partial class Designer
 
     static MarkupString NodeIconMarkup(Node n) => (MarkupString)Icons.Get(Geometry.IconOf(n));
 
+    /// <summary>The step-number badge on a shape (same markup as the export).</summary>
+    static MarkupString StepBadgeMarkup(NodeView v, int step) => (MarkupString)Geometry.StepBadgeSvg(v.N, step, v.Style.Stroke);
+
     static string EdgeLabelTransform(EdgeGeom geo) =>
         $"translate({F(geo.LabelX)},{F(geo.LabelY)}) rotate({F(geo.LabelAngle)})";
 
@@ -760,6 +763,26 @@ public partial class Designer
     static Rect NodeEditRect(NodeView v) => v.Layout.Below
         ? new Rect(v.N.X + v.N.W / 2 - 80, v.N.Y + v.N.H + 4, 160, 44)
         : new Rect(v.N.X + 8, v.N.Y + 6, v.N.W - 16, v.N.H - 12);
+
+    /// <summary>Step number typed in the panel: a whole number makes the shape that step (others move down one).</summary>
+    void StepTyped(Node n, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int step)) Editor.SetStep(n, step);
+    }
+
+    /// <summary>A shape can run in parallel when there's another step to share a number with (or it already does).</summary>
+    bool CanBeParallel(Node n) => Editor.Steps.IsParallel(n) || Editor.Steps.Last > 1;
+
+    /// <summary>"Shares step 4 with Design Review" under the step box, or null when the shape has a number of its own.</summary>
+    string? ParallelNote(Node n)
+    {
+        List<Node> others = Editor.Steps.ParallelWith(n);
+        if (others.Count == 0) return null;
+        return $"Shares step {n.Step} with {string.Join(", ", others.Select(o => string.IsNullOrWhiteSpace(o.Label) ? NodeTypes.Get(o.Type).Display : o.Label.Replace("\n", " ")))}";
+    }
+
+    /// <summary>How many of the selected items are steps (shapes other than outcomes).</summary>
+    int SelectedStepCount => D.Nodes.Count(n => Editor.Selection.Contains(n.Id) && StepOrder.IsStep(n));
 
     static bool HasProperties(Node n) => n.Properties.Values.Any(v => !string.IsNullOrWhiteSpace(v));
 

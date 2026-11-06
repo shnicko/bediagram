@@ -32,6 +32,7 @@ BeDiagram/
                          one class per outline (Rect, Check, RoundedRect, Pill, Diamond, Parallelogram, Hexagon, Circle,
                          Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (lookup by shape key)
   Models/GroupTree.cs    group hierarchy (Composite): parent / children / descendants / ancestors / paint order from GroupId
+  Models/StepOrder.cs    step order (Node.Step): numbering, gap-closing, move / parallel, flow order for unnumbered shapes
   Models/NodeFactory.cs  new nodes: size, label, icon, fill and default properties per type (palette keys incl. "outcome:pass")
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
   Editing/DiagramEditor.cs   the editor model, no UI (BeDiagram.Editing): open Diagram, Selection / SelectedEdgeId /
@@ -124,6 +125,11 @@ tools/regression/                side-by-side regression suites (master vs worki
   by hand or loop over `Diagram.Groups` to draw — use `PaintOrder` so inner groups sit over their parents. Moving a
   group moves all its descendants (`MoveBox`); `GrowGroup` also grows every group around it. A group can't go inside
   itself or one of its own groups (`CanHold`).
+- **Step order is data, not decoration.** Every shape except outcomes has `Node.Step` (1, 2, 3, …, no gaps; parallel
+  steps share a number), whether or not `Diagram.ShowSteps` draws the badges. Change numbers only through `StepOrder`
+  (`Editor.Steps`): `Normalise` / `Compact` after adding, deleting or retyping shapes, `MoveTo` / `SetParallel` /
+  `MakeParallel` for edits. The later reorder dialog drives the same methods. The badge sits at
+  `IShapeOutline.StepBadgeCentre` (default: the link badge's spot mirrored through the centre).
 - **PDF is drawn from the SVG export**, so it has no geometry of its own. If a new visual feature uses an SVG
   element or attribute `PdfExporter` doesn't read yet (gradients, images, …), extend `PdfExporter` as well.
 - **Export uses the strategy pattern** (owner's preference — he knows it well). A new format or area is a new class
