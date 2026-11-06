@@ -83,7 +83,7 @@ The PNG is drawn by your browser from the SVG export, so it matches the SVG and 
 - **Edit text:** double-click, or select and press `Enter`. Connector labels have quick chips (Yes / No / Pass / Fail).
 - **Properties panel:** type, size, and free-form key/value properties per shape. Rule-check shapes start with `ruleId`, `ifcEntity`, `property`, `operator`, `value` — groundwork for the future rule builder.
 - **Navigate:** mouse wheel pans, Ctrl+wheel zooms, right- or middle-drag pans, `F` fits the whole drawing, `Shift+F` (or *Selection* next to *Fit* in the toolbar) zooms and centres on the selected items — a selected connector counts as its two ends.
-- **Other:** `Del` delete, arrows nudge (Shift = 1px), `Ctrl+Z`/`Ctrl+Y` undo/redo, `Ctrl+D` duplicate, `Ctrl+A` select all, `Ctrl+S` save.
+- **Other:** `Del` delete, arrows nudge (Shift = 1px), `Ctrl+Z`/`Ctrl+Y` undo/redo, `Ctrl+D` duplicate (the copy keeps everything but the id: look, link, description, properties; groups keep their fill, border and title style), `Ctrl+A` select all, `Ctrl+S` save.
 
 ## File format (bediagram/1)
 

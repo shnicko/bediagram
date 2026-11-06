@@ -36,4 +36,7 @@ public class Group : IGroupable
     /// <summary>"band" = title on a tinted strip inside the group; "text" = plain bold title
     /// (inside at the top, or centred under the box when the title is at the bottom).</summary>
     public string HeaderStyle { get; set; } = GroupLook.Band;
+
+    /// <summary>A copy with a new id; every other field (title, colour, fill, border, title style, link, parent group) is kept.</summary>
+    public Group Copy() { Group c = (Group)MemberwiseClone(); c.Id = Node.NewId("g"); return c; }
 }

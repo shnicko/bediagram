@@ -59,5 +59,14 @@ public class Node : IGroupable
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Link { get; set; }
 
+    /// <summary>A copy with a new id and its own <see cref="Properties"/>; every other field (look, link, step, group) is kept.</summary>
+    public Node Copy()
+    {
+        Node c = (Node)MemberwiseClone();
+        c.Id = NewId("n");
+        c.Properties = new Dictionary<string, string>(Properties);
+        return c;
+    }
+
     public static string NewId(string prefix) => $"{prefix}_{Guid.NewGuid().ToString("N")[..8]}";
 }

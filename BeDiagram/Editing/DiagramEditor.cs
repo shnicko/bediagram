@@ -661,7 +661,8 @@ public class DiagramEditor
         List<(Group Old, Group Copy)> groupCopies = new List<(Group Old, Group Copy)>();
         foreach (Group g in items.OfType<Group>())
         {
-            Group gg = new Group { Title = g.Title, Color = g.Color, X = g.X + 30, Y = g.Y + 30, W = g.W, H = g.H };
+            Group gg = g.Copy();
+            gg.X += 30; gg.Y += 30;
             Diagram.Groups.Add(gg); map[g.Id] = gg.Id;
             groupCopies.Add((g, gg));
         }
@@ -675,14 +676,9 @@ public class DiagramEditor
             switch (b)
             {
                 case Node n:
-                    Node nn = new Node
-                    {
-                        Type = n.Type, Label = n.Label, X = n.X + 30, Y = n.Y + 30, W = n.W, H = n.H,
-                        Icon = n.Icon, Color = n.Color, Filled = n.Filled, Outcome = n.Outcome, Emphasis = n.Emphasis, GroupId = NewGroup(n.GroupId),
-                        Description = n.Description, TextWidth = n.TextWidth, ClearTextBack = n.ClearTextBack,
-                        Step = n.Step is int s ? stepBase + s - firstCopied + 1 : null,
-                        Properties = new(n.Properties),
-                    };
+                    Node nn = n.Copy();
+                    nn.X += 30; nn.Y += 30; nn.GroupId = NewGroup(n.GroupId);
+                    nn.Step = n.Step is int s ? stepBase + s - firstCopied + 1 : null;
                     Diagram.Nodes.Add(nn); map[n.Id] = nn.Id; break;
                 case TextBox c:
                     TextBox cc = c.Copy();
