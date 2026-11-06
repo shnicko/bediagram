@@ -45,18 +45,24 @@ const [url, out] = process.argv.slice(2);
     ['group', async () => { const c = await centreOf('.group-header', 0); if (c) await p.mouse.click(...c); }],
     ['multi', async () => { await p.keyboard.press('Escape'); await p.keyboard.press('Control+a'); }],
   ];
-  const CONTROLS = 'aside.panel button:not(.icon-btn), aside.panel .icon-btn:nth-child(-n+2), aside.panel input[type=checkbox], aside.panel select, aside.panel input[type=range]';
+  const CONTROLS = 'aside.panel button:not(.icon-btn), aside.panel .icon-btn:nth-child(-n+2), aside.panel .alignbar .icon-btn, aside.panel input[type=checkbox], aside.panel select, aside.panel input[type=range]';
   // Each control is named by what it says (text, tooltip, or the label next to it), with " (2)", " (3)" … for repeats,
   // so a step keeps its name when a control is added or removed elsewhere in the panel.
   const controls = async () => {
     const hs = await p.$$(CONTROLS);
     const names = await p.evaluate(sel => {
       const seen = {};
+      // The label or heading just before the control (in its own row, or before the row it sits in).
+      const isTitle = x => ['LABEL', 'H3', 'H4'].includes(x.tagName) && !x.querySelector('input');
       const labelOf = e => {
         const own = e.closest('label'); if (own) return own.innerText;
-        let x = e.previousElementSibling; while (x && x.tagName !== 'LABEL') x = x.previousElementSibling;
-        if (!x && e.parentElement) { x = e.parentElement.previousElementSibling; while (x && x.tagName !== 'LABEL') x = x.previousElementSibling; }
-        return x ? x.innerText : '';
+        for (let from = e; from && from.tagName !== 'ASIDE'; from = from.parentElement) {
+          let x = from.previousElementSibling;
+          while (x && !isTitle(x) && !x.querySelector('input, select, button')) x = x.previousElementSibling;
+          if (x && isTitle(x)) return x.innerText;
+          if (x) return '';
+        }
+        return '';
       };
       return [...document.querySelectorAll(sel)].map(e => {
         const text = (e.tagName === 'BUTTON' ? (e.textContent.trim() || e.title) : labelOf(e) || e.title || e.value || '').trim().replace(/\s+/g, ' ').slice(0, 40);
@@ -68,14 +74,19 @@ const [url, out] = process.argv.slice(2);
     return hs.map((h, i) => ({ h, name: names[i] }));
   };
   const canvas = async () => p.evaluate(() => document.querySelector('svg.surface').outerHTML.replace(/\b[netg]_[0-9a-f]{8}\b/g, ''));
+  // Wait until the canvas stops changing (slow actions such as Auto-layout finish after the click returns).
+  const settle = async () => {
+    let last = await canvas();
+    for (let k = 0; k < 20; k++) { await p.waitForTimeout(150); const now = await canvas(); if (now === last) return; last = now; }
+  };
   const deselect = async () => { await p.keyboard.press('Escape'); await p.keyboard.press('Escape'); await p.mouse.click(1250, 950); await p.waitForTimeout(120); };
   // Undo until the canvas is back to how it was before the step; reload the diagram if undo can't get there.
   let reloads = 0;
   const restore = async (before) => {
-    await deselect();
+    await deselect(); await settle();
     for (let k = 0; k < 8 && (await canvas()) !== before; k++) {
       if (await p.evaluate(() => document.querySelector('button[title^="Undo"]').disabled)) break;
-      await p.keyboard.press('Control+z'); await p.waitForTimeout(120);
+      await p.keyboard.press('Control+z'); await settle();
     }
     if ((await canvas()) !== before) { reloads++; await setup(); }
   };
@@ -84,7 +95,7 @@ const [url, out] = process.argv.slice(2);
     const names = (await controls()).map(c => c.name);
     for (const ctrl of names) {
       if (ctrl.startsWith('button "Open')) continue;
-      await deselect();
+      await deselect(); await settle();
       const before = await canvas();
       await select(); await p.waitForTimeout(W);
       const c = (await controls()).find(x => x.name === ctrl)?.h;
@@ -98,7 +109,7 @@ const [url, out] = process.argv.slice(2);
           await c.evaluate(e => { e.value = '0.25'; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); });
         } else await c.click({ timeout: 2000 });
       } catch (e) { log.push({ label: `${name} · ${ctrl} — could not interact` }); await restore(before); continue; }
-      await p.waitForTimeout(W);
+      await p.waitForTimeout(W); await settle();
       // close a dialog if one opened (e.g. confirm leave on a link)
       if (await p.$('.modal')) { await p.keyboard.press('Escape'); await p.keyboard.press('Escape'); await p.waitForTimeout(150); }
       await state(`${name} · ${ctrl}`);
