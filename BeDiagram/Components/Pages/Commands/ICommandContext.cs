@@ -34,6 +34,11 @@ public interface ICommandContext
     void Nudge(double dx, double dy);
     void ToggleSelectedConnectorStyle();
 
+    /// <summary>The diagram has at least one connector.</summary>
+    bool HasConnectors { get; }
+    /// <summary>Re-routes connectors that pass through shapes (selected connector, those on the selection, or all).</summary>
+    void TidyConnectors();
+
     /// <summary>There is at least one top-level group to arrange as a swim lane.</summary>
     bool HasLanes { get; }
     /// <summary>Arranges the top-level groups (or the selected ones) as swim lanes.</summary>
