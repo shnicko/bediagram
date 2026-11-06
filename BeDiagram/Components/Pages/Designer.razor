@@ -85,6 +85,7 @@
                 <button class="@(D.DefaultConnector == EdgeStyles.Elbow ? "on" : "")" title="Right-angled connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyles.Elbow)">@IconSvg("corner-down-right", 16)</button>
                 <button class="@(D.DefaultConnector == EdgeStyles.Straight ? "on" : "")" title="Straight connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyles.Straight)">@IconSvg("move-up-right", 16)</button>
             </div>
+            <button class="small" title="@TidyTip" disabled="@(!CanRun(TidyCmd))" @onclick="() => Run(TidyCmd)">Tidy</button>
         </div>
         <div class="group">
             <label class="toggle" title="New items join to the selected item automatically">

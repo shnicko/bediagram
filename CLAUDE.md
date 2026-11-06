@@ -44,6 +44,7 @@ BeDiagram/
   Editing/AlignOp.cs         align / distribute / row / column operations
   Editing/Lanes/             swim lanes (Strategy pattern, BeDiagram.Editing.Lanes): ILaneLayout, HorizontalLanes,
                              VerticalLanes, LaneLayouts, LaneArranger (the one-off arrange). Editor.ArrangeLanes(layout)
+  Editing/Routing/           Tidy connectors (BeDiagram.Editing.Routing): ConnectorTidier (Plan → TidyPlan, Apply). Editor.TidyConnectors()
   Editing/Angles/            angle lock (Strategy pattern, BeDiagram.Editing.Angles): IAngleLock, LockedOffset, FreeAngle,
                              StepAngle (90 / 45 / 30), AngleLocks. Editor.LockOffset (moves) / LockPoint (placed steps)
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
@@ -139,6 +140,10 @@ tools/regression/                side-by-side regression suites (master vs worki
   (`flow` along a lane, `cross` across) and an `ILaneLayout` maps them to x / y and gives the title insets, so one
   algorithm does both directions. Columns come from `Node.Step`. It's a one-off arrange (one `Change()`), not a
   stored layout: no file-format change. Run from `ArrangeLanesHorizontalCommand` / `ArrangeLanesVerticalCommand`.
+- **Tidy connectors is on request, never automatic** (Nick's call, 2026-11-06: auto re-routing would get frustrating).
+  `ConnectorTidier` only picks values for the existing route fields (`FromSide` / `ToSide` / `Bend`) by trying candidates
+  through `Geometry.Route` and scoring them, so the renderers and file format don't change. It plans first and the
+  editor calls `Change()` only when a route changes. Elbow connectors that cross a shape or text box only.
 - **Step order is data, not decoration.** Every shape except outcomes has `Node.Step` (1, 2, 3, …, no gaps; parallel
   steps share a number), whether or not `Diagram.ShowSteps` draws the badges. Change numbers only through `StepOrder`
   (`Editor.Steps`): `Normalise` / `Compact` after adding, deleting or retyping shapes, `MoveTo` / `SetParallel` /
@@ -187,7 +192,7 @@ tools/regression/                side-by-side regression suites (master vs worki
 
 ## Backlog (rough priority)
 
-1. Connector routing around shapes (lines currently pass behind obstacles).
+1. Connector routing: *Tidy* (on request) is in; live routing deliberately not wanted.
 2. Auto-layout ("tidy") — candidate: MSAGL (Microsoft Automatic Graph Layout, MIT).
 3. Mermaid import.
 4. Later: visual rule builder for the Data Audit Tools rules engine (Excel template stays a valid source).

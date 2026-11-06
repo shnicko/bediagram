@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using BeDiagram.Editing.Angles;
 using BeDiagram.Editing.Lanes;
+using BeDiagram.Editing.Routing;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
@@ -926,6 +927,34 @@ public class DiagramEditor
         int start = nodes[0].Step!.Value;
         for (int i = 0; i < nodes.Count; i++) Steps.MoveTo(nodes[i], start + i);
         view.ShowToast($"Steps {start}–{start + nodes.Count - 1} in turn");
+    }
+
+    // ───────────── Tidy connectors ─────────────
+
+    /// <summary>
+    /// Re-routes elbow connectors that pass through a shape or text box (see <see cref="ConnectorTidier"/>): the selected
+    /// connector; or the connectors touching the selected items; or, with nothing selected, all of them.
+    /// Connectors already clear are left alone. One undo step, and none when nothing changes.
+    /// </summary>
+    public void TidyConnectors()
+    {
+        List<Edge> edges;
+        string scope;
+        if (SelectedEdge is { } one) { edges = new List<Edge> { one }; scope = "the selected connector"; }
+        else if (Selection.Count > 0)
+        {
+            HashSet<string> ids = WithMembers(Selection).Select(b => b.Id).ToHashSet();
+            edges = Diagram.Edges.Where(e => ids.Contains(e.From) || ids.Contains(e.To)).ToList();
+            scope = "connectors on the selection";
+        }
+        else { edges = Diagram.Edges.ToList(); scope = "all connectors"; }
+        if (edges.Count == 0) { view.ShowToast("No connectors to tidy"); return; }
+        TidyPlan plan = new ConnectorTidier(Diagram, id => FindBox(id)).Plan(edges);
+        if (plan.Routes.Count > 0) { Change(); ConnectorTidier.Apply(plan); }
+        int crossing = plan.Crossing, cleared = plan.Cleared;
+        if (crossing == 0) view.ShowToast($"Nothing to tidy — {scope} already miss every shape");
+        else if (cleared == crossing) view.ShowToast($"Tidied {cleared} connector{(cleared == 1 ? "" : "s")} so they go round shapes");
+        else view.ShowToast($"Tidied {plan.Routes.Count} of {crossing} connectors that crossed a shape; {crossing - cleared} still touch one — no clear route (move a shape to make room)");
     }
 
     // ───────────── Swim lanes ─────────────

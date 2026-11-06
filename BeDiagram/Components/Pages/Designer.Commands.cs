@@ -44,6 +44,12 @@ public partial class Designer
         ? $"{command.Name}: line the lanes up and put their shapes in columns by step number"
         : "Group the shapes of each lane first (select them, Ctrl+G)";
 
+    /// <summary>Tooltip for Tidy: what it will work on, given the selection.</summary>
+    string TidyTip => !CanRun(TidyCmd) ? "No connectors yet"
+        : Editor.SelectedEdge is not null ? "Tidy the selected connector: re-route it round any shape it passes through"
+        : Editor.Selection.Count > 0 ? "Tidy the connectors on the selected items: re-route any that pass through a shape"
+        : "Tidy connectors: re-route any that pass through a shape (select items first to tidy just theirs)";
+
     // Commands wired to buttons in Designer.razor.
     IEditorCommand SaveCmd => Commands.Get<SaveCommand>();
     IEditorCommand SaveAsCmd => Commands.Get<SaveAsCommand>();
@@ -60,4 +66,5 @@ public partial class Designer
     IEditorCommand AddCommentCmd => Commands.Get<AddCommentCommand>();
     IEditorCommand LanesAcrossCmd => Commands.Get<ArrangeLanesHorizontalCommand>();
     IEditorCommand LanesDownCmd => Commands.Get<ArrangeLanesVerticalCommand>();
+    IEditorCommand TidyCmd => Commands.Get<TidyConnectorsCommand>();
 }
