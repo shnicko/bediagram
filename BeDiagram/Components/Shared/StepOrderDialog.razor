@@ -1,0 +1,53 @@
+<div class="modal-bg see-through" @onclick="Close">
+    <div class="modal step-order" @onclick:stopPropagation="true">
+        <h3>Step order</h3>
+        <p class="muted">Drag a step <strong>between</strong> two others to move it, or <strong>onto</strong> another step to run them in parallel. Changes go straight into the diagram. Click a name to select that shape.</p>
+        <label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="ShowNumbers" /> Show step numbers on the diagram</label>
+
+        @if (Slots.Count == 0)
+        {
+            <p class="muted">No steps yet — add some shapes first. (Outcomes have no step number.)</p>
+        }
+        <div class="step-list" @ondragend="EndDrag">
+            @foreach ((int step, List<Node> nodes) in Slots)
+            {
+                <div class="@GapClass(step)" data-gap="@step"
+                     @ondragover:preventDefault="true" @ondragenter="() => EnterGap(step)" @ondrop="() => DropInGap(step)"></div>
+                <div class="@SlotClass(step)" data-step="@step"
+                     @ondragover:preventDefault="true" @ondragenter="() => EnterSlot(step)" @ondrop="() => DropOnSlot(step)">
+                    <span class="step-num">@step</span>
+                    <div class="step-items">
+                        @foreach (Node n in nodes)
+                        {
+                            <div class="@ItemClass(n)" draggable="true" data-node="@n.Id" @ondragstart="() => StartDrag(n)">
+                                <span class="grip" title="Drag to move">⋮⋮</span>
+                                <button class="link step-name" title="Select this shape on the diagram" @onclick="() => Pick(n)">@NameOf(n)</button>
+                                <span class="muted step-meta">@MetaOf(n)</span>
+                                <button class="icon step-btn" title="@EarlierTip(n)" disabled="@(!CanEarlier(n))" @onclick="() => Earlier(n)">↑</button>
+                                <button class="icon step-btn" title="@LaterTip(n)" disabled="@(!CanLater(n))" @onclick="() => Later(n)">↓</button>
+                                @if (IsParallel(n))
+                                {
+                                    <button class="icon step-btn" title="Runs in parallel — click to make it its own step, straight after" @onclick="() => ToggleParallel(n)">@IconSvg("rows-3", 15)</button>
+                                }
+                                else
+                                {
+                                    <button class="icon step-btn" title="Run in parallel with the step above" disabled="@(!CanJoinAbove(n))" @onclick="() => ToggleParallel(n)">@IconSvg("columns-3", 15)</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            @if (Slots.Count > 0)
+            {
+                <div class="@GapClass(EndGap)" data-gap="@EndGap"
+                     @ondragover:preventDefault="true" @ondragenter="() => EnterGap(EndGap)" @ondrop="() => DropInGap(EndGap)"></div>
+            }
+        </div>
+
+        <div class="actions">
+            <button title="Undo the last change" disabled="@(!Editor.CanUndo)" @onclick="Undo">↶ Undo</button>
+            <button class="primary" @onclick="Close">Done</button>
+        </div>
+    </div>
+</div>

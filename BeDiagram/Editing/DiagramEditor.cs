@@ -896,6 +896,19 @@ public class DiagramEditor
     /// <summary>Runs the shape in parallel with the step before it (shares that number), or back on its own.</summary>
     public void SetParallel(Node n, bool parallel) { if (parallel == Steps.IsParallel(n)) return; Change(); Steps.SetParallel(n, parallel); }
 
+    /// <summary>Step order dialog: makes the shape a step of its own in gap <paramref name="gap"/> (just before step
+    /// <paramref name="gap"/>; see <see cref="StepOrder.MoveBefore"/>).</summary>
+    public void MoveStepBefore(Node n, int gap) { if (!Steps.CanMoveBefore(n, gap)) return; Change(); Steps.MoveBefore(n, gap); }
+
+    /// <summary>Step order dialog: one place earlier (a parallel step comes out just before its group).</summary>
+    public void MoveStepEarlier(Node n) => MoveStepBefore(n, Steps.EarlierGap(n));
+
+    /// <summary>Step order dialog: one place later (a parallel step comes out just after its group).</summary>
+    public void MoveStepLater(Node n) => MoveStepBefore(n, Steps.LaterGap(n));
+
+    /// <summary>Step order dialog: the shape runs in parallel with step <paramref name="step"/>.</summary>
+    public void JoinStep(Node n, int step) { if (!Steps.CanJoin(n, step)) return; Change(); Steps.Join(n, step); }
+
     /// <summary>The selected shapes all take the earliest of their step numbers, so they run in parallel.</summary>
     public void MakeSelectionParallel()
     {

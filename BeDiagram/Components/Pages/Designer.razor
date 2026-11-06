@@ -96,6 +96,7 @@
             <label class="toggle" title="Show each shape's step number (the order is kept either way)">
                 <input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Steps
             </label>
+            <button class="small" title="Put the steps in order: drag to reorder, or set steps to run in parallel" @onclick="ShowStepOrder">Order…</button>
         </div>
         <div class="group" title="Angle lock when moving items and placing joined steps">
             <span class="muted-label">Angle</span>
@@ -566,6 +567,7 @@
                 {
                     <p class="muted small-note">@pn</p>
                 }
+                <button class="small" title="See every step in order: drag to reorder, or set steps to run in parallel" @onclick="ShowStepOrder">Step order…</button>
             }
             <label>Type</label>
             <select value="@sn.Type" @onchange="e => Editor.ChangeType(sn, e.Value?.ToString())">
@@ -963,7 +965,8 @@
 
             <h4>Steps</h4>
             <label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
-            <p class="muted">Every shape except outcomes has a step number, shown or not — new shapes go on the end. Change a shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</p>
+            <p class="muted">Every shape except outcomes has a step number, shown or not — new shapes go on the end. Reorder them all in <em>Step order…</em>, or change one shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</p>
+            <button class="small" @onclick="ShowStepOrder">Step order…</button>
 
             <h4>Page</h4>
             <select value="@D.Page.Size" @onchange="SetPageSize">
@@ -1116,6 +1119,10 @@ else if (dialog == Dialog.ConfirmLeave && pendingNav is { } nav)
             </div>
         </div>
     </div>
+}
+else if (dialog == Dialog.StepOrder)
+{
+    <StepOrderDialog Editor="Editor" OnChanged="StateHasChanged" OnClose="CloseDialog" />
 }
 else if (dialog == Dialog.ConfirmNew)
 {

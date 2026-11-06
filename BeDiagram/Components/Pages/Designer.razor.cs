@@ -27,7 +27,7 @@ public partial class Designer
     [Inject] ExportService Exports { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
-    enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave }
+    enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave, StepOrder }
 
     /// <summary>
     /// The diagram and everything done to it (selection, undo, editing actions) live in the editor; this page shows
@@ -425,6 +425,9 @@ public partial class Designer
         dialog = Dialog.SaveAs;
         _ = module?.InvokeVoidAsync("focus", "saveas-name");
     }
+
+    /// <summary>Opens the step order pop-up (Components/Shared/StepOrderDialog).</summary>
+    void ShowStepOrder() => dialog = Dialog.StepOrder;
 
     void CloseDialog() { dialog = Dialog.None; confirmDelete = null; }
 
