@@ -107,6 +107,7 @@ kbd {
 .node:hover .port, .node.selected .port, .connecting .port { opacity: 1; }
 .port:hover { fill: var(--accent); }
 .props-dot { pointer-events: none; }
+.step-badge text { user-select: none; }
 
 .edge { cursor: pointer; }
 .edge-hit { fill: none; stroke: transparent; stroke-width: 14; }
@@ -183,6 +184,9 @@ kbd {
 .panel textarea { resize: vertical; }
 .row { display: flex; gap: 8px; }
 .row > div { flex: 1; }
+.step-row { display: flex; gap: 12px; align-items: center; }
+.step-row input[type=number] { width: 72px; flex: none; }
+.step-row .check { margin: 0; }
 .props { display: flex; flex-direction: column; gap: 4px; }
 .prop { display: flex; gap: 4px; align-items: center; }
 .prop input { padding: 4px 6px; font-size: 12px; }

@@ -41,6 +41,14 @@ public abstract class ShapeOutline : IShapeOutline
 
     public virtual (double X, double Y) LinkBadgeCentre(IBox b) => (b.X + b.W - 1.5, b.Y + b.H - 1.5);
 
+    /// <summary>Default: the link badge's spot mirrored through the centre, so it sits on the top-left of the same
+    /// outline (on the curve for circles, on the upper-left edge for diamonds, at the corner for boxes).</summary>
+    public virtual (double X, double Y) StepBadgeCentre(IBox b)
+    {
+        (double lx, double ly) = LinkBadgeCentre(b);
+        return (2 * (b.X + b.W / 2) - lx, 2 * (b.Y + b.H / 2) - ly);
+    }
+
     public virtual double TextWrap => 0.86;
     public virtual double? IconAboveTextWrap => null;
     public virtual double IconInset => 14;

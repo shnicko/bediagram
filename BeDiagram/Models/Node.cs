@@ -23,6 +23,10 @@ public class Node : IGroupable
     /// This carries the meaning; the shape and glyph are just how it is drawn.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Outcome { get; set; }
+    /// <summary>Place in the flow: 1, 2, 3, … (see <see cref="StepOrder"/>). Shapes that run in parallel share a number.
+    /// Always kept, whether or not the numbers are shown; null only on outcomes, which are results rather than steps.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Step { get; set; }
     public Dictionary<string, string> Properties { get; set; } = new();
     /// <summary>Optional longer note drawn in smaller text under the label. For shapes with the label inside,
     /// it sits under the shape. A blank description is stored as null (left out of the file).</summary>

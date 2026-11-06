@@ -157,6 +157,7 @@ public static class Exporters
                 sb.Append("</text>\n");
             }
             if (Geometry.HasLink(n)) sb.Append(Geometry.LinkBadgeSvg(n, st.Stroke)).Append('\n');
+            if (Geometry.ShownStep(d, n) is int step) sb.Append(Geometry.StepBadgeSvg(n, step, st.Stroke)).Append('\n');
         }
         // Group link badges sit above the members so they're never hidden.
         foreach (Group g in d.Groups.Where(Geometry.HasLink))
@@ -219,7 +220,7 @@ public static class Exporters
         {
             string id = $"N{++i}";
             ids[n.Id] = id;
-            string text = Geometry.LabelText(n);
+            string text = Geometry.ShownStep(d, n) is int step ? $"{step}. {Geometry.LabelText(n)}" : Geometry.LabelText(n);
             // Mermaid can't draw text outside a shape, so the description goes on its own line inside the label.
             string desc = n.Description is { } dsc ? "<br/>" + dsc.Replace("\"", "'").Replace("\r", "").Trim().Replace("\n", " ") : "";
             if (n.Type == NodeTypes.Outcome)

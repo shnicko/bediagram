@@ -76,6 +76,29 @@ public static class Geometry
         return $"M{F(x + r)},{F(y)} H{F(x + w - r)} Q{F(x + w)},{F(y)} {F(x + w)},{F(y + r)} V{F(y + h - r)} Q{F(x + w)},{F(y + h)} {F(x + w - r)},{F(y + h)} H{F(x + r)} Q{F(x)},{F(y + h)} {F(x)},{F(y + h - r)} V{F(y + r)} Q{F(x)},{F(y)} {F(x + r)},{F(y)} Z";
     }
 
+    // ───────────── Step badge ─────────────
+
+    /// <summary>Radius of the step-number badge (a little wider for two-digit numbers).</summary>
+    public static double StepBadgeR(int step) => step >= 10 ? 11.5 : 10;
+
+    /// <summary>Font size of the number in the step badge.</summary>
+    public const double StepFontSize = 11.5;
+
+    /// <summary>The step number drawn on <paramref name="n"/>, or null when numbers are hidden or it has none (outcomes).</summary>
+    public static int? ShownStep(Diagram d, Node n) => d.ShowSteps && StepOrder.IsStep(n) ? n.Step : null;
+
+    /// <summary>Centre of the step badge: the top-left of the drawn outline (see <see cref="IShapeOutline.StepBadgeCentre"/>).</summary>
+    public static (double X, double Y) StepBadgeCentre(Node n) => OutlineOf(n).StepBadgeCentre(n);
+
+    /// <summary>SVG markup for the step badge: a disc in the shape's colour with a white ring and a white number.
+    /// Used by the canvas and the export.</summary>
+    public static string StepBadgeSvg(Node n, int step, string colour)
+    {
+        (double cx, double cy) = StepBadgeCentre(n);
+        return $"<circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(StepBadgeR(step))}\" fill=\"{colour}\" stroke=\"#ffffff\" stroke-width=\"2\"/>"
+             + $"<text x=\"{F(cx)}\" y=\"{F(cy + StepFontSize * 0.36)}\" font-size=\"{F(StepFontSize)}\" font-weight=\"700\" text-anchor=\"middle\" fill=\"#ffffff\">{step}</text>";
+    }
+
     // ───────────── Link badge ─────────────
 
     /// <summary>Radius of the round "has a more detailed diagram" badge.</summary>

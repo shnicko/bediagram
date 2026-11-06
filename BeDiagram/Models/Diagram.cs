@@ -19,6 +19,10 @@ public class Diagram : IJsonOnDeserialized
     public Edge DefaultLook { get; set; } = new();
     /// <summary>Optional fixed page (paper size). Size "none" = open canvas.</summary>
     public PageSetup Page { get; set; } = new();
+    /// <summary>Draw each shape's step number in a small badge. The order itself is always kept
+    /// (<see cref="Node.Step"/>); this only decides whether it is shown. False is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ShowSteps { get; set; }
     public List<Group> Groups { get; set; } = new();
     public List<Node> Nodes { get; set; } = new();
     public List<Edge> Edges { get; set; } = new();

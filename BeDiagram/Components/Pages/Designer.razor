@@ -93,6 +93,9 @@
             <label class="toggle" title="Snap to a 10px grid">
                 <input type="checkbox" @bind="Editor.Snap" /> Snap
             </label>
+            <label class="toggle" title="Show each shape's step number (the order is kept either way)">
+                <input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Steps
+            </label>
         </div>
         <div class="group" title="Angle lock when moving items and placing joined steps">
             <span class="muted-label">Angle</span>
@@ -438,6 +441,10 @@
                         {
                             <LinkBadge Box="v.N" Colour="@v.Style.Stroke" Link="@(v.N.Link!)" OnFollow="FollowLink" />
                         }
+                        @if (Geometry.ShownStep(D, v.N) is int step)
+                        {
+                            <g class="step-badge">@StepBadgeMarkup(v, step)</g>
+                        }
                         @foreach ((double px, double py) in Ports(v.N))
                         {
                             <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
@@ -539,6 +546,20 @@
             <label>Text width <span class="muted">(px — @TextWidthHint(sn))</span></label>
             <input type="number" min="40" step="10" placeholder="@TextWidthPlaceholder(sn)" @bind="sn.TextWidth" @bind:after="() => Editor.OutsideTextChanged(sn)" @onfocus="Editor.Checkpoint" />
             <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@sn.ClearTextBack" @onchange="e => Editor.SetClearTextBack(sn, e.Value is true)" /> Transparent text background</label>
+            @if (StepOrder.IsStep(sn))
+            {
+                <label>Step <span class="muted">(place in the flow@(D.ShowSteps ? "" : " — numbers hidden"))</span></label>
+                <div class="step-row">
+                    <input id="prop-step" type="number" min="1" max="@Editor.Steps.Next" value="@sn.Step" @onchange="e => StepTyped(sn, e)" />
+                    <label class="check" title="Shares its step number with the step before it — tasks that happen at the same time">
+                        <input type="checkbox" checked="@Editor.Steps.IsParallel(sn)" disabled="@(!CanBeParallel(sn))" @onchange="e => Editor.SetParallel(sn, e.Value is true)" /> Runs in parallel
+                    </label>
+                </div>
+                @if (ParallelNote(sn) is { } pn)
+                {
+                    <p class="muted small-note">@pn</p>
+                }
+            }
             <label>Type</label>
             <select value="@sn.Type" @onchange="e => Editor.ChangeType(sn, e.Value?.ToString())">
                 @foreach (NodeTypeInfo t in NodeTypes.All)
@@ -905,6 +926,14 @@
                 <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyles.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
                 <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyles.Straight)">@IconSvg("move-up-right", 16) Straight</button>
             </div>
+            @if (SelectedStepCount > 1)
+            {
+                <label>Step order</label>
+                <div class="seg wide">
+                    <button title="Give the selected steps the same number — they happen at the same time" @onclick="Editor.MakeSelectionParallel">@IconSvg("columns-3", 16) Run in parallel</button>
+                    <button title="Number the selected steps one after another, top to bottom" @onclick="Editor.MakeSelectionSequential">@IconSvg("rows-3", 16) One after another</button>
+                </div>
+            }
             <div class="actions col">
                 <button @onclick="() => Run(JoinCmd)">Join in selection order (J)</button>
                 <button @onclick="() => Run(GroupCmd)">Group (Ctrl+G)</button>
@@ -917,6 +946,10 @@
             <label>Name</label>
             <input value="@D.Name" @onchange="RenameDiagram" />
             <p class="muted">@DiagramSummary</p>
+
+            <h4>Steps</h4>
+            <label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
+            <p class="muted">Every shape except outcomes has a step number, shown or not — new shapes go on the end. Change a shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</p>
 
             <h4>Page</h4>
             <select value="@D.Page.Size" @onchange="SetPageSize">
