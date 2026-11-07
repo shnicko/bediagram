@@ -53,6 +53,8 @@ public partial class Designer : ICommandContext
     }
 
     void ICommandContext.JoinSelected() => Editor.JoinSelected();
+    bool ICommandContext.CanBranch => Editor.BranchSource is not null;
+    void ICommandContext.QuickBranch() => Editor.QuickBranch();
     void ICommandContext.Nudge(double dx, double dy) => Editor.Nudge(dx, dy);
 
     void ICommandContext.ToggleSelectedConnectorStyle()

@@ -94,6 +94,7 @@ public static class Icons
         ["git-compare"] = "<circle cx=\"18\" cy=\"18\" r=\"3\"/> <circle cx=\"6\" cy=\"6\" r=\"3\"/> <path d=\"M13 6h3a2 2 0 0 1 2 2v7\"/> <path d=\"M11 18H8a2 2 0 0 1-2-2V9\"/>",
         ["refresh-cw"] = "<path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"/> <path d=\"M21 3v5h-5\"/> <path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"/> <path d=\"M8 16H3v5\"/>",
         ["repeat"] = "<path d=\"m17 2 4 4-4 4\"/> <path d=\"M3 11v-1a4 4 0 0 1 4-4h14\"/> <path d=\"m7 22-4-4 4-4\"/> <path d=\"M21 13v1a4 4 0 0 1-4 4H3\"/>",
+        ["magnet"] = "<path d=\"m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15\"/> <path d=\"m5 8 4 4\"/> <path d=\"m12 15 4 4\"/>",
         ["arrow-down"] = "<path d=\"M12 5v14\"/> <path d=\"m19 12-7 7-7-7\"/>",
         ["arrow-right"] = "<path d=\"M5 12h14\"/> <path d=\"m12 5 7 7-7 7\"/>",
         ["arrow-right-left"] = "<path d=\"m16 3 4 4-4 4\"/> <path d=\"M20 7H4\"/> <path d=\"m8 21-4-4 4-4\"/> <path d=\"M4 17h16\"/>",

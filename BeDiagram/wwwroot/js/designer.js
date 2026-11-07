@@ -28,7 +28,7 @@ function onKey(e) {
         return;
     }
     const handled = ['Delete', 'Backspace', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'];
-    const letters = ['j', 'c', 't', 'g', 'l', 'f', 'a', 'z', 'y', 'd', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '=', '-', '0'];
+    const letters = ['j', 'b', 'c', 't', 'g', 'l', 'f', 'a', 'z', 'y', 'd', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '=', '-', '0'];
     if (handled.includes(key) || letters.includes(key.toLowerCase())) {
         if (ctrl || handled.includes(key)) e.preventDefault();
         dotnet.invokeMethodAsync('OnKey', key, ctrl, e.shiftKey);
