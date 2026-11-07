@@ -10,6 +10,14 @@ const [url, dir, out] = process.argv.slice(2);
   // Toolbar controls that moved into the menu bar (File → Open / Save / Export …): open the File menu first when the
   // control isn't on screen. Builds without a menu bar have them on the toolbar, so this does nothing there.
   const reveal = async (sel) => { if (await p.isVisible(sel)) return; if (await p.$('.menubar')) { await p.click('.menubar button.menu-head:text-is("File")'); await p.waitForTimeout(250); } };
+  // The export entries: the toolbar's Export ▾ menu, or File in the menu bar. Opens it unless a menu is already open.
+  const openExport = async () => {
+    if (await p.$('.menu')) return;
+    if (await p.isVisible('text=Export ▾')) await p.click('text=Export ▾');
+    else await p.click('.menubar button.menu-head:text-is("File")');
+    await p.waitForTimeout(300);
+  };
+  const isExport = t => /SVG|PNG|PDF|Mermaid/.test(t);
   const errs = [];
   p.on('console', m => { if (m.type() === 'error' && !m.text().includes('404')) errs.push(m.text()); });
   p.on('pageerror', e => errs.push(e.message));
@@ -77,16 +85,16 @@ const [url, dir, out] = process.argv.slice(2);
   // Every export, open canvas then A4 page (with a text box and a comment added)
   await p.keyboard.press('t'); await p.waitForTimeout(W); await p.keyboard.press('Escape'); await p.keyboard.press('c'); await p.waitForTimeout(W); await p.keyboard.press('Escape');
   const exportAll = async (tag) => {
-    await reveal('text=Export ▾'); if (await p.isVisible('text=Export ▾')) await p.click('text=Export ▾'); await p.waitForTimeout(300);
-    const labels = await p.$$eval('.menu button', bs => bs.map(b => b.textContent));
+    await openExport();
+    const labels = (await p.$$eval('.menu button', bs => bs.map(b => b.textContent))).filter(isExport);
     for (const l of labels) {
-      if (!(await p.$('.menu'))) { await reveal('text=Export ▾'); if (await p.isVisible('text=Export ▾')) await p.click('text=Export ▾'); await p.waitForTimeout(300); }
+      if (!(await p.$('.menu'))) { await openExport(); }
       await p.click('.menu button:text-is("' + l + '")'); await p.waitForTimeout(1200);
     }
     for (const f of fs.readdirSync(dir)) if (f.startsWith('gest.') && !f.endsWith('.diagram.json')) fs.copyFileSync(`${dir}/${f}`, `${out}/${tag}-${f}`);
   };
   await exportAll('canvas');
-  await p.selectOption('.page-select', 'A4'); await p.waitForTimeout(600);
+  await reveal('.page-select'); await p.selectOption('.page-select', 'A4'); await p.waitForTimeout(600); if (await p.$('.menu-backdrop')) { await p.click('.menu-backdrop', { position: { x: 5, y: 5 } }); await p.waitForTimeout(200); }
   await exportAll('a4');
   console.log('errors:', errs);
   await b.close();
