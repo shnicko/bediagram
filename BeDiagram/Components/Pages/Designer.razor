@@ -559,11 +559,12 @@
             </g>
         </svg>
 
-        @if (D.Nodes.Count == 0 && D.TextBoxes.Count == 0)
+        @if (Editor.IsBlank)
         {
             <div class="empty-hint">
                 <div class="big">Drag a shape here to start</div>
                 <div>Or click a shape in the sidebar · double-click the canvas to add a process step</div>
+                <LaneCreator Editor="Editor" OnCreated="FitAfterLanes" />
             </div>
         }
     </main>
