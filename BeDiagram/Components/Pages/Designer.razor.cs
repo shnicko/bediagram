@@ -281,8 +281,8 @@ public partial class Designer
     }
 
     static string LabelPlaceHint(Edge e) => e.LabelOrient == LabelOrients.Along
-        ? ""
-        : "(on up-down lines: above = left, below = right)";
+        ? "Inline sits on the line; above and below set the text beside it, as the text reads."
+        : "Inline sits on the line; above and below set the text beside it. On up-down lines above = left, below = right.";
 
     static string GroupStyleTip(string style) => style == GroupLook.Band
         ? "Title on a tinted strip inside the group"
@@ -635,7 +635,10 @@ public partial class Designer
 
     static string OutcomePaletteKey(OutcomeInfo o) => $"{NodeTypes.Outcome}:{o.Key}";
 
-    static string OutcomePaletteTip(OutcomeInfo o) => $"{o.Hint}. Drag onto the canvas or click to add.";
+    static string OutcomePaletteTip(OutcomeInfo o) => $"{o.Display}: {o.Hint}. Drag onto the canvas or click to add.";
+
+    /// <summary>Tooltip for a shape tile in the palette (the tiles have no text of their own).</summary>
+    static string PaletteShapeTip(PaletteShape p) => $"{p.Type.Display}: drag onto the canvas, click to add, or press {p.Number}";
 
     static string PaletteShapePath(string type) => Geometry.ShapePath(new Node { Type = type, W = 48, H = 28 });
 

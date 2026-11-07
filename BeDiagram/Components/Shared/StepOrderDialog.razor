@@ -1,7 +1,6 @@
 <div class="modal-bg see-through" @onclick="Close">
     <div class="modal step-order" @onclick:stopPropagation="true">
-        <h3>Step order</h3>
-        <p class="muted">Drag a step <strong>between</strong> two others to move it, or <strong>onto</strong> another step to run them in parallel. Changes go straight into the diagram. Click a name to select that shape.</p>
+        <h3>Step order <InfoTip>Drag a step <strong>between</strong> two others to move it, or <strong>onto</strong> another step to run them in parallel. Changes go straight into the diagram. Click a name to select that shape.</InfoTip></h3>
         <label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="ShowNumbers" /> Show step numbers on the diagram</label>
 
         @if (Slots.Count == 0)
