@@ -953,6 +953,48 @@ public class DiagramEditor
         view.ShowToast($"{nodes.Count} steps now share step {nodes[0].Step}");
     }
 
+    /// <summary>The two selected shapes, when exactly two shapes (and nothing else) are selected; otherwise null.</summary>
+    public (Node A, Node B)? SwapPair()
+    {
+        if (Selection.Count != 2) return null;
+        List<Node> nodes = Diagram.Nodes.Where(n => Selection.Contains(n.Id)).ToList();
+        return nodes.Count == 2 ? (nodes[0], nodes[1]) : null;
+    }
+
+    /// <summary>
+    /// Swaps the two selected shapes' places: each shape (type, label, icon, colour, size, look, properties, link)
+    /// moves to where the other one was, centred on its spot. The places keep their connectors, their group and,
+    /// when both shapes are steps, their step number, so the flow stays as drawn and only what happens at each spot
+    /// changes. With an outcome involved the step number goes with the shape (outcomes have none).
+    /// </summary>
+    public void SwapSelection()
+    {
+        if (SwapPair() is not (Node a, Node b)) { view.ShowToast("Select exactly two shapes to swap"); return; }
+        Change();
+        bool keepSteps = StepOrder.IsStep(a) && StepOrder.IsStep(b);
+        Node atA = TakePlace(b, a, keepSteps);
+        Node atB = TakePlace(a, b, keepSteps);
+        Diagram.Nodes[Diagram.Nodes.IndexOf(a)] = atA;
+        Diagram.Nodes[Diagram.Nodes.IndexOf(b)] = atB;
+        GroupTree tree = Tree;
+        foreach (Group g in new[] { atA, atB }.Select(n => tree.Parent(n)).OfType<Group>().Distinct().ToList())
+            GrowGroup(g);
+        view.ShowToast($"Swapped “{a.Label}” and “{b.Label}”");
+    }
+
+    /// <summary><paramref name="shape"/> moved into <paramref name="place"/>: a copy that keeps the place's id (so its
+    /// connectors stay), group, centre and, if asked, step number.</summary>
+    static Node TakePlace(Node shape, Node place, bool keepStep)
+    {
+        Node n = shape.Copy();
+        n.Id = place.Id;
+        n.GroupId = place.GroupId;
+        n.X = place.X + place.W / 2 - n.W / 2;
+        n.Y = place.Y + place.H / 2 - n.H / 2;
+        if (keepStep) n.Step = place.Step;
+        return n;
+    }
+
     /// <summary>The selected shapes become separate steps in turn (by position), starting where the first of them is.</summary>
     public void MakeSelectionSequential()
     {
