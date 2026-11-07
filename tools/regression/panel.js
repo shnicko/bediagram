@@ -74,7 +74,13 @@ const [url, out] = process.argv.slice(2);
     return hs.map((h, i) => ({ h, name: names[i] }));
   };
   const canvas = async () => p.evaluate(() => document.querySelector('svg.surface').outerHTML.replace(/\b[netg]_[0-9a-f]{8}\b/g, ''));
-  // Wait until the canvas stops changing (slow actions such as Auto-layout finish after the click returns).
+  // After an action: wait up to 400 ms for the canvas to start changing (the server may not have started yet), then
+  // until it stops changing (slow actions such as Auto-layout finish well after the click returns).
+  const afterAction = async (pre) => {
+    for (let k = 0; k < 8 && (await canvas()) === pre; k++) await p.waitForTimeout(50);
+    await settle();
+  };
+  // Wait until the canvas stops changing.
   const settle = async () => {
     let last = await canvas();
     for (let k = 0; k < 20; k++) { await p.waitForTimeout(150); const now = await canvas(); if (now === last) return; last = now; }
@@ -86,7 +92,8 @@ const [url, out] = process.argv.slice(2);
     await deselect(); await settle();
     for (let k = 0; k < 8 && (await canvas()) !== before; k++) {
       if (await p.evaluate(() => document.querySelector('button[title^="Undo"]').disabled)) break;
-      await p.keyboard.press('Control+z'); await settle();
+      const pre = await canvas();
+      await p.keyboard.press('Control+z'); await afterAction(pre);
     }
     if ((await canvas()) !== before) { reloads++; await setup(); }
   };
@@ -101,6 +108,7 @@ const [url, out] = process.argv.slice(2);
       const c = (await controls()).find(x => x.name === ctrl)?.h;
       if (!c) { log.push({ label: `${name} · ${ctrl} — not there` }); continue; }
       const tag = await c.evaluate(e => e.tagName + ':' + (e.type || ''));
+      const pre = await canvas();
       try {
         if (tag.startsWith('SELECT')) {
           const opts = await c.evaluate(e => [...e.options].map(o => o.value));
@@ -109,7 +117,7 @@ const [url, out] = process.argv.slice(2);
           await c.evaluate(e => { e.value = '0.25'; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); });
         } else await c.click({ timeout: 2000 });
       } catch (e) { log.push({ label: `${name} · ${ctrl} — could not interact` }); await restore(before); continue; }
-      await p.waitForTimeout(W); await settle();
+      await p.waitForTimeout(W); await afterAction(pre);
       // close a dialog if one opened (e.g. confirm leave on a link)
       if (await p.$('.modal')) { await p.keyboard.press('Escape'); await p.keyboard.press('Escape'); await p.waitForTimeout(150); }
       await state(`${name} · ${ctrl}`);
