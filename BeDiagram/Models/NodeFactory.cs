@@ -23,7 +23,7 @@ public static class NodeFactory
             Outcome = isOutcome ? Outcomes.Get(outcome).Key : null,
             Filled = isOutcome,
             Label = t.Key == NodeTypes.Circle ? "Label" : isOutcome ? Outcomes.Get(outcome).Display : t.Display,
-            Icon = t.Key == NodeTypes.Circle ? "layers" : null,
+            Icon = DefaultIcon(t.Key),
             W = t.W,
             H = t.H,
             X = cx - t.W / 2,
@@ -31,6 +31,16 @@ public static class NodeFactory
             Properties = DefaultProperties(t.Key),
         };
     }
+
+    /// <summary>The icon a new node of <paramref name="type"/> starts with: start ▶ and end 🏁 so the two ends of a
+    /// flow read as a pair (End is green like Start, so the flag is what tells them apart), a placeholder on circles.</summary>
+    public static string? DefaultIcon(string type) => type switch
+    {
+        NodeTypes.Start => "play",
+        NodeTypes.End => "flag",
+        NodeTypes.Circle => "layers",
+        _ => null,
+    };
 
     /// <summary>The properties a new node of <paramref name="type"/> starts with (empty values).</summary>
     public static Dictionary<string, string> DefaultProperties(string type) => type switch
