@@ -890,9 +890,6 @@ public class DiagramEditor
         if (FindGroup(n.GroupId) is { } g) GrowGroup(g);
     }
 
-    public void SetNodeColour(Node n, string? colour) { Change(); n.Color = colour; }
-
-    public void SetFilled(Node n, bool filled) { Change(); n.Filled = filled; }
     public void SetClearTextBack(Node n, bool clear) { Change(); n.ClearTextBack = clear; }
 
     public void SetOutcome(Node n, string outcome)
@@ -907,11 +904,26 @@ public class DiagramEditor
     public void SetIcon(Node n, string? icon) { Change(); n.Icon = icon; }
 
     /// <summary>Major / normal / minor look (see <see cref="Emphases"/>).</summary>
-    public void SetEmphasis(Node n, string key)
+    /// <summary>Sets the emphasis of every shape that doesn't have it yet, in one undo step.</summary>
+    public void SetEmphasis(IReadOnlyList<Node> nodes, string key)
     {
-        if (Emphases.Get(key) == Emphases.Of(n)) return;
+        List<Node> todo = nodes.Where(n => Emphases.Get(key) != Emphases.Of(n)).ToList();
+        if (todo.Count == 0) return;
         Change();
-        n.Emphasis = key;
+        foreach (Node n in todo) n.Emphasis = key;
+    }
+
+    // ───────────── Restyling one item or many ─────────────
+
+    /// <summary>
+    /// Applies a look change (colour, fill, border, font, …) to every item in one undo step. The style controls in the
+    /// panel use this for a single item and for a whole selection alike.
+    /// </summary>
+    public void Restyle<T>(IReadOnlyList<T> items, Action<T> change)
+    {
+        if (items.Count == 0) return;
+        Change();
+        foreach (T item in items) change(item);
     }
 
     // ───────────── Step order ─────────────
@@ -1084,21 +1096,17 @@ public class DiagramEditor
         view.ShowToast($"{lanes.Count} lane{(lanes.Count == 1 ? "" : "s")} arranged ({layout.Name}), {placed} item{(placed == 1 ? "" : "s")} lined up by step");
     }
 
-    public void SetGroupColour(Group g, string colour) { Change(); g.Color = colour; }
-
-    public void SetGroupFilled(Group g, bool filled) { Change(); g.Filled = filled; }
-
-    public void SetGroupBorder(Group g, string pattern) { Change(); g.Border = pattern; }
-
-    public void SetGroupBorderWeight(Group g, string weight) { Change(); g.BorderWeight = weight; }
-
-    /// <summary>Moving or restyling the title changes the room it takes inside the group, so the group grows if needed.</summary>
-    public void SetGroupTitleLook(Group g, string? pos, string? style)
+    /// <summary>Moving or restyling the title changes the room it takes inside a group, so each group grows if needed.</summary>
+    public void SetGroupTitleLook(IReadOnlyList<Group> groups, string? pos, string? style)
     {
+        if (groups.Count == 0) return;
         Change();
-        if (pos is not null) g.HeaderPos = pos;
-        if (style is not null) g.HeaderStyle = style;
-        GrowGroup(g);
+        foreach (Group g in groups)
+        {
+            if (pos is not null) g.HeaderPos = pos;
+            if (style is not null) g.HeaderStyle = style;
+            GrowGroup(g);
+        }
     }
 
     public void SetNodeLink(Node n, string? link) { Change(); n.Link = link; }
@@ -1141,7 +1149,6 @@ public class DiagramEditor
 
     // ───────────── Text boxes and properties ─────────────
 
-    public void SetTextLook(TextBox t, Action<TextBox> change) { Change(); change(t); }
 
     /// <summary>Turning the comment flag on applies the standard comment look; turning it off keeps the look.</summary>
     public void SetComment(TextBox t, bool on)
@@ -1184,11 +1191,11 @@ public class DiagramEditor
     /// <summary>The height at which the wrapped text just fits.</summary>
     static double TextHeight(TextBox t) => Math.Max(24, Math.Ceiling(Geometry.Layout(t).ContentHeight / 2) * 2);
 
-    public void SetFontSize(TextBox t, object? value)
+    public void SetFontSize(IReadOnlyList<TextBox> boxes, object? value)
     {
-        if (!double.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double v)) return;
+        if (boxes.Count == 0 || !double.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double v)) return;
         Change();
-        t.FontSize = Math.Clamp(v, 6, 96);
+        foreach (TextBox t in boxes) t.FontSize = Math.Clamp(v, 6, 96);
     }
 
     public void AddProp(Node n)
