@@ -1,0 +1,17 @@
+@using BeDiagram.Components.Pages.Commands
+<div class="modal-bg" @onclick="Close">
+    <div class="modal shortcuts" @onclick:stopPropagation="true">
+        <h3>Keyboard shortcuts</h3>
+        <table class="keys">
+            @foreach (ShortcutRow r in KeyRows)
+            {
+                <tr><td><kbd>@r.Keys</kbd></td><td>@r.Action</td></tr>
+            }
+            @foreach (ShortcutRow r in ShortcutList.Mouse)
+            {
+                <tr><td>@r.Keys</td><td>@r.Action</td></tr>
+            }
+        </table>
+        <div class="actions"><button @onclick="Close">Close</button></div>
+    </div>
+</div>

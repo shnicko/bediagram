@@ -27,7 +27,7 @@ public partial class Designer
     [Inject] ExportService Exports { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
-    enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave, StepOrder }
+    enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave, StepOrder, Shortcuts }
 
     /// <summary>
     /// The diagram and everything done to it (selection, undo, editing actions) live in the editor; this page shows
@@ -59,7 +59,8 @@ public partial class Designer
     string iconFilter = "";
     /// <summary>Saved diagrams listed in the Open dialog (read when it opens).</summary>
     IReadOnlyList<(string Name, DateTime Modified)> openFiles = Array.Empty<(string Name, DateTime Modified)>();
-    bool exportMenu;
+    /// <summary>The menu bar heading whose drop-down is open ("File", "Edit", …), or null.</summary>
+    string? openMenu;
     readonly ExportOptions exportOptions = new();
     CancellationTokenSource? toastCts;
 
@@ -435,7 +436,9 @@ public partial class Designer
     /// <summary>Opens the step order pop-up (Components/Shared/StepOrderDialog).</summary>
     void ShowStepOrder() => dialog = Dialog.StepOrder;
 
-    void CloseDialog() { dialog = Dialog.None; confirmDelete = null; }
+    void ShowShortcuts() => dialog = Dialog.Shortcuts;
+
+    void CloseDialog() { dialog = Dialog.None; confirmDelete = null; openMenu = null; }
 
     /// <summary>Open from the Open dialog: a fresh start, so the linked-diagram trail is cleared.</summary>
     async Task Open(string name)
@@ -857,8 +860,8 @@ public partial class Designer
 
     // Small UI handlers that used to be inline lambdas in the markup.
 
-    void ToggleExportMenu() => exportMenu = !exportMenu;
-    void CloseExportMenu() => exportMenu = false;
+    void SetOpenMenu(string? menu) => openMenu = menu;
+    void CloseMenus() => openMenu = null;
     void StartPaletteDrag(string key) => paletteDrag = key;
     void DragOver() { }
     void AskDelete(string name) => confirmDelete = name;

@@ -387,3 +387,17 @@ kbd {
     background: #f3f6fa; border: 1px solid var(--line); color: #4b5563;
     font-size: 12px; font-weight: normal; line-height: 1.4; text-align: left;
 }
+
+/* ── Menu bar (File / Edit / Arrange / View / Help) ── */
+.menubar { display: flex; align-items: center; gap: 0; padding-right: 6px; }
+.toolbar .menu-head { border: none; background: none; padding: 5px 10px; border-radius: 6px; }
+.toolbar .menu-head:hover, .toolbar .menu-head.on { background: #eef2f7; }
+.menu { min-width: 240px; }
+.menu > button { display: flex; align-items: center; gap: 6px; }
+.menu-key { margin-left: auto; padding-left: 24px; color: var(--muted); font-size: 12px; }
+.menu-heading { padding: 6px 10px 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.menu-heading .muted-label { text-transform: none; letter-spacing: normal; }
+.menu-settings .seg button { padding: 4px 8px; }
+.menu-backdrop { position: fixed; inset: 0; z-index: 15; }
+.modal.shortcuts { max-width: 520px; max-height: 85vh; overflow-y: auto; }
+.modal.shortcuts .keys td:first-child { white-space: nowrap; padding-right: 14px; }
