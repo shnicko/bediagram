@@ -49,25 +49,38 @@ def compare_folder(name: str, skip=lambda f: False) -> int:
     return len(bad)
 
 
-def compare_log(name: str) -> int:
+def compare_log(name: str, by_label: bool = False) -> int:
     def load(side):
         text = open(f'{work}/{side}-out/{name}.json').read().replace(f'{work}/{side}-store', '<storage>')
         return json.loads(text)
     a, b = load('base'), load('head')
 
-    def toast_expired_early(i: int) -> bool:
+    if by_label:
+        # Panel steps are named after their control: match by name, so a control added or removed is one line,
+        # not a shift of every step after it.
+        bi = {x['label']: i for i, x in enumerate(b)}
+        ai = {x['label']: i for i, x in enumerate(a)}
+        pairs = [(i, bi[x['label']]) for i, x in enumerate(a) if x['label'] in bi]
+        only = [('only in base: ' + x['label'], 'step') for x in a if x['label'] not in bi] + \
+               [('only in head: ' + y['label'], 'step') for y in b if y['label'] not in ai]
+    else:
+        pairs = [(i, i) for i in range(min(len(a), len(b)))]
+        only = [('(number of steps)', f'{len(a)} vs {len(b)}')] if len(a) != len(b) else []
+
+    def toast_expired_early(i: int, j: int) -> bool:
         # One build still shows the toast from the step before, the other has already cleared it: timing, not behaviour.
-        x, y = a[i].get('toast'), b[i].get('toast')
+        x, y = a[i].get('toast'), b[j].get('toast')
         if x is not None and y is not None: return False
-        shown, side = (x, a) if x is not None else (y, b)
-        return i > 0 and side[i - 1].get('toast') == shown
+        shown, side, k = (x, a, i) if x is not None else (y, b, j)
+        return k > 0 and side[k - 1].get('toast') == shown
 
     diffs, timing = [], []
-    for i, (x, y) in enumerate(zip(a, b)):
+    for i, j in pairs:
+        x, y = a[i], b[j]
         for k in x:
             if x.get(k) == y.get(k): continue
-            (timing if k == 'toast' and toast_expired_early(i) else diffs).append((x['label'], k))
-    if len(a) != len(b): diffs.append(('(number of steps)', f'{len(a)} vs {len(b)}'))
+            (timing if k == 'toast' and toast_expired_early(i, j) else diffs).append((x['label'], k))
+    diffs += only
     print(f'{name:18} {len(a):4} steps  {"SAME" if not diffs else f"{len(diffs)} DIFFERENT"}'
           + (f'  (ignored {len(timing)} toast that expired a step apart — timing)' if timing else ''))
     for label, field in diffs[:10]: print(f'                   differs: {label} → {field}')
@@ -79,7 +92,7 @@ ran = lambda p: os.path.exists(f'{work}/head-out/{p}')   # suites skipped with S
 if ran('gestures'): total += compare_folder('gestures', skip=lambda f: f.endswith('.png') and '-gest.' not in f)  # screenshots show the folder
 if ran('keyboard.json'): total += compare_log('keyboard')
 if ran('all-shapes'): total += compare_folder('all-shapes', skip=lambda f: 'screen' in f)
-if ran('panel.json'): total += compare_log('panel')
+if ran('panel.json'): total += compare_log('panel', by_label=True)
 if not any(ran(p) for p in ('gestures', 'keyboard.json', 'all-shapes', 'panel.json')):
     print('No suite output to compare'); sys.exit(1)
 print('ALL THE SAME' if total == 0 else f'{total} difference(s) — look at the lines above')
