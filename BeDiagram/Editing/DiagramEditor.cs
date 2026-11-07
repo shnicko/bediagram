@@ -276,8 +276,13 @@ public class DiagramEditor
         if (Tree.Parent(item) is { } g) GrowGroup(g);
     }
 
+    /// <summary>A swim lane (top-level group) whose size is locked (<see cref="Diagram.LockLanes"/>): it doesn't grow or
+    /// shrink to fit its items; they stay members even when they hang over its edge.</summary>
+    public bool SizeLocked(Group g) => Diagram.LockLanes && g.GroupId is null;
+
     void GrowOne(Group g)
     {
+        if (SizeLocked(g)) return;
         List<IBox> members = Members(g).Cast<IBox>().ToList();
         if (members.Count == 0) return;
         (double x, double y, double w, double h) = Geometry.GroupBounds(members, g);
@@ -287,8 +292,12 @@ public class DiagramEditor
     }
 
     /// <summary>Shrink-wraps a group around its members (the groups around it grow if they need to).</summary>
-    public void FitGroup(Group g)
+    public void FitGroup(Group g) => FitGroup(g, force: false);
+
+    /// <param name="force">The user asked for it ("Fit to contents"): fit even a locked lane.</param>
+    void FitGroup(Group g, bool force)
     {
+        if (!force && SizeLocked(g)) return;
         List<IBox> members = Members(g).Cast<IBox>().ToList();
         if (members.Count == 0) return;
         (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(members, g);
@@ -521,7 +530,10 @@ public class DiagramEditor
     /// Placed by the pointer (palette drop, port drag): when joined, put the new shape on an allowed angle from the
     /// source's centre (<see cref="AngleLock"/>). Steps placed by the editor itself (below the selection) pass false.
     /// </param>
-    public void AddNodeAt(string type, double cx, double cy, bool join, string? groupId = null, bool lockAngle = false)
+    /// <param name="centre">Pan the view so the new shape is in the middle (quick-add: sidebar click, number keys,
+    /// "+ Next step"). Shapes placed with the pointer are already where the user is looking.</param>
+    /// <remarks>The new shape's label is opened for editing straight away, all text selected, so typing replaces it.</remarks>
+    public void AddNodeAt(string type, double cx, double cy, bool join, string? groupId = null, bool lockAngle = false, bool centre = false)
     {
         Change();
         IBox? src = join ? JoinSource() : null;
@@ -536,9 +548,12 @@ public class DiagramEditor
         if (groupId is not null && FindGroup(groupId) is { } g) { n.GroupId = g.Id; GrowGroup(g); }
         else UpdateMembership(new[] { n });
         SelectOnly(n.Id);
+        if (centre) view.CentreOn(n.X + n.W / 2, n.Y + n.H / 2);
+        BeginEdit(n.Id, checkpoint: false);
     }
 
-    /// <summary>Palette click or number key: place the next step below the selection, joined to it when Auto-join is on.</summary>
+    /// <summary>Palette click or number key: place the next step after the selection in the flow direction
+    /// (<see cref="Diagram.Flow"/>), joined to it when Auto-join is on.</summary>
     public void QuickAdd(string type) => QuickAdd(type, join: AutoConnect);
 
     /// <summary>The panel's "+ Next step" button: always joined to the selection (that's what the button is for).</summary>
@@ -551,12 +566,16 @@ public class DiagramEditor
         double cx, cy;
         if (src is not null)
         {
-            cx = src.X + src.W / 2;
-            cy = src.Y + src.H + Geometry.ExtraBelow(src) + 70 + t.H / 2;
-            // Step sideways until the spot is free (e.g. second branch of a decision).
+            (cx, cy) = NextSpot(src, t.W, t.H);
+            // Step across the flow until the spot is free (e.g. second branch of a decision).
+            ILaneLayout flow = FlowLayout;
+            (double _, double stepAcross) = flow.ToLane(t.W + 40, t.H + 40);
             int guard = 0;
             while (Diagram.Nodes.Any(o => Geometry.Intersects(o, cx - t.W / 2 - 10, cy - t.H / 2 - 10, cx + t.W / 2 + 10, cy + t.H / 2 + 10)) && guard++ < 20)
-                cx += t.W + 40;
+            {
+                (double f, double c) = flow.ToLane(cx, cy);
+                (cx, cy) = flow.FromLane(f, c + stepAcross);
+            }
         }
         else
         {
@@ -564,7 +583,42 @@ public class DiagramEditor
             while (Diagram.Nodes.Any(o => Geometry.Contains(o, cx, cy))) cy += 100;
         }
         // A step added from a shape inside a group stays in that group.
-        AddNodeAt(type, cx, cy, join: join && src is not null, groupId: (src as IGroupable)?.GroupId);
+        AddNodeAt(type, cx, cy, join: join && src is not null, groupId: (src as IGroupable)?.GroupId, centre: true);
+    }
+
+    /// <summary>The flow direction as a lane layout, so placement can work in (flow, cross) coordinates.</summary>
+    public ILaneLayout FlowLayout => LaneLayouts.ForFlow(Diagram.Flow);
+
+    /// <summary>Gap between a step and the next one quick-added after it, along the flow.</summary>
+    const double NextStepGap = 70;
+
+    /// <summary>
+    /// Centre for a new item <paramref name="w"/> × <paramref name="h"/> placed after <paramref name="src"/> in the flow
+    /// direction: past the source's far edge (text under a shape counts when the flow runs down), on its centre line.
+    /// </summary>
+    (double X, double Y) NextSpot(IBox src, double w, double h)
+    {
+        ILaneLayout flow = FlowLayout;
+        (double _, double centreAcross) = flow.ToLane(src.X + src.W / 2, src.Y + src.H / 2);
+        (double farEdge, double _) = flow.ToLane(src.X + src.W, src.Y + src.H + Geometry.ExtraBelow(src));
+        (double halfAlong, double _) = flow.ToLane(w / 2, h / 2);
+        return flow.FromLane(farEdge + NextStepGap + halfAlong, centreAcross);
+    }
+
+    /// <summary>File menu: which way new steps go (<see cref="FlowDirections"/>). One undo step.</summary>
+    public void SetFlow(string flow)
+    {
+        if (Diagram.Flow == flow) return;
+        Change();
+        Diagram.Flow = flow;
+    }
+
+    /// <summary>Arrange menu: lock or unlock the size of the swim lanes (<see cref="Diagram.LockLanes"/>). One undo step.</summary>
+    public void SetLockLanes(bool locked)
+    {
+        if (Diagram.LockLanes == locked) return;
+        Change();
+        Diagram.LockLanes = locked;
     }
 
     /// <summary>Adds a text box (or a comment) with its top-left at (x, y), optionally joined/pinned to an item.</summary>
@@ -594,7 +648,11 @@ public class DiagramEditor
         IBox? src = JoinSource();
         TextBox t = new TextBox();
         if (src is not null && AutoConnect)
-            AddTextAt(src.X + src.W / 2 - t.W / 2, src.Y + src.H + Geometry.ExtraBelow(src) + 60, src.Id, comment: false);
+        {
+            (double cx, double cy) = NextSpot(src, t.W, t.H);
+            AddTextAt(cx - t.W / 2, cy - t.H / 2, src.Id, comment: false);
+            view.CentreOn(cx, cy);
+        }
         else { (double cx, double cy) = view.ViewCentre(); AddTextAt(cx - t.W / 2, cy - t.H / 2, null, comment: false); }
     }
 
@@ -622,9 +680,18 @@ public class DiagramEditor
     /// the way <paramref name="layout"/> says, <paramref name="gap"/> px apart (0 = edge to edge). With a page size
     /// set they fill the printable area; on an open canvas each lane is <see cref="NewLaneLength"/> ×
     /// <see cref="NewLaneWidth"/>. One undo step. Rename the lanes in the group panel as usual.
+    /// The diagram's flow is set to suit the lanes (rows → left to right, columns → top to down).
     /// </summary>
-    public void CreateLanes(ILaneLayout layout, int count, double gap)
+    /// <param name="pageSize">A <see cref="PageSetup"/> size key, or <see cref="PageSetup.None"/> for an open canvas.</param>
+    /// <param name="orientation">"portrait" or "landscape" (ignored on an open canvas).</param>
+    /// <param name="lockSize">Lock the lanes' size (<see cref="Diagram.LockLanes"/>).</param>
+    public void CreateLanes(ILaneLayout layout, int count, double gap, string pageSize, string orientation, bool lockSize)
     {
+        Change();
+        Diagram.Page.Size = pageSize;
+        if (Diagram.Page.Enabled) Diagram.Page.Orientation = orientation;
+        Diagram.Flow = layout.Flow;
+        Diagram.LockLanes = lockSize;
         count = Math.Clamp(count, 1, 20);
         gap = Math.Clamp(gap, 0, 400);
         double flow = NewLaneLength, across = NewLaneWidth, x0 = 0, y0 = 0;
@@ -636,7 +703,6 @@ public class DiagramEditor
             across = Math.Max(Group.Header + 2 * Group.Pad, (pageCross - (count - 1) * gap) / count);
             x0 = m; y0 = m;
         }
-        Change();
         (double w, double h) = layout.FromLane(flow, across);
         for (int i = 0; i < count; i++)
         {
@@ -1148,7 +1214,7 @@ public class DiagramEditor
 
     public void SetGroupLink(Group g, string? link) { Change(); g.Link = link; }
 
-    public void FitGroupToContents(Group g) { Change(); FitGroup(g); }
+    public void FitGroupToContents(Group g) { Change(); FitGroup(g, force: true); }
 
     /// <summary>
     /// Moves the group box (same size) so its contents sit in the middle of it. The items stay where they are.

@@ -23,6 +23,13 @@ public class Diagram : IJsonOnDeserialized
     /// (<see cref="Node.Step"/>); this only decides whether it is shown. False is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool ShowSteps { get; set; }
+    /// <summary>Which way the flow runs: <see cref="FlowDirections.Down"/> (top → down) or <see cref="FlowDirections.Right"/>
+    /// (left → right). Decides where the next step goes when one is added from the sidebar or a number key.</summary>
+    public string Flow { get; set; } = FlowDirections.Down;
+    /// <summary>Swim lanes (top-level groups) keep their size: adding or moving items doesn't grow them. Arranging
+    /// lanes, resizing a lane by hand and "Fit to contents" still change the size. False is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool LockLanes { get; set; }
     public List<Group> Groups { get; set; } = new();
     public List<Node> Nodes { get; set; } = new();
     public List<Edge> Edges { get; set; } = new();

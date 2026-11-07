@@ -1,4 +1,5 @@
 using BeDiagram.Models;
+using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Editing.Lanes;
 
@@ -13,6 +14,8 @@ public interface ILaneLayout
     string Key { get; }
     /// <summary>Which way the flow runs, for messages: "left → right" or "top → down".</summary>
     string Direction { get; }
+    /// <summary>The diagram flow these lanes suit (<see cref="FlowDirections"/>): rows flow right, columns flow down.</summary>
+    string Flow { get; }
     /// <summary>Button text, e.g. "Lanes left → right".</summary>
     string Name { get; }
 

@@ -40,6 +40,14 @@
                     </label>
                 </div>
                 <hr class="menu-divider" />
+                <div class="menu-settings" @onclick:stopPropagation="true" title="Where the next step goes when you add one from the sidebar, a number key or + Next step">
+                    <span class="muted-label">Flow direction</span>
+                    <div class="seg">
+                        <button class="@FlowClass(FlowDirections.Right)" title="New steps go to the right" @onclick="() => Editor.SetFlow(FlowDirections.Right)">@IconSvg("arrow-right", 16) Left → right</button>
+                        <button class="@FlowClass(FlowDirections.Down)" title="New steps go below" @onclick="() => Editor.SetFlow(FlowDirections.Down)">@IconSvg("arrow-down", 16) Top → down</button>
+                    </div>
+                </div>
+                <hr class="menu-divider" />
                 <div class="menu-settings" @onclick:stopPropagation="true" title="Canvas size: open canvas or a fixed paper size">
                     <span class="muted-label">Page</span>
                     <select class="page-select" value="@D.Page.Size" @onchange="SetPageSize">
@@ -93,6 +101,9 @@
                 <div class="menu-heading">Swim lanes</div>
                 <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
                 <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
+                <div class="menu-settings" @onclick:stopPropagation="true">
+                    <label title="Adding or moving shapes won't resize the lanes. Arrange, resizing a lane by hand and Fit to contents still do."><input type="checkbox" checked="@D.LockLanes" @onchange="SetLockLanes" /> Lock lane size</label>
+                </div>
                 <hr class="menu-divider" />
                 <div class="menu-settings" @onclick:stopPropagation="true" title="Line style for new connectors">
                     <span class="muted-label">New connectors</span>

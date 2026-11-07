@@ -14,10 +14,31 @@
                     <button class="@LayoutClass(l)" @onclick="() => Pick(l)">@IconSvg(LayoutIcon(l), 16) @l.Direction</button>
                 }
             </div>
+            <label>Canvas size</label>
+            <div class="row">
+                <div>
+                    <select value="@PageSize" @onchange="SetPageSize">
+                        <option value="@PageSetup.None">Open canvas</option>
+                        @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
+                        {
+                            <option value="@ps.Key">@ps.Name</option>
+                        }
+                    </select>
+                </div>
+                @if (HasPage)
+                {
+                    <div class="seg">
+                        <button class="@OrientationClass(Portrait)" title="Portrait" @onclick="() => PickOrientation(Portrait)">@IconSvg("rectangle-vertical", 16)</button>
+                        <button class="@OrientationClass(Landscape)" title="Landscape" @onclick="() => PickOrientation(Landscape)">@IconSvg("rectangle-horizontal", 16)</button>
+                    </div>
+                }
+            </div>
             <div class="row">
                 <div><label>How many</label><input type="number" min="1" max="20" @bind="Count" /></div>
                 <div><label>Gap (px)</label><input type="number" min="0" max="400" step="10" @bind="Gap" /></div>
             </div>
+            <label class="check" title="Adding or moving shapes won't resize the lanes (change it later in Arrange)"><input type="checkbox" @bind="LockSize" /> Lock lane size</label>
+            <div class="hint">@SizeHint</div>
             <div class="actions">
                 <button class="primary" @onclick="Create">Create lanes</button>
                 <button @onclick="Toggle">Cancel</button>

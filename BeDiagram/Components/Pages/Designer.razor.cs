@@ -310,6 +310,12 @@ public partial class Designer
         Fit();
     }
 
+    // ───────────── Flow direction and lane lock (menu toggles) ─────────────
+
+    string FlowClass(string flow) => D.Flow == flow ? "on" : "";
+
+    void SetLockLanes(ChangeEventArgs e) => Editor.SetLockLanes(e.Value is true);
+
     bool PageIsLandscape => D.Page.Size == PageSetup.Custom ? D.Page.CustomW > D.Page.CustomH : D.Page.Landscape;
 
         /// <summary>What above/below means for the selected label's text direction.</summary>

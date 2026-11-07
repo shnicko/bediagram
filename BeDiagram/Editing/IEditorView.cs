@@ -12,6 +12,9 @@ public interface IEditorView
     /// <summary>The middle of the visible canvas, in world coordinates (where quick-added items go).</summary>
     (double X, double Y) ViewCentre();
 
+    /// <summary>Pans (zoom unchanged) so the world point (x, y) is in the middle of the canvas, e.g. a quick-added step.</summary>
+    void CentreOn(double x, double y);
+
     /// <summary>Inline text editing started (<see cref="DiagramEditor.EditingId"/> is set): stop any drag and focus the editor box.</summary>
     void EditStarted();
 }

@@ -1,4 +1,5 @@
 using BeDiagram.Models;
+using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Editing.Lanes;
 
@@ -9,6 +10,7 @@ public class VerticalLanes : ILaneLayout
 
     public string Key => KeyName;
     public string Direction => "top → down";
+    public string Flow => FlowDirections.Down;
     public string Name => "Lanes top → down";
 
     public (double Flow, double Cross) ToLane(double x, double y) => (y, x);
