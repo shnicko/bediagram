@@ -394,24 +394,37 @@ public class DiagramEditor
             case AlignOp.Bottom: foreach (IBox b in items) MoveBox(b, b.X, B - b.H); break;
             case AlignOp.DistributeH:
             {
-                List<IBox> sorted = items.OrderBy(b => b.X + b.W / 2).ToList();
-                double space = (R - L) - sorted.Sum(b => b.W);
-                double g = sorted.Count > 1 ? space / (sorted.Count - 1) : 0;
+                // Items sharing a centre line (one above the other) move as one block, so they stay lined up.
+                List<List<IBox>> blocks = SameCentre(items, b => b.X + b.W / 2);
+                double space = (R - L) - blocks.Sum(k => k.Max(b => b.W));
+                double g = blocks.Count > 1 ? space / (blocks.Count - 1) : 0;
                 if (g < 20) g = gap;
-                double x = sorted.Count > 1 ? L : (L + R) / 2 - sorted[0].W / 2;
-                foreach (IBox b in sorted) { MoveBox(b, x, b.Y); x += b.W + g; }
+                double x = blocks.Count > 1 ? L : (L + R) / 2 - blocks[0].Max(b => b.W) / 2;
+                foreach (List<IBox> block in blocks)
+                {
+                    double w = block.Max(b => b.W);
+                    foreach (IBox b in block) MoveBox(b, x + (w - b.W) / 2, b.Y);
+                    x += w + g;
+                }
                 break;
             }
             case AlignOp.DistributeV:
             {
+                // Items sharing a centre line (side by side) move as one block, so they stay lined up.
                 // First outline top stays at T, last outline bottom at B; gaps are measured from the bottom of each
-                // item's label (if any) to the top of the next outline.
-                List<IBox> sorted = items.OrderBy(b => b.Y + b.H / 2).ToList();
-                double space = (B - T) - sorted.Sum(b => b.H) - sorted.Take(sorted.Count - 1).Sum(Geometry.ExtraBelow);
-                double g = sorted.Count > 1 ? space / (sorted.Count - 1) : 0;
+                // block's lowest label (if any) to the top of the next block's outlines.
+                List<List<IBox>> blocks = SameCentre(items, b => b.Y + b.H / 2);
+                double space = (B - T) - blocks.Sum(k => k.Max(b => b.H)) - blocks.Take(blocks.Count - 1).Sum(BlockExtraBelow);
+                double g = blocks.Count > 1 ? space / (blocks.Count - 1) : 0;
                 if (g < 20) g = gap;
-                double y = sorted.Count > 1 ? T : (T + B) / 2 - sorted[0].H / 2;
-                foreach (IBox b in sorted) { MoveBox(b, b.X, y); y += b.H + Geometry.ExtraBelow(b) + g; }
+                double y = blocks.Count > 1 ? T : (T + B) / 2 - blocks[0].Max(b => b.H) / 2;
+                foreach (List<IBox> block in blocks)
+                {
+                    double h = block.Max(b => b.H);
+                    double extra = BlockExtraBelow(block);
+                    foreach (IBox b in block) MoveBox(b, b.X, y + (h - b.H) / 2);
+                    y += h + extra + g;
+                }
                 break;
             }
             case AlignOp.Row:
@@ -444,6 +457,29 @@ public class DiagramEditor
             foreach (Group g in items.OfType<IGroupable>().Select(tree.Parent).OfType<Group>().Distinct().ToList())
                 GrowGroup(g);
         }
+    }
+
+    /// <summary>
+    /// Items grouped by a shared centre line (<paramref name="centre"/> equal to within half a pixel), in order along
+    /// that axis. Distribute spaces these blocks rather than single items, so items already lined up stay lined up.
+    /// </summary>
+    static List<List<IBox>> SameCentre(List<IBox> items, Func<IBox, double> centre)
+    {
+        List<List<IBox>> blocks = new List<List<IBox>>();
+        foreach (IBox b in items.OrderBy(centre))
+        {
+            if (blocks.Count > 0 && Math.Abs(centre(blocks[^1][0]) - centre(b)) < 0.5) blocks[^1].Add(b);
+            else blocks.Add(new List<IBox> { b });
+        }
+        return blocks;
+    }
+
+    /// <summary>Space a block of side-by-side items takes under its tallest outline: the lowest label or description
+    /// hanging below any of them (see <see cref="Geometry.ExtraBelow"/>), measured from the block's centred bottom edge.</summary>
+    static double BlockExtraBelow(List<IBox> block)
+    {
+        double h = block.Max(b => b.H);
+        return Math.Max(0, block.Max(b => Geometry.ExtraBelow(b) - (h - b.H) / 2));
     }
 
     public void AlignSelection(AlignOp op) => Align(op, Selection.Select(FindBox).Where(b => b is not null).Cast<IBox>().ToList(), null);
