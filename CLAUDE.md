@@ -40,7 +40,7 @@ BeDiagram/
   Editing/DiagramEditor.cs   the editor model, no UI (BeDiagram.Editing): open Diagram, Selection / SelectedEdgeId /
                              EditingId, Dirty, AutoConnect / Snap, undo / redo (snapshots), and every editing action
                              (create, join, group, align, duplicate, delete, nudge, panel setters)
-  Editing/IEditorView.cs     what the editor needs from the screen: ShowToast, ViewCentre, EditStarted
+  Editing/IEditorView.cs     what the editor needs from the screen: ShowToast, ViewCentre, CentreOn, EditStarted
   Editing/AlignOp.cs         align / distribute / row / column operations
   Editing/Lanes/             swim lanes (Strategy pattern, BeDiagram.Editing.Lanes): ILaneLayout, HorizontalLanes,
                              VerticalLanes, LaneLayouts, LaneArranger (the one-off arrange). Editor.ArrangeLanes(layout);
@@ -140,7 +140,8 @@ tools/regression/                side-by-side regression suites (master vs worki
 - **Swim lanes use the Strategy pattern.** A lane is a top-level group; `LaneArranger` works in lane coordinates
   (`flow` along a lane, `cross` across) and an `ILaneLayout` maps them to x / y and gives the title insets, so one
   algorithm does both directions. Columns come from `Node.Step`. It's a one-off arrange (one `Change()`), not a
-  stored layout: no file-format change. Run from `ArrangeLanesHorizontalCommand` / `ArrangeLanesVerticalCommand`.
+  stored layout: no file-format change. `Diagram.LockLanes` stops lanes (top-level groups) growing or shrinking
+  automatically (`Editor.SizeLocked`, checked in `GrowOne` / `FitGroup`); explicit sizing still works. Run from `ArrangeLanesHorizontalCommand` / `ArrangeLanesVerticalCommand`.
   Auto-layout reuses the same core (`ArrangeAll`: top-level items as one lane with no box, groups as blocks) and then
   `ConnectorTidier`, in one `Change()` (`AutoLayoutHorizontalCommand` / `AutoLayoutVerticalCommand`).
 - **Tidy connectors is on request, never automatic** (Nick's call, 2026-11-06: auto re-routing would get frustrating).
@@ -158,6 +159,9 @@ tools/regression/                side-by-side regression suites (master vs worki
 - **Export uses the strategy pattern** (owner's preference — he knows it well). A new format or area is a new class
   implementing `IExportFormat` / `IExportArea`, registered in `Program.cs`; don't add format-specific export methods to
   the Designer. PNG is rasterised from the SVG export in the browser, so like PDF it has no geometry of its own.
+- **Flow direction** (`Diagram.Flow`, `FlowDirections`) maps to an `ILaneLayout` via `LaneLayouts.ForFlow`, so quick-add
+  (`Editor.NextSpot`) places the next step in (flow, cross) coordinates like the lane arranger. New shapes open their
+  label for editing (`AddNodeAt` → `BeginEdit`); quick-adds also pan to centre them (`IEditorView.CentreOn`).
 - **Connector labels** render in their own layer above shapes (canvas and export).
 - **Page mode** puts the sheet at world (0,0); sizes in mm convert at 96 px/inch (`PageSetup.PxPerMm`).
 - Razor gotchas: wrap SVG `<text>` in a `<g>` when it's the first element in a code block (Razor treats a bare

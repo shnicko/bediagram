@@ -411,3 +411,8 @@ h4.bulk { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line)
 .lane-form .row { display: flex; gap: 10px; }
 .lane-form .row > div { flex: 1; }
 .lane-form .actions { margin-top: 10px; }
+.lane-form select { width: 100%; }
+.lane-form .row > .seg { flex: 0 0 auto; }
+.lane-form label.check { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 13px; margin-top: 10px; }
+.lane-form label.check input { width: auto; }
+.lane-form .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }

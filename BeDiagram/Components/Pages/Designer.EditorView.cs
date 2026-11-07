@@ -10,6 +10,12 @@ public partial class Designer : IEditorView
 
     (double X, double Y) IEditorView.ViewCentre() => ViewCentre();
 
+    void IEditorView.CentreOn(double x, double y)
+    {
+        PanX = canvasW / 2 - x * Zoom;
+        PanY = canvasH / 2 - y * Zoom;
+    }
+
     void IEditorView.EditStarted()
     {
         CancelGesture();
