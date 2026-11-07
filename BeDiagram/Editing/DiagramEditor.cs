@@ -633,9 +633,10 @@ public class DiagramEditor
         Node fail = AddBranchNode(failKey, flow, srcFlow + offset, srcCross + offset, src);
         // Leave the source on the side facing each branch and come into the outcome from the flow side, so the line
         // turns once and stays clear of the outcome's label.
+        string outOfFlow = SideToward(flow.FromLane(1, 0));
         string intoFlow = SideToward(flow.FromLane(-1, 0));
-        AddBranchEdge(src, pass, SideToward(flow.FromLane(0, -1)), intoFlow);
-        AddBranchEdge(src, fail, SideToward(flow.FromLane(0, 1)), intoFlow);
+        AddBranchEdge(src, pass, outOfFlow, intoFlow);
+        AddBranchEdge(src, fail, outOfFlow, intoFlow);
 
         // The next steps: straight on along the flow from each outcome (90° to it).
         (double stepHalf, double _) = flow.ToLane(stepType.W / 2, stepType.H / 2);
