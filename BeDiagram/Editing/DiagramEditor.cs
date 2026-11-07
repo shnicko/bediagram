@@ -605,6 +605,82 @@ public class DiagramEditor
         return flow.FromLane(farEdge + NextStepGap + halfAlong, centreAcross);
     }
 
+    /// <summary>The shape a quick branch would start from: exactly one shape selected (not an outcome); otherwise null.</summary>
+    public Node? BranchSource =>
+        Selection.Count == 1 && FindBox(Selection[0]) is Node { Type: not NodeTypes.Outcome } n ? n : null;
+
+    /// <summary>
+    /// Quick branch from the selected shape: a Pass and a Fail outcome at 45° either side of the flow (left → right:
+    /// Pass above, Fail below; top → down: Pass left, Fail right), each followed by a new process step straight on
+    /// along the flow. The two new steps run in parallel. All four join the source's group. One undo step; the Pass
+    /// branch's step is selected with its label open for typing, and the view centres on the branch.
+    /// </summary>
+    public void QuickBranch()
+    {
+        if (BranchSource is not { } src) { view.ShowToast("Select one shape to branch from"); return; }
+        Change();
+        ILaneLayout flow = FlowLayout;
+        string passKey = NodeTypes.Outcome + ":" + Outcomes.Pass, failKey = NodeTypes.Outcome + ":" + Outcomes.Fail;
+        NodeTypeInfo outcomeType = NodeTypes.Get(NodeTypes.Outcome), stepType = NodeTypes.Get(NodeTypes.Process);
+
+        // Pass / Fail: the same distance along the flow and across it, so they sit on the 45° lines.
+        (double srcFlow, double srcCross) = flow.ToLane(src.X + src.W / 2, src.Y + src.H / 2);
+        (double srcFar, double _) = flow.ToLane(src.X + src.W, src.Y + src.H + Geometry.ExtraBelow(src));
+        (double outcomeHalf, double _) = flow.ToLane(outcomeType.W / 2, outcomeType.H / 2);
+        double offset = srcFar - srcFlow + NextStepGap + outcomeHalf;
+
+        Node pass = AddBranchNode(passKey, flow, srcFlow + offset, srcCross - offset, src);
+        Node fail = AddBranchNode(failKey, flow, srcFlow + offset, srcCross + offset, src);
+        // Leave the source on the side facing each branch and come into the outcome from the flow side, so the line
+        // turns once and stays clear of the outcome's label.
+        string intoFlow = SideToward(flow.FromLane(-1, 0));
+        AddBranchEdge(src, pass, SideToward(flow.FromLane(0, -1)), intoFlow);
+        AddBranchEdge(src, fail, SideToward(flow.FromLane(0, 1)), intoFlow);
+
+        // The next steps: straight on along the flow from each outcome (90° to it).
+        (double stepHalf, double _) = flow.ToLane(stepType.W / 2, stepType.H / 2);
+        Node passNext = AddBranchNode(NodeTypes.Process, flow, NextAlong(flow, pass) + stepHalf, srcCross - offset, src);
+        Node failNext = AddBranchNode(NodeTypes.Process, flow, NextAlong(flow, fail) + stepHalf, srcCross + offset, src);
+        AddEdge(pass.Id, passNext.Id);
+        AddEdge(fail.Id, failNext.Id);
+        Steps.MakeParallel(new[] { passNext, failNext });
+
+        if (FindGroup(src.GroupId) is { } g) GrowGroup(g);
+        SelectOnly(passNext.Id);
+        (double midX, double midY) = flow.FromLane((srcFlow + NextAlong(flow, pass) + stepHalf) / 2, srcCross);
+        view.CentreOn(midX, midY);
+        BeginEdit(passNext.Id, checkpoint: false);
+    }
+
+    /// <summary>Joins two quick-branch nodes with the connector pinned to the given sides.</summary>
+    void AddBranchEdge(Node from, Node to, string fromSide, string toSide)
+    {
+        if (!AddEdge(from.Id, to.Id)) return;
+        Edge e = Diagram.Edges[^1];
+        e.FromSide = fromSide;
+        e.ToSide = toSide;
+    }
+
+    /// <summary>The side of a shape that faces the unit direction (dx, dy), e.g. (0, -1) → top.</summary>
+    static string SideToward((double X, double Y) dir) => Sides.All.First(side => Sides.Dir(side) == dir);
+
+    /// <summary>A new node for a quick branch, centred on (flow, cross), in the same group as <paramref name="src"/>.</summary>
+    Node AddBranchNode(string key, ILaneLayout flow, double along, double across, Node src)
+    {
+        (double cx, double cy) = flow.FromLane(along, across);
+        Node n = CreateNode(key, cx, cy);
+        n.GroupId = src.GroupId;
+        return n;
+    }
+
+    /// <summary>Where the next item along the flow may start after <paramref name="b"/>: its far edge (text under it
+    /// counts when the flow runs down) plus the usual gap.</summary>
+    double NextAlong(ILaneLayout flow, IBox b)
+    {
+        (double far, double _) = flow.ToLane(b.X + b.W, b.Y + b.H + Geometry.ExtraBelow(b));
+        return far + NextStepGap;
+    }
+
     /// <summary>File menu: which way new steps go (<see cref="FlowDirections"/>). One undo step.</summary>
     public void SetFlow(string flow)
     {

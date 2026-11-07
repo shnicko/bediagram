@@ -31,6 +31,9 @@ public interface ICommandContext
     void GroupSelection();
     void UngroupSelected();
     void JoinSelected();
+    /// <summary>Exactly one (non-outcome) shape is selected, so a quick branch can start from it.</summary>
+    bool CanBranch { get; }
+    void QuickBranch();
     void Nudge(double dx, double dy);
     void ToggleSelectedConnectorStyle();
 

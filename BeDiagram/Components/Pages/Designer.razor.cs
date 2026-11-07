@@ -316,6 +316,12 @@ public partial class Designer
 
     void SetLockLanes(ChangeEventArgs e) => Editor.SetLockLanes(e.Value is true);
 
+    string SnapClass => Editor.Snap ? "on" : "";
+
+    string SnapTip => Editor.Snap ? "Snap to grid is on (10 px) — click to turn off" : "Snap to grid is off — click to turn on";
+
+    void ToggleSnap() => Editor.Snap = !Editor.Snap;
+
     bool PageIsLandscape => D.Page.Size == PageSetup.Custom ? D.Page.CustomW > D.Page.CustomH : D.Page.Landscape;
 
         /// <summary>What above/below means for the selected label's text direction.</summary>

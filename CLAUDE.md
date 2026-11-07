@@ -162,6 +162,8 @@ tools/regression/                side-by-side regression suites (master vs worki
 - **Flow direction** (`Diagram.Flow`, `FlowDirections`) maps to an `ILaneLayout` via `LaneLayouts.ForFlow`, so quick-add
   (`Editor.NextSpot`) places the next step in (flow, cross) coordinates like the lane arranger. New shapes open their
   label for editing (`AddNodeAt` → `BeginEdit`); quick-adds also pan to centre them (`IEditorView.CentreOn`).
+  Quick branch (`Editor.QuickBranch`, `QuickBranchCommand`, key B) places Pass / Fail outcomes at 45° and their next
+  steps in the same (flow, cross) coordinates; Pass is on the −cross side (above / left).
 - **Connector labels** render in their own layer above shapes (canvas and export).
 - **Page mode** puts the sheet at world (0,0); sizes in mm convert at 96 px/inch (`PageSetup.PxPerMm`).
 - Razor gotchas: wrap SVG `<text>` in a `<g>` when it's the first element in a code block (Razor treats a bare
