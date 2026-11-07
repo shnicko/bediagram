@@ -17,6 +17,13 @@ public partial class TextBoxStyle
 
     [Parameter, EditorRequired] public IReadOnlyList<TextBox> Boxes { get; set; } = default!;
 
+    /// <summary>Called after every change, so the page redraws the canvas (a click here only re-renders this component).</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    Task Set(Action<TextBox> change) { Editor.Restyle(Boxes, change); return OnChanged.InvokeAsync(); }
+
+    Task SetFontSize(object? value) { Editor.SetFontSize(Boxes, value); return OnChanged.InvokeAsync(); }
+
     static readonly (string Key, string Name)[] HAligns = { (TextLook.Left, "Left"), (TextLook.Center, "Centre"), (TextLook.Right, "Right") };
     static readonly (string Key, string Name)[] VAligns = { (TextLook.Top, "Top"), (TextLook.Middle, "Middle"), (TextLook.Bottom, "Bottom") };
 

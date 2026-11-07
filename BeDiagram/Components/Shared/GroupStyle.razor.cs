@@ -16,6 +16,13 @@ public partial class GroupStyle
 
     [Parameter, EditorRequired] public IReadOnlyList<Group> Groups { get; set; } = default!;
 
+    /// <summary>Called after every change, so the page redraws the canvas (a click here only re-renders this component).</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    Task Set(Action<Group> change) { Editor.Restyle(Groups, change); return OnChanged.InvokeAsync(); }
+
+    Task SetTitleLook(string? pos, string? style) { Editor.SetGroupTitleLook(Groups, pos, style); return OnChanged.InvokeAsync(); }
+
     string On(Func<Group, bool> test) => Groups.Count > 0 && Groups.All(test) ? "on" : "";
 
     bool AllFilled => Groups.All(g => g.Filled);

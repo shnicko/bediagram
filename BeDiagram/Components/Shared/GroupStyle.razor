@@ -3,34 +3,34 @@
     @foreach ((string k, Swatch swc) in Palette.All)
     {
         <button class="swatch @On(g => g.Color == k)" style="background:@swc.Light;border-color:@swc.Stroke" title="@k"
-                @onclick="() => Editor.Restyle(Groups, g => g.Color = k)"></button>
+                @onclick="() => Set(g => g.Color = k)"></button>
     }
 </div>
-<label class="check"><input type="checkbox" checked="@AllFilled" @onchange="e => Editor.Restyle(Groups, g => g.Filled = e.Value is true)" /> Tinted background</label>
+<label class="check"><input type="checkbox" checked="@AllFilled" @onchange="e => Set(g => g.Filled = e.Value is true)" /> Tinted background</label>
 <label>Border</label>
 <div class="seg wide patterns">
     @foreach ((string k, string name) in LineLook.Patterns)
     {
-        <button class="@On(g => g.Border == k)" title="@name" @onclick="() => Editor.Restyle(Groups, g => g.Border = k)">@LinePreview(SampleWeight, k, LineLook.ArrowNone)</button>
+        <button class="@On(g => g.Border == k)" title="@name" @onclick="() => Set(g => g.Border = k)">@LinePreview(SampleWeight, k, LineLook.ArrowNone)</button>
     }
 </div>
 <label>Border weight</label>
 <div class="seg wide stacked">
     @foreach ((string k, string name) in LineLook.Weights)
     {
-        <button class="@On(g => g.BorderWeight == k)" title="@name" @onclick="() => Editor.Restyle(Groups, g => g.BorderWeight = k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
+        <button class="@On(g => g.BorderWeight == k)" title="@name" @onclick="() => Set(g => g.BorderWeight = k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
     }
 </div>
 <label>Title position and style</label>
 <div class="seg wide">
     @foreach ((string k, string name) in GroupLook.Positions)
     {
-        <button class="@On(g => g.HeaderPos == k)" @onclick="() => Editor.SetGroupTitleLook(Groups, k, null)">@name</button>
+        <button class="@On(g => g.HeaderPos == k)" @onclick="() => SetTitleLook(k, null)">@name</button>
     }
 </div>
 <div class="seg wide" style="margin-top:6px">
     @foreach ((string k, string name) in GroupLook.Styles)
     {
-        <button class="@On(g => g.HeaderStyle == k)" title="@StyleTip(k)" @onclick="() => Editor.SetGroupTitleLook(Groups, null, k)">@name</button>
+        <button class="@On(g => g.HeaderStyle == k)" title="@StyleTip(k)" @onclick="() => SetTitleLook(null, k)">@name</button>
     }
 </div>

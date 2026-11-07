@@ -16,6 +16,13 @@ public partial class ShapeStyle
 
     [Parameter, EditorRequired] public IReadOnlyList<Node> Nodes { get; set; } = default!;
 
+    /// <summary>Called after every change, so the page redraws the canvas (a click here only re-renders this component).</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    Task Set(Action<Node> change) { Editor.Restyle(Nodes, change); return OnChanged.InvokeAsync(); }
+
+    Task SetEmphasis(string key) { Editor.SetEmphasis(Nodes, key); return OnChanged.InvokeAsync(); }
+
     string On(Func<Node, bool> test) => Nodes.Count > 0 && Nodes.All(test) ? "on" : "";
 
     static bool Forced(Node n) => Emphases.Of(n).ForcesSolidFill;

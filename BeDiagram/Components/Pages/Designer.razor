@@ -606,7 +606,7 @@
                 <div><label>Width</label><input type="number" step="10" @bind="sn.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
                 <div><label>Height</label><input type="number" step="10" @bind="sn.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
             </div>
-            <ShapeStyle Editor="Editor" Nodes="[sn]" />
+            <ShapeStyle Editor="Editor" Nodes="[sn]" OnChanged="StateHasChanged" />
 
             @if (sn.Type == NodeTypes.Outcome)
             {
@@ -688,7 +688,7 @@
                 <div class="chips"><button class="chip" @onclick="() => Editor.ResetCommentStyle(st)">Reset to comment style</button></div>
             }
 
-            <TextBoxStyle Editor="Editor" Boxes="[st]" />
+            <TextBoxStyle Editor="Editor" Boxes="[st]" OnChanged="StateHasChanged" />
             <div class="row">
                 <div><label>Width</label><input type="number" step="10" @bind="st.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
                 <div><label>Height</label><input type="number" step="10" @bind="st.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
@@ -801,7 +801,7 @@
             <h3>Group</h3>
             <label>Title</label>
             <input @bind="sg.Title" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" />
-            <GroupStyle Editor="Editor" Groups="[sg]" />
+            <GroupStyle Editor="Editor" Groups="[sg]" OnChanged="StateHasChanged" />
             <p class="muted">@MemberCount(sg) item@(MemberCount(sg) == 1 ? "" : "s") inside <InfoTip>Drag items in or out of the box to change what's in the group.</InfoTip></p>
             @if (Editor.FindGroup(sg.GroupId) is { } pg)
             {
@@ -861,18 +861,18 @@
             @if (SelectedNodes.Count > 0)
             {
                 <h4 class="bulk">Shapes · @SelectedNodes.Count <InfoTip>Changes here apply to every selected shape at once (one undo step). A setting shows as on when all of them have it.</InfoTip></h4>
-                <ShapeStyle Editor="Editor" Nodes="SelectedNodes" />
+                <ShapeStyle Editor="Editor" Nodes="SelectedNodes" OnChanged="StateHasChanged" />
                 <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@SelectedNodes.All(n => n.ClearTextBack)" @onchange="e => Editor.Restyle(SelectedNodes, n => n.ClearTextBack = e.Value is true)" /> Transparent text background</label>
             }
             @if (SelectedTextBoxes.Count > 0)
             {
                 <h4 class="bulk">Text boxes · @SelectedTextBoxes.Count</h4>
-                <TextBoxStyle Editor="Editor" Boxes="SelectedTextBoxes" />
+                <TextBoxStyle Editor="Editor" Boxes="SelectedTextBoxes" OnChanged="StateHasChanged" />
             }
             @if (SelectedGroups.Count > 0)
             {
                 <h4 class="bulk">Groups · @SelectedGroups.Count</h4>
-                <GroupStyle Editor="Editor" Groups="SelectedGroups" />
+                <GroupStyle Editor="Editor" Groups="SelectedGroups" OnChanged="StateHasChanged" />
             }
             @if (SelectedLaneCount >= 2)
             {
