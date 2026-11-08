@@ -15,7 +15,12 @@ public static class Geometry
 
     /// <summary>The outline actually drawn: the type's shape, or for outcome nodes the outcome's own shape.</summary>
     public static string ShapeOf(Node n) =>
-        n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Shape : NodeTypes.Get(n.Type).Shape;
+        n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Shape
+        : DrawnAsCircle(n) ? NodeTypes.Get(NodeTypes.Circle).Shape
+        : NodeTypes.Get(n.Type).Shape;
+
+    /// <summary>A Circle, or one of the classic shapes drawn as a circle (<see cref="Node.Round"/>).</summary>
+    public static bool DrawnAsCircle(Node n) => n.Type == NodeTypes.Circle || (n.Round && NodeTypes.CanBeRound(n.Type));
 
     /// <summary>The icon drawn in a node: the outcome glyph for outcome nodes, otherwise the chosen icon.</summary>
     public static string? IconOf(Node n) => n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Glyph : n.Icon;

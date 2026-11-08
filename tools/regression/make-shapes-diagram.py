@@ -57,6 +57,14 @@ edge(e, lid, iid, "elbow"); edges[-1].update({"fromItem": "i_00000002", "toItem"
 edge(e, iid, hub, "straight", label="row"); edges[-1]["fromItem"] = "i_00000009"; e += 1
 edge(e, hub, lid, "elbow"); e += 1
 edge(e, iid, sid, "elbow"); edges[-1].update({"fromItem": "i_00000009", "toItem": "i_0000000a"}); e += 1
+# The classic shapes drawn as circles ("round": true keeps the type), with their circle icons; one solid, one with no icon.
+round_icons = {'start': 'play', 'process': 'settings', 'decision': 'git-branch', 'check': 'shield-check', 'action': 'zap',
+               'data': 'database', 'status': 'activity', 'end': 'flag'}
+for c, t in enumerate(types[:8]):
+    nid = node(k, t, 60 + c * 160, 1450, w=84, h=84, icon=None if c == 7 else round_icons[t], label=f"{t.title()} circle",
+               filled=(c == 2)); k += 1
+    nodes[-1]["round"] = True
+    if c > 0: edge(e, f"n_{k - 2:08x}", nid, "elbow"); e += 1
 d = {"schema": "bediagram/1", "name": "shapes", "defaultConnector": "elbow", "groups": [g], "nodes": nodes, "edges": edges, "textBoxes": [],
      "page": {"size": "none", "orientation": "landscape", "customW": 210, "customH": 297, "marginMm": 10, "fitOnExport": True}}
 for folder in sys.argv[1:]:

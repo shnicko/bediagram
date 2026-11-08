@@ -639,6 +639,13 @@ public partial class Designer
 
     static string OutcomePaletteKey(OutcomeInfo o) => $"{NodeTypes.Outcome}:{o.Key}";
 
+    /// <summary>The classic shapes, each offered again as a circle with its type's icon (<see cref="Node.Round"/>).</summary>
+    static readonly List<NodeTypeInfo> RoundShapes = NodeTypes.All.Where(t => NodeTypes.CanBeRound(t.Key)).ToList();
+
+    static string RoundPaletteKey(NodeTypeInfo t) => NodeFactory.RoundPrefix + t.Key;
+
+    static string RoundPaletteTip(NodeTypeInfo t) => $"{t.Display} as a circle: drag onto the canvas or click to add";
+
     static string OutcomePaletteTip(OutcomeInfo o) => $"{o.Display}: {o.Hint}. Drag onto the canvas or click to add.";
 
     /// <summary>Tooltip for a shape tile in the palette (the tiles have no text of their own).</summary>

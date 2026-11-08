@@ -18,6 +18,10 @@ public class Node : IGroupable
     public string? Icon { get; set; }
     /// <summary>Optional colour key from <see cref="Palette"/>; null = the type's default colours.</summary>
     public string? Color { get; set; }
+    /// <summary>Drawn as a circle with an icon in the middle and the label underneath (presentation style), keeping the
+    /// type and its meaning. Only for the classic shapes (see <see cref="NodeTypes.CanBeRound"/>). False is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Round { get; set; }
     /// <summary>Solid fill with white text/icon (presentation style).</summary>
     public bool Filled { get; set; }
     /// <summary>Outcome nodes only: "pass", "fail", "rework", "conditional" or "hold" (see <see cref="Outcomes"/>).

@@ -35,5 +35,12 @@ public static class NodeTypes
     /// <summary>List and IPO nodes: a titled box holding rows (<see cref="Node.Items"/>), laid out by <see cref="PanelGeometry"/>.</summary>
     public static bool IsPanel(string type) => type is List or Ipo;
 
+    /// <summary>Types that can also be drawn as a circle (<see cref="Node.Round"/>): the eight classic shapes.
+    /// Circles already are one; outcomes, lists and IPO boxes have shapes of their own.</summary>
+    public static bool CanBeRound(string type) => type is not (Circle or Outcome or List or Ipo);
+
+    /// <summary>Width and height of a circle-drawn shape (the same as a new Circle).</summary>
+    public const double RoundSize = 84;
+
     public static NodeTypeInfo Get(string key) => All.FirstOrDefault(t => t.Key == key) ?? All[1];
 }

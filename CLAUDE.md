@@ -169,6 +169,11 @@ tools/regression/                side-by-side regression suites (master vs worki
   label for editing (`AddNodeAt` → `BeginEdit`); quick-adds also pan to centre them (`IEditorView.CentreOn`).
   Quick branch (`Editor.QuickBranch`, `QuickBranchCommand`, key B) places Pass / Fail outcomes at 45° and their next
   steps in the same (flow, cross) coordinates; Pass is on the −cross side (above / left).
+- **Circle versions of the classic shapes.** `Node.Round` draws start / process / decision / check / action / data /
+  status / end as a circle (`NodeTypes.CanBeRound`, size `NodeTypes.RoundSize`) without changing `Type`, so the meaning
+  stays data. `Geometry.ShapeOf` / `DrawnAsCircle` pick the circle outline, so everything else (label below, badges,
+  Mermaid `(( ))`, semibold label) follows from the outline. Circle icons per type: `NodeFactory.RoundIcon`. Palette keys
+  `round:<type>` (`NodeFactory.RoundPrefix`, `SizeFor`); panel toggle `Editor.SetRound`; `ChangeType` keeps a circle a circle.
 - **Lists and IPO boxes ("panels").** `list` / `ipo` nodes keep their rows in `Node.Items` (`ListItem`: id, label,
   description, icon, IPO `Section`); IPO adds `SectionTitles` and `Stacked`. Rows have a fixed height and the node is
   always as tall as its rows (`Editor.FitPanel` after every row change, `ResizeGesture` won't go shorter). All layout is in
