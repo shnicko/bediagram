@@ -17,7 +17,7 @@ namespace BeDiagram.Editing;
 /// reach it through the Designer's IEditorContext / ICommandContext. What the editor needs from the screen
 /// (a toast, the view centre, focusing the text editor) goes through <see cref="IEditorView"/>.
 /// </summary>
-public class DiagramEditor
+public partial class DiagramEditor
 {
     readonly IEditorView view;
 
@@ -497,10 +497,12 @@ public class DiagramEditor
 
     // ───────────── Creating items ─────────────
 
-    public bool AddEdge(string from, string to, string label = "")
+    /// <summary>Adds a connector (false when it isn't allowed or already exists). <paramref name="fromItem"/> /
+    /// <paramref name="toItem"/> attach an end to a row of a list or IPO node instead of the whole node.</summary>
+    public bool AddEdge(string from, string to, string label = "", string? fromItem = null, string? toItem = null)
     {
         if (from == to) return false;
-        if (Diagram.Edges.Any(e => (e.From == from && e.To == to))) return false;
+        if (Diagram.Edges.Any(e => e.From == from && e.To == to && e.FromItem == fromItem && e.ToItem == toItem)) return false;
         IBox? a = FindBox(from); IBox? b = FindBox(to);
         if (a is null || b is null) return false;
         // Two comments pinned to each other is meaningless; any other pairing (text ↔ shape, text ↔ text) is fine.
@@ -510,7 +512,7 @@ public class DiagramEditor
         GroupTree tree = Tree;
         if (a is Group ga && b is IGroupable ib && tree.IsInside(ib, ga)) return false;
         if (b is Group gb && a is IGroupable ia && tree.IsInside(ia, gb)) return false;
-        Edge edge = new Edge { From = from, To = to, Label = label };
+        Edge edge = new Edge { From = from, To = to, Label = label, FromItem = fromItem, ToItem = toItem };
         edge.CopyLookFrom(Diagram.DefaultLook);
         edge.Style = Diagram.DefaultConnector;
         if (aNote || bNote) TextBox.ApplyPinLook(edge);
@@ -905,7 +907,7 @@ public class DiagramEditor
         foreach (Edge e in Diagram.Edges.ToList())
             if (map.TryGetValue(e.From, out string? f) && map.TryGetValue(e.To, out string? t))
             {
-                Edge copy = new Edge { From = f, To = t, Label = e.Label, LabelPos = e.LabelPos };
+                Edge copy = new Edge { From = f, To = t, FromItem = e.FromItem, ToItem = e.ToItem, Label = e.Label, LabelPos = e.LabelPos };
                 copy.CopyLookFrom(e);
                 copy.CopyRouteFrom(e);
                 Diagram.Edges.Add(copy);
@@ -1036,6 +1038,7 @@ public class DiagramEditor
         Change();
         (e.From, e.To) = (e.To, e.From);
         (e.FromSide, e.ToSide) = (e.ToSide, e.FromSide);
+        (e.FromItem, e.ToItem) = (e.ToItem, e.FromItem);
     }
 
     public void SetEdgeLabel(Edge e, string label) { Checkpoint(); e.Label = label; MarkDirty(); }
@@ -1051,12 +1054,13 @@ public class DiagramEditor
         string oldDisplay = n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : oldT.Display;
         if (t.Key == NodeTypes.Outcome) { n.Outcome ??= Outcomes.Pass; n.Filled = true; }
         else n.Outcome = null;
-        if (n.Label == oldDisplay) n.Label = t.Key == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : t.Display;
+        if (n.Label == oldDisplay) n.Label = t.Key == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : t.Key == NodeTypes.Ipo ? "Process" : t.Display;
         double cx = n.X + n.W / 2; double cy = n.Y + n.H / 2;
         n.Type = t.Key; n.W = t.W; n.H = t.H;
         n.X = SnapV(cx) - t.W / 2; n.Y = SnapV(cy) - t.H / 2;
         if (t.Key == NodeTypes.Circle && n.Icon is null) n.Icon = "layers";
         foreach ((string k, string v) in NodeFactory.DefaultProperties(t.Key)) n.Properties.TryAdd(k, v);
+        RetypeRows(n);
         // Becoming an outcome drops the number (and closes the gap); leaving one goes on the end of the flow.
         Steps.Normalise();
     }

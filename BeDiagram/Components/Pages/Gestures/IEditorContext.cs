@@ -17,6 +17,9 @@ public interface IEditorContext
     IBox? FindBox(string? id);
     Group? FindGroup(string? id);
 
+    /// <summary>The boxes a connector runs between (a row of a list / IPO node where it ends on one), or null when either is gone.</summary>
+    (IBox A, IBox B)? EdgeEnds(Edge e);
+
     /// <summary>Top-most item under a world point, ignoring <paramref name="exclude"/>.</summary>
     IBox? HitTest(double x, double y, string? exclude);
 
@@ -38,7 +41,7 @@ public interface IEditorContext
     void GrowAround(IGroupable item);
 
     /// <summary>Adds a connector (false when it isn't allowed or already exists). Doesn't record undo.</summary>
-    bool AddEdge(string from, string to);
+    bool AddEdge(string from, string to, string? fromItem, string? toItem);
 
     /// <summary>
     /// Adds a shape centred on a world point (records undo), joined from the selection when asked.

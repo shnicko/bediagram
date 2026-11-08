@@ -226,6 +226,7 @@ public static class Geometry
 
     static LabelLayout LayoutLabel(Node n, string label)
     {
+        if (PanelGeometry.IsPanel(n)) return PanelGeometry.HeaderLabel(n, label);
         IShapeOutline outline = OutlineOf(n);
         double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
         bool icon = Icons.Exists(n.Icon);
@@ -412,6 +413,9 @@ public static class Geometry
 
     public static EdgeRoute Route(IBox a, IBox b, string style, string? fromSide, string? toSide, double bend)
     {
+        // A row of a list / IPO node only has ports on its left and right.
+        if (a is ItemBox) fromSide = PanelGeometry.RowSide(a, b, fromSide);
+        if (b is ItemBox) toSide = PanelGeometry.RowSide(b, a, toSide);
         if (style == EdgeStyles.Straight) return StraightRoute(a, b, fromSide, toSide);
         if (fromSide is null && toSide is null)
         {

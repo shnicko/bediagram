@@ -17,7 +17,14 @@ public class ResizeGesture : UndoableDragGesture
     protected override bool Drag(double dx, double dy)
     {
         if (Ctx.FindBox(id) is not { } r) return true;
-        (double minW, double minH) = r switch { Group => (160.0, 100.0), TextBox => (40.0, 24.0), _ => (80.0, 40.0) };
+        // A list / IPO node can't get shorter than its rows (they have a fixed height).
+        (double minW, double minH) = r switch
+        {
+            Group => (160.0, 100.0),
+            TextBox => (40.0, 24.0),
+            Node n when PanelGeometry.IsPanel(n) => (PanelGeometry.MinWidth(n), PanelGeometry.NeededHeight(n)),
+            _ => (80.0, 40.0),
+        };
         r.W = Math.Max(minW, Ctx.SnapV(w0 + dx));
         r.H = Math.Max(minH, Ctx.SnapV(h0 + dy));
         Moved = true;

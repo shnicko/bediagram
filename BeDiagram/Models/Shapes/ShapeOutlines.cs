@@ -10,7 +10,7 @@ public static class ShapeOutlines
     {
         Rect, new CheckOutline(), new RoundedRectOutline(), new PillOutline(), new DiamondOutline(),
         new ParallelogramOutline(), new HexagonOutline(), new CircleOutline(),
-        new SealOutline(), new OctagonOutline(), new TriangleOutline(), new RoundedSquareOutline(),
+        new SealOutline(), new OctagonOutline(), new TriangleOutline(), new RoundedSquareOutline(), new PanelOutline(),
     }.ToDictionary(o => o.Key);
 
     public static IShapeOutline Get(string? key) =>

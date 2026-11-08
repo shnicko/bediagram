@@ -20,7 +20,7 @@ public class BendGesture : EdgeHandleGesture
     public static BendGesture? TryStart(IEditorContext ctx, double x, double y, string edgeId)
     {
         Edge? edge = ctx.Diagram.Edges.FirstOrDefault(e => e.Id == edgeId);
-        if (edge is null || ctx.FindBox(edge.From) is not { } a || ctx.FindBox(edge.To) is not { } b) return null;
+        if (edge is null || ctx.EdgeEnds(edge) is not (IBox a, IBox b)) return null;
         EdgeRoute r = Geometry.Route(a, b, edge);
         if (r.BendIndex < 0) return null;
         bool vertical = r.BendIsVertical;

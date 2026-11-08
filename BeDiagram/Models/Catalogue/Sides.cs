@@ -6,6 +6,9 @@ public static class Sides
     public const string Top = "top", Right = "right", Bottom = "bottom", Left = "left";
     public static readonly string[] All = { Top, Right, Bottom, Left };
 
+    /// <summary>The sides a row of a list / IPO node has ports on.</summary>
+    public static readonly string[] LeftRight = { Right, Left };
+
     /// <summary>Outward direction of a side.</summary>
     public static (double X, double Y) Dir(string side) => side switch
     {

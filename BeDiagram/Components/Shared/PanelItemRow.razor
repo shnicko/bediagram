@@ -1,0 +1,47 @@
+<div class="panel-item">
+    <div class="panel-item-top">
+        <button class="icon panel-item-icon @(IconOpen ? "on" : "")" title="@IconTitle" @onclick="ToggleIcon">
+            @if (Icons.Exists(Item.Icon))
+            {
+                @IconSvg(Item.Icon!, 16)
+            }
+            else
+            {
+                <span class="muted">+</span>
+            }
+        </button>
+        <input class="panel-item-label" value="@Item.Label" placeholder="Item" @onfocus="Editor.Checkpoint" @oninput="LabelTyped" />
+        <button class="icon" title="Move up" disabled="@(!Editor.CanMoveItem(Node, Item.Id, -1))" @onclick="Up">↑</button>
+        <button class="icon" title="Move down" disabled="@(!Editor.CanMoveItem(Node, Item.Id, 1))" @onclick="Down">↓</button>
+        <button class="icon" title="Remove this row (and connectors to it)" @onclick="Remove">✕</button>
+    </div>
+    <input class="panel-item-desc" value="@(Item.Description ?? "")" placeholder="Description (optional)" @onfocus="Editor.Checkpoint" @oninput="DescTyped" />
+    @if (Ipo)
+    {
+        <select class="panel-item-section" value="@IpoSections.Of(Item.Section)" title="Section" @onchange="SectionPicked">
+            @foreach (string s in IpoSections.All)
+            {
+                <option value="@s">@PanelGeometry.SectionTitle(Node, s)</option>
+            }
+        </select>
+    }
+    @if (IconOpen)
+    {
+        <div class="icon-current">
+            <button class="small" @onclick="ClearIcon">No icon</button>
+        </div>
+        <input class="icon-search" placeholder="Search icons…" @bind="filter" @bind:event="oninput" />
+        <div class="icon-picker">
+            @foreach ((string cat, List<string> names) in FilteredIcons())
+            {
+                <div class="icon-cat">@cat</div>
+                <div class="icon-grid">
+                    @foreach (string iconName in names)
+                    {
+                        <button class="icon-btn @(Item.Icon == iconName ? "on" : "")" title="@iconName" @onclick="() => PickIcon(iconName)">@IconSvg(iconName, 18)</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>

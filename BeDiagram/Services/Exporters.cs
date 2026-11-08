@@ -104,19 +104,23 @@ public static class Exporters
             sb.Append(TextBoxSvg(t));
 
         StringBuilder labels = new StringBuilder();
+        // Connectors ending on a row of a list / IPO node go above the shapes, so that end isn't hidden.
+        StringBuilder rowEdges = new StringBuilder();
         foreach (Edge e in d.Edges)
         {
-            if (!lookup.TryGetValue(e.From, out IBox? a) || !lookup.TryGetValue(e.To, out IBox? b)) continue;
+            StringBuilder lines = e.EndsOnRow ? rowEdges : sb;
+            if (PanelGeometry.Ends(e, id => lookup.GetValueOrDefault(id)) is not { } ends) continue;
+            (IBox a, IBox b) = ends;
             EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
             double lw = LineLook.Width(e.Weight);
             string lc = LineLook.Colour(e.Color);
             string? dash = LineLook.Dash(e.Pattern, lw);
             string mk = $"url(#{LineLook.MarkerId(lc, e.Weight)})";
-            sb.Append($"<path d=\"{geo.D}\" fill=\"none\" stroke=\"{lc}\" stroke-width=\"{F(lw)}\" stroke-linecap=\"{LineLook.Cap(e.Pattern)}\"");
-            if (dash is not null) sb.Append($" stroke-dasharray=\"{dash}\"");
-            if (e.Arrows != LineLook.ArrowNone) sb.Append($" marker-end=\"{mk}\"");
-            if (e.Arrows == LineLook.ArrowBoth) sb.Append($" marker-start=\"{mk}\"");
-            sb.Append("/>\n");
+            lines.Append($"<path d=\"{geo.D}\" fill=\"none\" stroke=\"{lc}\" stroke-width=\"{F(lw)}\" stroke-linecap=\"{LineLook.Cap(e.Pattern)}\"");
+            if (dash is not null) lines.Append($" stroke-dasharray=\"{dash}\"");
+            if (e.Arrows != LineLook.ArrowNone) lines.Append($" marker-end=\"{mk}\"");
+            if (e.Arrows == LineLook.ArrowBoth) lines.Append($" marker-start=\"{mk}\"");
+            lines.Append("/>\n");
             if (!string.IsNullOrWhiteSpace(e.Label))
             {
                 EdgeLabelLayout lab = Geometry.LayoutEdgeLabel(e, geo);
@@ -142,6 +146,7 @@ public static class Exporters
             sb.Append($"<path d=\"{shape}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"{F(Geometry.ShapeStrokeOf(n))}\"/>\n");
             if (Geometry.OutlineOf(n).HasSideStripe)
                 sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
+            if (PanelGeometry.IsPanel(n)) sb.Append(PanelSvg.Body(n, st)).Append('\n');
             LabelLayout lay = Geometry.Layout(n);
             if (lay.HasIcon)
                 sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(Geometry.IconStroke(n))}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g>\n");
@@ -162,6 +167,7 @@ public static class Exporters
             if (Geometry.HasLink(n)) sb.Append(Geometry.LinkBadgeSvg(n, st.Stroke)).Append('\n');
             if (Geometry.ShownStep(d, n) is int step) sb.Append(Geometry.StepBadgeSvg(n, step, st.Stroke)).Append('\n');
         }
+        sb.Append(rowEdges);
         // Group link badges sit above the members so they're never hidden.
         foreach (Group g in d.Groups.Where(Geometry.HasLink))
             sb.Append(Geometry.LinkBadgeSvg(g, Palette.Get(g.Color).Stroke)).Append('\n');
@@ -211,12 +217,69 @@ public static class Exporters
         return label ? $"{start}-- {Q(e.Label)} --{(end == "" ? "-" : ">")}" : $"{start}--{(end == "" ? "-" : ">")}";
     }
 
+    /// <summary>Indents every line of a Mermaid block by <paramref name="depth"/> levels (4 spaces each).</summary>
+    static string Indent(string block, int depth)
+    {
+        string pad = new string(' ', 4 * depth);
+        return string.Concat(block.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => pad + l + "\n"));
+    }
+
+    /// <summary>
+    /// A list / IPO node as Mermaid (not indented): a subgraph titled with <paramref name="title"/> (already quoted)
+    /// holding a node per row (ids "N3_1", "N3_2", … recorded in <paramref name="rowIds"/>); an IPO box nests a
+    /// subgraph per section that has rows. A panel with no rows at all is a plain node.
+    /// </summary>
+    static string PanelMermaid(Node n, string id, string title, Dictionary<(string Node, string Item), string> rowIds)
+    {
+        static string Row(ListItem item)
+        {
+            string label = (string.IsNullOrWhiteSpace(item.Label) ? "Item" : item.Label).Replace("\"", "'").Replace("\r", "").Replace("\n", " ").Trim();
+            string desc = item.Description is { } d ? "<br/>" + d.Replace("\"", "'").Replace("\r", "").Replace("\n", " ").Trim() : "";
+            return $"[\"{label}{desc}\"]";
+        }
+        List<ListItem> items = n.Items ?? new List<ListItem>();
+        if (items.Count == 0) return $"{id}[{title}]\n";
+        StringBuilder sb = new StringBuilder($"subgraph {id}[{title}]\n");
+        int k = 0;
+        if (n.Type != NodeTypes.Ipo)
+        {
+            sb.Append("    direction TB\n");
+            foreach (ListItem item in items)
+            {
+                string rid = $"{id}_{++k}";
+                rowIds[(n.Id, item.Id)] = rid;
+                sb.Append($"    {rid}{Row(item)}\n");
+            }
+        }
+        else
+        {
+            sb.Append(n.Stacked ? "    direction TB\n" : "    direction LR\n");
+            foreach (string section in IpoSections.All)
+            {
+                List<ListItem> rows = PanelGeometry.InSection(n, section);
+                if (rows.Count == 0) continue;
+                string sectionTitle = PanelGeometry.SectionTitle(n, section).Replace("\"", "'").Replace("\n", " ").Trim();
+                sb.Append($"    subgraph {id}_{section}[\"{sectionTitle}\"]\n");
+                foreach (ListItem item in rows)
+                {
+                    string rid = $"{id}_{++k}";
+                    rowIds[(n.Id, item.Id)] = rid;
+                    sb.Append($"        {rid}{Row(item)}\n");
+                }
+                sb.Append("    end\n");
+            }
+        }
+        return sb.Append("end\n").ToString();
+    }
+
     /// <summary>Mermaid flowchart text, for interoperability with Mermaid-based tools.</summary>
     public static string ToMermaid(Diagram d)
     {
         static string Q(string s) => "\"" + (s ?? "").Replace("\"", "'").Replace("\r", "").Replace("\n", " ").Trim() + "\"";
         StringBuilder sb = new StringBuilder("flowchart TD\n");
         Dictionary<string, string> ids = new Dictionary<string, string>();
+        Dictionary<(string Node, string Item), string> rowIds = new Dictionary<(string Node, string Item), string>();
+        Dictionary<string, string> panelBlocks = new Dictionary<string, string>();
         StringBuilder styles = new StringBuilder();
         int i = 0;
         foreach (Node n in d.Nodes)
@@ -226,6 +289,15 @@ public static class Exporters
             string text = Geometry.ShownStep(d, n) is int step ? $"{step}. {Geometry.LabelText(n)}" : Geometry.LabelText(n);
             // Mermaid can't draw text outside a shape, so the description goes on its own line inside the label.
             string desc = n.Description is { } dsc ? "<br/>" + dsc.Replace("\"", "'").Replace("\r", "").Trim().Replace("\n", " ") : "";
+            if (PanelGeometry.IsPanel(n))
+            {
+                // A list / IPO box is a subgraph with a node per row, so connectors can still end on a row.
+                panelBlocks[n.Id] = PanelMermaid(n, id, Q(text)[..^1] + desc + "\"", rowIds);
+                NodeStyle pst = NodeStyle.For(n);
+                styles.Append($"    style {id} fill:{pst.Fill},stroke:{pst.Stroke},color:{pst.Text}\n");
+                if (n.GroupId is null || d.Groups.All(g => g.Id != n.GroupId)) sb.Append(Indent(panelBlocks[n.Id], 1));
+                continue;
+            }
             if (n.Type == NodeTypes.Outcome)
             {
                 // Mermaid has no seal/octagon: a symbol in the label plus the closest classic shape and a solid fill.
@@ -284,7 +356,7 @@ public static class Exporters
             string indent = new string(' ', 4 * (depth + 1));
             sb.Append($"{indent}subgraph {gid}[{Q(g.Title)}]\n");
             foreach (IGroupable m in tree.Children(g).Where(m => m is not Group))
-                sb.Append($"{indent}    {ids[m.Id]}\n");
+                sb.Append(panelBlocks.TryGetValue(m.Id, out string? block) ? Indent(block, depth + 2) : $"{indent}    {ids[m.Id]}\n");
             // Carry the group's look across where Mermaid can show it (no fill, broken outline, line weight).
             List<string> look = new List<string>();
             if (!g.Filled) look.Add("fill:none");
@@ -299,6 +371,8 @@ public static class Exporters
         foreach (Edge e in d.Edges)
         {
             if (!ids.TryGetValue(e.From, out string? a) || !ids.TryGetValue(e.To, out string? b)) continue;
+            if (e.FromItem is { } fromRow && rowIds.TryGetValue((e.From, fromRow), out string? ra)) a = ra;
+            if (e.ToItem is { } toRow && rowIds.TryGetValue((e.To, toRow), out string? rb)) b = rb;
             sb.Append($"    {a} {MermaidLink(e)} {b}\n");
         }
         // Mermaid has no notion of a linked sub-diagram; keep the links as comments so they aren't lost.
