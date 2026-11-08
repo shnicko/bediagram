@@ -17,20 +17,38 @@ public static class NodeFactory
         (string type, string? outcome) = ParsePaletteKey(paletteKey);
         NodeTypeInfo t = NodeTypes.Get(type);
         bool isOutcome = t.Key == NodeTypes.Outcome;
-        return new Node
+        Node n = new Node
         {
             Type = t.Key,
             Outcome = isOutcome ? Outcomes.Get(outcome).Key : null,
             Filled = isOutcome,
-            Label = t.Key == NodeTypes.Circle ? "Label" : isOutcome ? Outcomes.Get(outcome).Display : t.Display,
+            Label = t.Key == NodeTypes.Circle ? "Label" : t.Key == NodeTypes.Ipo ? "Process" : isOutcome ? Outcomes.Get(outcome).Display : t.Display,
             Icon = DefaultIcon(t.Key),
             W = t.W,
             H = t.H,
             X = cx - t.W / 2,
             Y = cy - t.H / 2,
             Properties = DefaultProperties(t.Key),
+            Items = NodeTypes.IsPanel(t.Key) ? DefaultItems(t.Key) : null,
         };
+        if (n.Items is not null)
+        {
+            // Rows have a fixed height, so the node is as tall as its rows need.
+            n.H = PanelGeometry.NeededHeight(n);
+            n.Y = cy - n.H / 2;
+        }
+        return n;
     }
+
+    /// <summary>The rows a new list (three items) or IPO box (one per section) starts with.</summary>
+    public static List<ListItem> DefaultItems(string type) => type == NodeTypes.Ipo
+        ? new List<ListItem>
+        {
+            new() { Label = "Inputs", Section = IpoSections.Input },
+            new() { Label = "Work done", Section = IpoSections.Process },
+            new() { Label = "Results", Section = IpoSections.Output },
+        }
+        : new List<ListItem> { new() { Label = "Item 1" }, new() { Label = "Item 2" }, new() { Label = "Item 3" } };
 
     /// <summary>The icon a new node of <paramref name="type"/> starts with: start ▶ and end 🏁 so the two ends of a
     /// flow read as a pair (End is green like Start, so the flag is what tells them apart), a placeholder on circles.</summary>

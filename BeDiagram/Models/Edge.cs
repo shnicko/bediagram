@@ -38,6 +38,17 @@ public class Edge
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double Bend { get; set; }
 
+    /// <summary>Row of a list / IPO source node the connector leaves from (<see cref="ListItem.Id"/>); null = the whole node.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? FromItem { get; set; }
+    /// <summary>Row of a list / IPO target node the connector arrives at; null = the whole node.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToItem { get; set; }
+
+    /// <summary>True when either end is on a row; such connectors are drawn above the shapes (canvas and export).</summary>
+    [JsonIgnore]
+    public bool EndsOnRow => FromItem is not null || ToItem is not null;
+
     public bool IsManual => FromSide is not null || ToSide is not null || Bend != 0;
 
     /// <summary>Back to fully automatic sides and bend.</summary>

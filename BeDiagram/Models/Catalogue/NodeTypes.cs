@@ -12,6 +12,8 @@ public static class NodeTypes
     public const string Status = "status";
     public const string Circle = "circle";
     public const string Outcome = "outcome";
+    public const string List = "list";
+    public const string Ipo = "ipo";
 
     public static readonly IReadOnlyList<NodeTypeInfo> All = new List<NodeTypeInfo>
     {
@@ -25,7 +27,13 @@ public static class NodeTypes
         new(End,      "End",           "pill",          "#e7f5ec", "#2f8f5b", 140, 52),
         new(Circle,   "Circle",        "circle",        "#eef3fb", "#3b6fb6", 84, 84),
         new(Outcome,  "Outcome",       "outcome",       "#e7f5ec", "#2f8f5b", 50, 50),
+        // After Outcome so the 1–9 shortcut keys stay on the classic shapes.
+        new(List,     "List",          "panel",         "#f3f5f8", "#4f6478", 220, 200),
+        new(Ipo,      "Input / process / output", "panel", "#fbf4ec", "#a8662a", 480, 150),
     };
+
+    /// <summary>List and IPO nodes: a titled box holding rows (<see cref="Node.Items"/>), laid out by <see cref="PanelGeometry"/>.</summary>
+    public static bool IsPanel(string type) => type is List or Ipo;
 
     public static NodeTypeInfo Get(string key) => All.FirstOrDefault(t => t.Key == key) ?? All[1];
 }

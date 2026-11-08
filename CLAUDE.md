@@ -31,6 +31,8 @@ BeDiagram/
   Models/Shapes/         shape outlines (Strategy pattern, BeDiagram.Models.Shapes): IShapeOutline, ShapeOutline base,
                          one class per outline (Rect, Check, RoundedRect, Pill, Diamond, Parallelogram, Hexagon, Circle,
                          Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (lookup by shape key)
+  Models/PanelGeometry.cs  list / IPO nodes ("panels"): title band, sections, fixed-height rows, row ends for connectors
+                         (End / Ends → ItemBox), row ports; ListItem = one row; Catalogue/IpoSections
   Models/GroupTree.cs    group hierarchy (Composite): parent / children / descendants / ancestors / paint order from GroupId
   Models/Emphasis/       major / normal / minor looks (Strategy pattern, BeDiagram.Models.Emphasis): IEmphasis, NodeEmphasis
                          base, NormalEmphasis, MajorEmphasis, MinorEmphasis, Emphases (lookup by Node.Emphasis)
@@ -40,6 +42,8 @@ BeDiagram/
   Editing/DiagramEditor.cs   the editor model, no UI (BeDiagram.Editing): open Diagram, Selection / SelectedEdgeId /
                              EditingId, Dirty, AutoConnect / Snap, undo / redo (snapshots), and every editing action
                              (create, join, group, align, duplicate, delete, nudge, panel setters)
+  Editing/DiagramEditor.Panels.cs   list / IPO rows (partial class): Add / Remove / Move / SetItemSection / SetSectionTitle /
+                             SetStacked, FitPanel (height = rows), RetypeRows, Ends(edge)
   Editing/IEditorView.cs     what the editor needs from the screen: ShowToast, ViewCentre, CentreOn, EditStarted
   Editing/AlignOp.cs         align / distribute / row / column operations
   Editing/Lanes/             swim lanes (Strategy pattern, BeDiagram.Editing.Lanes): ILaneLayout, HorizontalLanes,
@@ -51,6 +55,7 @@ BeDiagram/
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
   Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
   Services/ExportView.cs     the window onto the drawing that a current-view export uses
+  Services/PanelSvg.cs       inside of a list / IPO node as SVG markup, used by the canvas and the export
   Services/PdfExporter.cs    PDF = Exporters.ToSvg output converted to PDF operators (own SVG-subset reader, core fonts)
   Services/Export/           export strategies: IExportFormat (Svg/Png/Pdf/Mermaid), IExportArea (WholeDrawing/CurrentView),
                              ExportService (context: lists menu choices, renders + saves), IPngRasterizer (BrowserPngRasterizer)
@@ -66,7 +71,7 @@ BeDiagram/
                                        ICommandContext (receiver), CommandRegistry (invoker), one class per action
   Components/Pages/Designer.Commands.cs        OnKey (keyboard → CommandRegistry) and Run / CanRun / Tip for buttons
   Components/Pages/Designer.CommandContext.cs  Designer's ICommandContext implementation
-  Components/Shared/*.razor(.cs)       small child components: AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas),
+  Components/Shared/*.razor(.cs)       small child components: PanelItems / PanelItemRow (list / IPO rows in the panel), AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas),
                                        StepOrderDialog (the step order pop-up; drives Editor.MoveStepBefore / JoinStep)
   Components/UiSvg.cs                  IconSvg / OutcomeSwatch helpers (imported with `@using static` in _Imports.razor)
   wwwroot/js/designer.js     keyboard shortcuts, wheel zoom/pan, canvas size, focus, drag data
@@ -95,7 +100,7 @@ tools/regression/                side-by-side regression suites (master vs worki
 
 ## Design rules
 
-- **Typed nodes.** Every shape has a `Type` (start, process, decision, check, action, data, status, end, circle, outcome)
+- **Typed nodes.** Every shape has a `Type` (start, process, decision, check, action, data, status, end, circle, outcome, list, ipo)
   and free-form `Properties`. Outcome nodes carry `Outcome` (pass, fail, rework, conditional, hold — see `Outcomes`);
   `Geometry.ShapeOf`/`OutlineOf`/`IconOf` turn that into the drawn outline and glyph, so use those rather than `NodeTypes.Get(..).Shape`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`, `value`.
   This is what lets the audit tool read diagrams later — don't replace types with purely visual styling.
@@ -164,6 +169,15 @@ tools/regression/                side-by-side regression suites (master vs worki
   label for editing (`AddNodeAt` → `BeginEdit`); quick-adds also pan to centre them (`IEditorView.CentreOn`).
   Quick branch (`Editor.QuickBranch`, `QuickBranchCommand`, key B) places Pass / Fail outcomes at 45° and their next
   steps in the same (flow, cross) coordinates; Pass is on the −cross side (above / left).
+- **Lists and IPO boxes ("panels").** `list` / `ipo` nodes keep their rows in `Node.Items` (`ListItem`: id, label,
+  description, icon, IPO `Section`); IPO adds `SectionTitles` and `Stacked`. Rows have a fixed height and the node is
+  always as tall as its rows (`Editor.FitPanel` after every row change, `ResizeGesture` won't go shorter). All layout is in
+  `PanelGeometry`; the inside is drawn by `PanelSvg.Body` in both renderers; the title is the node's label (laid out in
+  the band via `Geometry.Layout`). A connector end on a row is `Edge.FromItem` / `ToItem`: resolve ends with
+  `PanelGeometry.Ends` / `Editor.Ends` / `IEditorContext.EdgeEnds` (never `FindBox(e.From)` alone), which gives an
+  `ItemBox` for a row; `Geometry.Route` keeps a row end on its left / right side. Row ids are only unique inside their
+  node and survive a copy. Connectors ending on a row draw above the shapes (`Edge.EndsOnRow`). Mermaid: a subgraph
+  with a node per row.
 - **Connector labels** render in their own layer above shapes (canvas and export).
 - **Page mode** puts the sheet at world (0,0); sizes in mm convert at 96 px/inch (`PageSetup.PxPerMm`).
 - Razor gotchas: wrap SVG `<text>` in a `<g>` when it's the first element in a code block (Razor treats a bare

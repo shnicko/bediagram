@@ -187,8 +187,15 @@
                      @onclick="() => Editor.QuickAdd(p.Type.Key)">
                     <svg width="48" height="30" viewBox="-2 -2 52 32">
                         <path d="@PaletteShapePath(p.Type.Key)" fill="@p.Type.Fill" stroke="@p.Type.Stroke" stroke-width="1.5" />
+                        @if (PaletteInnerPath(p.Type.Key) is { } inner)
+                        {
+                            <path d="@inner" fill="none" stroke="@p.Type.Stroke" stroke-width="1" />
+                        }
                     </svg>
-                    <kbd>@p.Number</kbd>
+                    @if (p.HasKey)
+                    {
+                        <kbd>@p.Number</kbd>
+                    }
                 </div>
             }
         </div>
@@ -444,6 +451,10 @@
                         {
                             <rect x="@F(v.N.X)" y="@F(v.N.Y)" width="6" height="@F(v.N.H)" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" fill-opacity="@(v.N.Filled ? "0.5" : "1")" />
                         }
+                        @if (PanelBody(v) is { } body)
+                        {
+                            <g class="panel-body">@body</g>
+                        }
                         @if (v.Layout.HasIcon)
                         {
                             <g class="node-icon" transform="@NodeIconTransform(v.Layout)"
@@ -503,6 +514,29 @@
                             <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
                                     @onpointerdown="e => PortDown(e, v.N.Id)" @onpointerdown:stopPropagation="true" />
                         }
+                        @foreach ((double px, double py, string itemId) in PanelGeometry.RowPorts(v.N))
+                        {
+                            <circle class="port row-port" cx="@F(px)" cy="@F(py)" r="5"
+                                    @onpointerdown="e => PortDown(e, v.N.Id, itemId)" @onpointerdown:stopPropagation="true" />
+                        }
+                    </g>
+                }
+
+                @* Connectors that end on a row of a list / IPO node: above the shapes, so the end on the row shows *@
+                @foreach (EdgeView v in EdgeViews(rowLayer: true))
+                {
+                    <g class="edge @(v.Selected ? "selected" : "")"
+                       @onpointerdown="ev => EdgeDown(ev, v.E.Id)" @onpointerdown:stopPropagation="true"
+                       @ondblclick="() => Editor.BeginEdit(v.E.Id)" @ondblclick:stopPropagation="true">
+                        <path d="@v.Geo.D" class="edge-hit" />
+                        @if (v.Selected)
+                        {
+                            <path d="@v.Geo.D" class="edge-halo" stroke-width="@F(v.Width + 7)" />
+                        }
+                        <path d="@v.Geo.D" class="edge-line" stroke="@v.Colour" stroke-width="@F(v.Width)"
+                              stroke-dasharray="@LineLook.Dash(v.E.Pattern, v.Width)" stroke-linecap="@LineLook.Cap(v.E.Pattern)"
+                              marker-end="@(v.E.Arrows == LineLook.ArrowNone ? null : v.Marker)"
+                              marker-start="@(v.E.Arrows == LineLook.ArrowBoth ? v.Marker : null)" />
                     </g>
                 }
 
@@ -628,7 +662,11 @@
             </div>
             <ShapeStyle Editor="Editor" Nodes="[sn]" OnChanged="StateHasChanged" />
 
-            @if (sn.Type == NodeTypes.Outcome)
+            @if (PanelGeometry.IsPanel(sn))
+            {
+                <PanelItems Editor="Editor" Node="sn" OnChanged="StateHasChanged" />
+            }
+            else if (sn.Type == NodeTypes.Outcome)
             {
                 <label>Outcome</label>
                 <div class="outcome-picker">

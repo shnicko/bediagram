@@ -1,0 +1,27 @@
+@if (IsIpo)
+{
+    <label class="check" title="Off: Input | Process | Output side by side. On: one section under another (narrower, for slides and portrait pages)">
+        <input type="checkbox" checked="@Node.Stacked" @onchange="StackedChanged" /> Stack sections top to bottom
+    </label>
+    @foreach (string section in IpoSections.All)
+    {
+        <div class="panel-section">
+            <input class="section-title" value="@SectionValue(section)" placeholder="@IpoSections.DefaultTitle(section)" title="Section title (blank = @IpoSections.DefaultTitle(section))"
+                   @onfocus="Editor.Checkpoint" @oninput="e => SectionTyped(section, e)" />
+            @foreach (ListItem item in PanelGeometry.InSection(Node, section))
+            {
+                <PanelItemRow Editor="Editor" Node="Node" Item="item" Ipo="true" IconOpen="@(iconFor == item.Id)" OnToggleIcon="ToggleIcon" OnChanged="Changed" />
+            }
+            <button class="small" @onclick="() => Add(section)">+ Add to @PanelGeometry.SectionTitle(Node, section)</button>
+        </div>
+    }
+}
+else
+{
+    <label>Items <InfoTip>Rows of the list, in order. Drag from a row's ● port on the canvas to connect from that row; drop a connector on a row to connect to it.</InfoTip></label>
+    @foreach (ListItem item in Node.Items ?? new List<ListItem>())
+    {
+        <PanelItemRow Editor="Editor" Node="Node" Item="item" Ipo="false" IconOpen="@(iconFor == item.Id)" OnToggleIcon="ToggleIcon" OnChanged="Changed" />
+    }
+    <button class="small" @onclick="() => Add(null)">+ Add item</button>
+}

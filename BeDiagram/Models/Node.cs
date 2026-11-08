@@ -38,6 +38,15 @@ public class Node : IGroupable
     }
     string? emphasis;
     public Dictionary<string, string> Properties { get; set; } = new();
+    /// <summary>List and IPO nodes: the rows, in order (IPO rows carry their <see cref="ListItem.Section"/>). Null for other shapes.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ListItem>? Items { get; set; }
+    /// <summary>IPO nodes: renamed section titles, in input / process / output order. Null (or a blank entry) = the default title.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? SectionTitles { get; set; }
+    /// <summary>IPO nodes: sections stacked top to bottom instead of side by side. False (the default) is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Stacked { get; set; }
     /// <summary>Optional longer note drawn in smaller text under the label. For shapes with the label inside,
     /// it sits under the shape. A blank description is stored as null (left out of the file).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -59,12 +68,14 @@ public class Node : IGroupable
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Link { get; set; }
 
-    /// <summary>A copy with a new id and its own <see cref="Properties"/>; every other field (look, link, step, group) is kept.</summary>
+    /// <summary>A copy with a new id and its own <see cref="Properties"/> and rows (rows keep their ids); every other field (look, link, step, group) is kept.</summary>
     public Node Copy()
     {
         Node c = (Node)MemberwiseClone();
         c.Id = NewId("n");
         c.Properties = new Dictionary<string, string>(Properties);
+        c.Items = Items?.Select(i => i.Copy()).ToList();
+        c.SectionTitles = SectionTitles is null ? null : new List<string>(SectionTitles);
         return c;
     }
 

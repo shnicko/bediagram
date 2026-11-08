@@ -18,15 +18,15 @@ public class EdgeEndGesture : EdgeHandleGesture
     protected override bool Drag(double dx, double dy)
     {
         if (Edge is not { } edge) return true;
-        IBox? box = Ctx.FindBox(FromEnd ? edge.From : edge.To);
-        if (box is null) return true;
-        // Nearest side middle to the pointer.
-        string side = Sides.All.MinBy(s =>
+        if (Ctx.EdgeEnds(edge) is not (IBox a, IBox b)) return true;
+        IBox box = FromEnd ? a : b;
+        // Nearest side middle to the pointer (left / right only on a row of a list or IPO box).
+        string side = PanelGeometry.SidesOf(box).MinBy(s =>
         {
             (double px, double py) = Geometry.SidePoint(box, s);
             return (px - CurX) * (px - CurX) + (py - CurY) * (py - CurY);
         })!;
-        EdgeRoute route = Geometry.Route(Ctx.FindBox(edge.From)!, Ctx.FindBox(edge.To)!, edge);
+        EdgeRoute route = Geometry.Route(a, b, edge);
         string? current = FromEnd ? route.FromSide : route.ToSide;
         if (side == current) return true;
         if (!Moved && Distance < 4) return true;

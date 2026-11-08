@@ -183,13 +183,16 @@ public partial class Designer
         gesture = new MarqueeGesture(this, x, y, clickSelects: id);
     }
 
-    void PortDown(PointerEventArgs e, string id)
+    void PortDown(PointerEventArgs e, string id) => PortDown(e, id, null);
+
+    /// <summary>Pressing a ● port: a shape's side, or (<paramref name="itemId"/>) a row of a list / IPO node.</summary>
+    void PortDown(PointerEventArgs e, string id, string? itemId)
     {
         if (e.Button != 0) { StartPan(e); return; }
         Editor.EndEdit();
         Editor.SelectOnly(id);
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
-        gesture = new ConnectGesture(this, x, y, id);
+        gesture = new ConnectGesture(this, x, y, id, itemId);
     }
 
     void ResizeDown(PointerEventArgs e, string id)
@@ -639,7 +642,20 @@ public partial class Designer
     static string OutcomePaletteTip(OutcomeInfo o) => $"{o.Display}: {o.Hint}. Drag onto the canvas or click to add.";
 
     /// <summary>Tooltip for a shape tile in the palette (the tiles have no text of their own).</summary>
-    static string PaletteShapeTip(PaletteShape p) => $"{p.Type.Display}: drag onto the canvas, click to add, or press {p.Number}";
+    static string PaletteShapeTip(PaletteShape p) => p.HasKey
+        ? $"{p.Type.Display}: drag onto the canvas, click to add, or press {p.Number}"
+        : $"{p.Type.Display}: drag onto the canvas or click to add";
+
+    /// <summary>Extra lines inside a palette tile (the title band and rows of a list / IPO box), or null.</summary>
+    static string? PaletteInnerPath(string type) => type switch
+    {
+        NodeTypes.List => "M0,8 H48 M5,12 H43 V17 H5 Z M5,20 H43 V25 H5 Z",
+        NodeTypes.Ipo => "M0,8 H48 M16,8 V28 M32,8 V28 M3,13 H13 V18 H3 Z M19,13 H29 V18 H19 Z M35,13 H45 V18 H35 Z",
+        _ => null,
+    };
+
+    /// <summary>The inside of a list / IPO node (title band, sections, rows) — same markup as the export — or null.</summary>
+    static MarkupString? PanelBody(NodeView v) => PanelGeometry.IsPanel(v.N) ? (MarkupString)PanelSvg.Body(v.N, v.Style) : null;
 
     static string PaletteShapePath(string type) => Geometry.ShapePath(new Node { Type = type, W = 48, H = 28 });
 
@@ -745,11 +761,13 @@ public partial class Designer
             return new TextBoxView(t, ts, Editor.Selection.Contains(t.Id), Geometry.Layout(t), Geometry.TextBoxPath(t, ts.Radius));
         });
 
-    IEnumerable<EdgeView> EdgeViews()
+    /// <summary>Connectors to draw: the ones under the shapes, or (<paramref name="rowLayer"/>) the ones that end on a
+    /// row of a list / IPO node, drawn above the shapes so that end isn't hidden.</summary>
+    IEnumerable<EdgeView> EdgeViews(bool rowLayer = false)
     {
-        foreach (Edge e in D.Edges)
+        foreach (Edge e in D.Edges.Where(e => e.EndsOnRow == rowLayer))
         {
-            if (Editor.FindBox(e.From) is not { } a || Editor.FindBox(e.To) is not { } b) continue;
+            if (Editor.Ends(e) is not (IBox a, IBox b)) continue;
             double lw = LineLook.Width(e.Weight);
             string lc = LineLook.Colour(e.Color);
             yield return new EdgeView(e, Editor.SelectedEdgeId == e.Id, Geometry.EdgeGeometry(a, b, e), lw, lc, $"url(#{LineLook.MarkerId(lc, e.Weight)})");
@@ -763,7 +781,7 @@ public partial class Designer
         {
             bool editing = Editor.EditingId == e.Id;
             if (string.IsNullOrWhiteSpace(e.Label) && !editing) continue;
-            if (Editor.FindBox(e.From) is not { } a || Editor.FindBox(e.To) is not { } b) continue;
+            if (Editor.Ends(e) is not (IBox a, IBox b)) continue;
             EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
             yield return new EdgeLabelView(e, Editor.SelectedEdgeId == e.Id, editing, geo, Geometry.LayoutEdgeLabel(e, geo));
         }
@@ -778,7 +796,9 @@ public partial class Designer
         });
 
     /// <summary>Where the inline label editor sits: under the shape for labels drawn below, otherwise inside it.</summary>
-    static Rect NodeEditRect(NodeView v) => v.Layout.Below
+    static Rect NodeEditRect(NodeView v) =>
+        PanelGeometry.IsPanel(v.N) ? PanelGeometry.HeaderArea(v.N) with { X = v.N.X + 8, W = v.N.W - 16, Y = v.N.Y + 4, H = PanelGeometry.Header - 8 }
+        : v.Layout.Below
         ? new Rect(v.N.X + v.N.W / 2 - 80, v.N.Y + v.N.H + 4, 160, 44)
         : new Rect(v.N.X + 8, v.N.Y + 6, v.N.W - 16, v.N.H - 12);
 
@@ -807,7 +827,7 @@ public partial class Designer
     /// <summary>The live connector drawn while dragging from a port (null when not connecting).</summary>
     ConnectPreview? LiveConnector()
     {
-        if (gesture is not ConnectGesture cg || Editor.FindBox(cg.FromId) is not { } from) return null;
+        if (gesture is not ConnectGesture cg || cg.From is not { } from) return null;
         IBox? target = cg.Target;
         (double dropX, double dropY) = cg.DropPoint;
         IBox to = target ?? new TextBox { X = dropX, Y = dropY, W = 0, H = 0 };
@@ -817,14 +837,14 @@ public partial class Designer
     /// <summary>Handles on the selected connector: ends (move to another side) and the bend (drag sideways).</summary>
     EdgeHandleView? SelectedEdgeHandles()
     {
-        if (Editor.SelectedEdge is not { } he || Editor.FindBox(he.From) is not { } ha || Editor.FindBox(he.To) is not { } hb || Editor.EditingId == he.Id) return null;
+        if (Editor.SelectedEdge is not { } he || Editor.Ends(he) is not (IBox ha, IBox hb) || Editor.EditingId == he.Id) return null;
         EdgeRoute hr = Geometry.Route(ha, hb, he);
         List<SideTarget> sides = new();
         if (gesture is EdgeEndGesture eg)
         {
             IBox box = eg.FromEnd ? ha : hb;
             string? current = eg.FromEnd ? hr.FromSide : hr.ToSide;
-            foreach (string side in Sides.All)
+            foreach (string side in PanelGeometry.SidesOf(box))
             {
                 (double sx, double sy) = Geometry.SidePoint(box, side);
                 sides.Add(new SideTarget(sx, sy, side == current));

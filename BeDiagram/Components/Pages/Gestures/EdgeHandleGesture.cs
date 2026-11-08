@@ -23,7 +23,7 @@ public abstract class EdgeHandleGesture : UndoableDragGesture
     protected void PinSides(Edge edge)
     {
         if (edge.Style == EdgeStyles.Straight) return;
-        if (Ctx.FindBox(edge.From) is not { } a || Ctx.FindBox(edge.To) is not { } b) return;
+        if (Ctx.EdgeEnds(edge) is not (IBox a, IBox b)) return;
         EdgeRoute r = Geometry.Route(a, b, edge);
         edge.FromSide ??= r.FromSide;
         edge.ToSide ??= r.ToSide;
