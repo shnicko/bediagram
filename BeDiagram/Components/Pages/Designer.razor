@@ -199,6 +199,17 @@
                 </div>
             }
         </div>
+        <div class="section">Circles</div>
+        <div class="tiles four">
+            @foreach (NodeTypeInfo t in RoundShapes)
+            {
+                <div class="tile" draggable="true" data-palette="@RoundPaletteKey(t)" data-tip="@RoundPaletteTip(t)" aria-label="@(t.Display) circle"
+                     @ondragstart="() => StartPaletteDrag(RoundPaletteKey(t))"
+                     @onclick="() => Editor.QuickAdd(RoundPaletteKey(t))">
+                    @RoundSwatch(t.Key, 26)
+                </div>
+            }
+        </div>
         <div class="section">Outcomes</div>
         <div class="tiles five">
             @foreach (OutcomeInfo o in Outcomes.All)
@@ -648,6 +659,12 @@
                     <p class="muted small-note">@pn</p>
                 }
                 <button class="small" title="See every step in order: drag to reorder, or set steps to run in parallel" @onclick="ShowStepOrder">Step order…</button>
+            }
+            @if (NodeTypes.CanBeRound(sn.Type))
+            {
+                <label class="check" title="Icon in a circle with the label underneath (presentation style). The shape keeps its type and meaning.">
+                    <input type="checkbox" checked="@sn.Round" @onchange="e => Editor.SetRound(sn, e.Value is true)" /> Draw as circle
+                </label>
             }
             <label>Type</label>
             <select value="@sn.Type" @onchange="e => Editor.ChangeType(sn, e.Value?.ToString())">

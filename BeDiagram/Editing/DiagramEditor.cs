@@ -564,7 +564,8 @@ public partial class DiagramEditor
     public void QuickAdd(string type, bool join)
     {
         IBox? src = JoinSource();
-        NodeTypeInfo t = NodeTypes.Get(NodeFactory.ParsePaletteKey(type).Type);
+        (double tw, double th) = NodeFactory.SizeFor(type);
+        NodeTypeInfo t = NodeTypes.Get(NodeFactory.ParsePaletteKey(type).Type) with { W = tw, H = th };
         double cx, cy;
         if (src is not null)
         {
@@ -1056,8 +1057,13 @@ public partial class DiagramEditor
         else n.Outcome = null;
         if (n.Label == oldDisplay) n.Label = t.Key == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : t.Key == NodeTypes.Ipo ? "Process" : t.Display;
         double cx = n.X + n.W / 2; double cy = n.Y + n.H / 2;
-        n.Type = t.Key; n.W = t.W; n.H = t.H;
-        n.X = SnapV(cx) - t.W / 2; n.Y = SnapV(cy) - t.H / 2;
+        // A circle-drawn shape stays a circle when the new type can be one, and its type's icon follows the type.
+        bool round = n.Round && NodeTypes.CanBeRound(t.Key);
+        if (n.Round && n.Icon == NodeFactory.RoundIcon(oldT.Key)) n.Icon = round ? NodeFactory.RoundIcon(t.Key) : NodeFactory.DefaultIcon(t.Key);
+        n.Round = round;
+        (double w, double h) = round ? (NodeTypes.RoundSize, NodeTypes.RoundSize) : (t.W, t.H);
+        n.Type = t.Key; n.W = w; n.H = h;
+        n.X = SnapV(cx) - w / 2; n.Y = SnapV(cy) - h / 2;
         if (t.Key == NodeTypes.Circle && n.Icon is null) n.Icon = "layers";
         foreach ((string k, string v) in NodeFactory.DefaultProperties(t.Key)) n.Properties.TryAdd(k, v);
         RetypeRows(n);
@@ -1084,6 +1090,26 @@ public partial class DiagramEditor
     }
 
     public void SetIcon(Node n, string? icon) { Change(); n.Icon = icon; }
+
+    /// <summary>
+    /// Draws a classic shape as a circle (icon in the middle, label underneath) or back as its own shape, keeping its
+    /// centre, label, colour and step. Going round, a shape with no icon gets its type's circle icon; going back, that
+    /// icon is swapped for the type's usual one (none for most shapes) so it doesn't sit beside the label.
+    /// </summary>
+    public void SetRound(Node n, bool round)
+    {
+        if (!NodeTypes.CanBeRound(n.Type) || n.Round == round) return;
+        Change();
+        double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
+        NodeTypeInfo t = NodeTypes.Get(n.Type);
+        n.Round = round;
+        if (round) n.Icon ??= NodeFactory.RoundIcon(n.Type);
+        else if (n.Icon == NodeFactory.RoundIcon(n.Type)) n.Icon = NodeFactory.DefaultIcon(n.Type);
+        (n.W, n.H) = round ? (NodeTypes.RoundSize, NodeTypes.RoundSize) : (t.W, t.H);
+        n.X = cx - n.W / 2;
+        n.Y = cy - n.H / 2;
+        GrowAround(n);
+    }
 
     /// <summary>Major / normal / minor look (see <see cref="Emphases"/>).</summary>
     /// <summary>Sets the emphasis of every shape that doesn't have it yet, in one undo step.</summary>

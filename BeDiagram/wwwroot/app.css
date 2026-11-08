@@ -429,3 +429,5 @@ h4.bulk { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line)
 .panel-item-icon { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--line, #cfd4da); border-radius: 6px; }
 .panel-item-icon.on { border-style: solid; border-color: var(--accent); }
 .panel-item-desc, .panel-item-section { width: 100%; margin-top: 4px; font-size: 12px; }
+
+.palette .tiles.four { grid-template-columns: repeat(4, 1fr); }
