@@ -51,8 +51,14 @@ BeDiagram/
   Editing/DiagramEditor.cs   the editor model, no UI (BeDiagram.Editing): open Diagram, Selection / SelectedEdgeId /
                              EditingId, Dirty, AutoConnect / Snap, undo / redo (snapshots), and every editing action
                              (create, join, group, align, duplicate, delete, nudge, panel setters)
-  Editing/DiagramEditor.Panels.cs   list / IPO rows (partial class): Add / Remove / Move / SetItemSection / SetSectionTitle /
-                             SetStacked, FitPanel (height = rows), RetypeRows, Ends(edge)
+  Editing/DiagramEditor.*.cs partial files by area (find a method by what it's about): .Creating (add shapes / text /
+                             groups, quick-add, quick branch, join), .Groups (grouping, nesting, fit / centre, title look),
+                             .Alignment (align / distribute / swap), .Selection (selection, connector ends / resets),
+                             .Actions (join, delete, duplicate, nudge), .Page (page, flow, lane lock), .Connectors (style,
+                             look, labels), .Styling (type, outcome, round, icon, emphasis, links, bulk restyle),
+                             .StepOrder, .Layout (auto-layout, tidy, swim lanes), .Text (text boxes, properties, inline
+                             editing), .Panels (list / IPO rows: Add / Remove / Move / sections / SetStacked, FitPanel,
+                             RetypeRows, Ends(edge)). DiagramEditor.cs keeps state, lookups and undo.
   Editing/IEditorView.cs     what the editor needs from the screen: ShowToast, ViewCentre, CentreOn, EditStarted
   Editing/AlignOp.cs         align / distribute / row / column operations
   Editing/Lanes/             swim lanes (Strategy pattern, BeDiagram.Editing.Lanes): ILaneLayout, HorizontalLanes,
@@ -70,8 +76,10 @@ BeDiagram/
                              PDF, page-sized in mm when a page is set, or an ExportView window; injected); the Mermaid writer
                              lives in MermaidExportFormat
   Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs) — markup only
-  Components/Pages/Designer.razor.cs   the page: view state (pan/zoom), pointer handlers → gestures, palette drop, page size,
-                                       files, linked-diagram navigation, export, render helpers (view records the markup reads)
+  Components/Pages/Designer.razor.cs   the page: fields, lifecycle, canvas coordinates, panel helpers. The rest is in partial
+                                       files by area: Designer.Pointer (pointer handlers → gestures), .Palette (tiles, drag
+                                       and drop), .View (pan / zoom), .Page (paper size, flow / lane-lock toggles), .Files,
+                                       .Navigation (linked diagrams), .Render (view records and values the markup reads)
   Components/Pages/Designer.EditorView.cs      Designer's IEditorView implementation (what the editor needs from the screen)
   Components/Pages/Designer.EditorContext.cs   Designer's IEditorContext implementation (what gestures may use)
   Components/Pages/Gestures/           mouse gestures (State pattern): IGesture, DragGesture / UndoableDragGesture bases,
@@ -140,6 +148,8 @@ tools/regression/                side-by-side regression suites (master vs worki
   `Models/Shapes/`, reached through `Geometry.OutlineOf(n)`: path, connector clipping (`Boundary`), badge position,
   label / icon layout hints, side stripe, Mermaid syntax. Don't add `switch`es or `== "diamond"` tests on shape
   keys elsewhere. A new per-shape behaviour is a new `IShapeOutline` member (with a default in `ShapeOutline`).
+- **Partial files by area.** `DiagramEditor` and `Designer` are split into `Type.Area.cs` partial files (see Layout). Put a
+  new member in the file for its area, or start a new area file, rather than growing the main file.
 - **Editing lives in `DiagramEditor`, the page is the view.** Anything that changes the diagram, the selection or the
   undo stack is a public method on `DiagramEditor` (no Blazor types in it — take plain values, not `ChangeEventArgs`).
   The Designer keeps only view concerns (pan/zoom, gestures, dialogs, toasts, files, export, render helpers) and passes
