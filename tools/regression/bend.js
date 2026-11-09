@@ -10,7 +10,13 @@ const [url, dir, out] = process.argv.slice(2);
   const drag = async (f, t) => { await p.mouse.move(...f); await p.mouse.down(); for (let k = 1; k <= 8; k++) await p.mouse.move(f[0] + (t[0] - f[0]) * k / 8, f[1] + (t[1] - f[1]) * k / 8); await p.mouse.up(); await p.waitForTimeout(250); };
   // A new shape opens its label for typing, so Escape closes it before the next key (else the key goes into the label).
   await p.mouse.click(700, 300);
-  for (const k of ['1', '2']) { await p.keyboard.press(k); await p.waitForTimeout(250); await p.keyboard.press('Escape'); await p.waitForTimeout(250); }
+  for (const k of ['1', '2']) {
+    await p.keyboard.press(k);
+    await p.waitForFunction(() => document.activeElement?.id === 'edit-box', null, { timeout: 3000 }).catch(() => {});
+    await p.keyboard.press('Escape');
+    await p.waitForSelector('#edit-box', { state: 'detached', timeout: 3000 }).catch(() => {});
+    await p.waitForTimeout(250);
+  }
   const c = await centre('.node > path:not(.node-shadow)', 1); await drag(c, [c[0] + 230, c[1] + 90]);
   const ec = await p.evaluate(() => { const pth = document.querySelectorAll('.edge-hit')[0]; const pt = pth.getPointAtLength(pth.getTotalLength() / 2); const m = pth.getScreenCTM(); return [pt.x * m.a + m.e, pt.y * m.d + m.f]; });
   await p.mouse.click(...ec); await p.waitForTimeout(300);

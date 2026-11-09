@@ -36,8 +36,16 @@ const [url, out] = process.argv.slice(2);
     log.push({ label, ...s });
   };
   const key = async (k, label) => { await p.keyboard.press(k); await p.waitForTimeout(W); await state(label || k); };
-  // A new shape opens its label for typing: record that, then Escape closes it so the next key isn't typed into the label.
-  const add = async (k) => { await key(k); await p.keyboard.press('Escape'); await p.waitForTimeout(W); };
+  // A new shape opens its label for typing: wait until the label box has focus and record that, then Escape closes it
+  // so the next key isn't typed into the label. (An Escape before the box has focus runs Cancel and clears the selection.)
+  const add = async (k) => {
+    await p.keyboard.press(k);
+    await p.waitForFunction(() => document.activeElement?.id === 'edit-box', null, { timeout: 3000 }).catch(() => {});
+    await p.waitForTimeout(W); await state(k);
+    await p.keyboard.press('Escape');
+    await p.waitForSelector('#edit-box', { state: 'detached', timeout: 3000 }).catch(() => {});
+    await p.waitForTimeout(W);
+  };
   const click = async (sel, label) => { await p.click(sel); await p.waitForTimeout(W); await state(label || sel); };
   const node = async i => p.evaluate(i => { const r = document.querySelectorAll('.node > path:not(.node-shadow)')[i].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, i);
 
