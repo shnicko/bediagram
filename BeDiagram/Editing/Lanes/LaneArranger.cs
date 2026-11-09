@@ -285,16 +285,16 @@ public class LaneArranger
     {
         switch (item)
         {
-            case Node n when StepOrder.IsStep(n) && n.Step is int s:
+            case Node n when n.Kind.IsStep && n.Step is int s:
                 return (s, null);
             case Group g:
-                List<int> inside = tree.Descendants(g).OfType<Node>().Where(n => StepOrder.IsStep(n) && n.Step is not null)
+                List<int> inside = tree.Descendants(g).OfType<Node>().Where(n => n.Kind.IsStep && n.Step is not null)
                     .Select(n => n.Step!.Value).ToList();
                 if (inside.Count > 0) return (inside.Min(), null);
                 break;
         }
         // Outcomes, text boxes and step-less groups ride with a connected step: what leads into them first.
-        Dictionary<string, Node> steps = d.Nodes.Where(n => StepOrder.IsStep(n) && n.Step is not null).ToDictionary(n => n.Id);
+        Dictionary<string, Node> steps = d.Nodes.Where(n => n.Kind.IsStep && n.Step is not null).ToDictionary(n => n.Id);
         Node? from = d.Edges.Where(e => e.To == item.Id && steps.ContainsKey(e.From)).Select(e => steps[e.From])
             .OrderByDescending(n => n.Step).FirstOrDefault()
             ?? d.Edges.Where(e => e.From == item.Id && steps.ContainsKey(e.To)).Select(e => steps[e.To])

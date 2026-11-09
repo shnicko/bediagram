@@ -1,0 +1,78 @@
+using BeDiagram.Models.Layout;
+using BeDiagram.Models.Styles;
+
+namespace BeDiagram.Models.Kinds;
+
+/// <summary>
+/// Strategy pattern: everything that depends on what <em>kind</em> of node a shape is: a classic shape, a circle, an
+/// outcome, a list or an input–process–output box. That covers whether it's a step, which outline and icon it's drawn
+/// with, where its label goes, its colours, and what a new or retyped node of that kind starts with.
+/// Each <see cref="Catalogue.NodeTypeInfo"/> holds its kind, and a node reaches it through <see cref="Node.Kind"/>.
+/// Ask the kind rather than testing <c>n.Type == NodeTypes.Outcome</c> elsewhere. A new per-kind behaviour is a new
+/// member here, with its usual answer in <see cref="NodeKind"/>.
+/// </summary>
+/// <remarks>
+/// Kinds hold no state (one shared instance per kind). Anything that differs per <em>outline</em> (path, badges,
+/// label wrap) stays in <see cref="Shapes.IShapeOutline"/>; the kind only says which outline to use.
+/// </remarks>
+public interface INodeKind
+{
+    /// <summary>Takes part in the step order (<see cref="Node.Step"/>). Outcomes are results of a step, not steps.</summary>
+    bool IsStep { get; }
+
+    /// <summary>Can also be drawn as a circle (<see cref="Node.Round"/>): the eight classic shapes.</summary>
+    bool CanBeRound { get; }
+
+    /// <summary>A titled box holding rows (<see cref="Node.Items"/>): lists and IPO boxes.</summary>
+    bool IsPanel { get; }
+
+    /// <summary>Carries an <see cref="Node.Outcome"/> (pass, fail, …) that sets its shape, glyph and colour.</summary>
+    bool HasOutcome { get; }
+
+    /// <summary>Extra lines drawn inside the palette tile (e.g. a list's title band and rows), or null.</summary>
+    string? PaletteInnerPath { get; }
+
+    /// <summary>Icon stroke width in 24-unit icon space.</summary>
+    double IconStroke { get; }
+
+    /// <summary>The outline key the node is drawn with (see <see cref="Shapes.ShapeOutlines"/>).</summary>
+    string ShapeOf(Node n);
+
+    /// <summary>Drawn as a circle with an icon (a Circle, or a classic shape with <see cref="Node.Round"/>):
+    /// such labels are semibold.</summary>
+    bool DrawnAsCircle(Node n);
+
+    /// <summary>The icon drawn in the node: an outcome's glyph, otherwise the chosen icon.</summary>
+    string? IconOf(Node n);
+
+    /// <summary>The label sits underneath the shape (an icon fills the middle).</summary>
+    bool LabelBelow(Node n);
+
+    /// <summary>Where the label lines (and the icon, if any) go. The description is added by <see cref="Geometry.Layout(Node, string)"/>.</summary>
+    LabelLayout LayoutLabel(Node n, string label);
+
+    /// <summary>Fill, outline and text colours from the type (or outcome), palette colour and fill, before emphasis.</summary>
+    NodeStyle Colours(Node n, bool filled);
+
+    /// <summary>What this node is called: the type's name, or the outcome's name.</summary>
+    string NameOf(Node n);
+
+    /// <summary>Heading of the side panel when the node is selected.</summary>
+    string PanelTitle(Node n);
+
+    /// <summary>The label a new node of this kind starts with (<see cref="NodeFactory"/>).</summary>
+    string NewLabel(Node n);
+
+    /// <summary>The label a node gets when its type changes to this kind and it still had its old type's name.</summary>
+    string RetypeLabel(Node n);
+
+    /// <summary>The rows a new list / IPO node starts with; null for kinds without rows.</summary>
+    List<ListItem>? NewItems();
+
+    /// <summary>Finishes a new node (<see cref="NodeFactory.Create"/>): <paramref name="variant"/> is the part of the
+    /// palette key after the type (an outcome name), or null.</summary>
+    void Init(Node n, string? variant);
+
+    /// <summary>A node whose type has just changed to this kind: set or clear what the kind needs (outcome, icon).</summary>
+    void Adopt(Node n);
+}

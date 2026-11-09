@@ -18,22 +18,19 @@ public class StepOrder
         d = diagram;
     }
 
-    /// <summary>Outcomes are results of a step, not steps, so they get no number.</summary>
-    public static bool IsStep(Node n) => n.Type != NodeTypes.Outcome;
-
     /// <summary>The numbered shapes in step order (parallel steps by position: top to bottom, then left to right).</summary>
     public List<Node> Ordered() =>
-        d.Nodes.Where(n => IsStep(n) && n.Step is not null).OrderBy(n => n.Step).ThenBy(n => n.Y).ThenBy(n => n.X).ToList();
+        d.Nodes.Where(n => n.Kind.IsStep && n.Step is not null).OrderBy(n => n.Step).ThenBy(n => n.Y).ThenBy(n => n.X).ToList();
 
     /// <summary>The highest step number in use (0 when there are none).</summary>
-    public int Last => d.Nodes.Where(IsStep).Select(n => n.Step ?? 0).DefaultIfEmpty(0).Max();
+    public int Last => d.Nodes.Where(n => n.Kind.IsStep).Select(n => n.Step ?? 0).DefaultIfEmpty(0).Max();
 
     /// <summary>The number a new step gets: one after the last.</summary>
     public int Next => Last + 1;
 
     /// <summary>Other shapes sharing <paramref name="n"/>'s number (its parallel steps).</summary>
     public List<Node> ParallelWith(Node n) =>
-        n.Step is null ? new List<Node>() : d.Nodes.Where(o => !ReferenceEquals(o, n) && IsStep(o) && o.Step == n.Step).ToList();
+        n.Step is null ? new List<Node>() : d.Nodes.Where(o => !ReferenceEquals(o, n) && o.Kind.IsStep && o.Step == n.Step).ToList();
 
     /// <summary>True when <paramref name="n"/> shares its number with another shape.</summary>
     public bool IsParallel(Node n) => ParallelWith(n).Count > 0;
@@ -45,9 +42,9 @@ public class StepOrder
     /// </summary>
     public void Normalise()
     {
-        foreach (Node n in d.Nodes.Where(n => !IsStep(n))) n.Step = null;
+        foreach (Node n in d.Nodes.Where(n => !n.Kind.IsStep)) n.Step = null;
         int next = Next;
-        foreach (Node n in FlowOrder(d.Nodes.Where(n => IsStep(n) && n.Step is null).ToList()))
+        foreach (Node n in FlowOrder(d.Nodes.Where(n => n.Kind.IsStep && n.Step is null).ToList()))
             n.Step = next++;
         Compact();
     }
@@ -55,10 +52,10 @@ public class StepOrder
     /// <summary>Closes gaps: the distinct numbers in use become 1, 2, 3, … in the same order.</summary>
     public void Compact()
     {
-        List<int> used = d.Nodes.Where(IsStep).Where(n => n.Step is not null).Select(n => n.Step!.Value).Distinct().OrderBy(s => s).ToList();
+        List<int> used = d.Nodes.Where(n => n.Kind.IsStep).Where(n => n.Step is not null).Select(n => n.Step!.Value).Distinct().OrderBy(s => s).ToList();
         Dictionary<int, int> map = new Dictionary<int, int>();
         for (int i = 0; i < used.Count; i++) map[used[i]] = i + 1;
-        foreach (Node n in d.Nodes.Where(n => IsStep(n) && n.Step is not null)) n.Step = map[n.Step!.Value];
+        foreach (Node n in d.Nodes.Where(n => n.Kind.IsStep && n.Step is not null)) n.Step = map[n.Step!.Value];
     }
 
     /// <summary>
@@ -67,15 +64,15 @@ public class StepOrder
     /// </summary>
     public void MoveTo(Node n, int step)
     {
-        if (!IsStep(n)) return;
+        if (!n.Kind.IsStep) return;
         bool wasAlone = !IsParallel(n);
         int? old = n.Step;
         n.Step = null;
         // Leaving a number of its own closes that gap first, so "move to 5" means the 5th place in the final order.
         if (wasAlone && old is not null)
-            foreach (Node o in d.Nodes.Where(o => IsStep(o) && o.Step > old)) o.Step--;
+            foreach (Node o in d.Nodes.Where(o => o.Kind.IsStep && o.Step > old)) o.Step--;
         step = Math.Clamp(step, 1, Next);
-        foreach (Node o in d.Nodes.Where(o => IsStep(o) && o.Step >= step)) o.Step++;
+        foreach (Node o in d.Nodes.Where(o => o.Kind.IsStep && o.Step >= step)) o.Step++;
         n.Step = step;
         Compact();
     }
@@ -86,7 +83,7 @@ public class StepOrder
     /// </summary>
     public void SetParallel(Node n, bool parallel)
     {
-        if (!IsStep(n) || n.Step is not int s || parallel == IsParallel(n)) return;
+        if (!n.Kind.IsStep || n.Step is not int s || parallel == IsParallel(n)) return;
         if (parallel)
         {
             if (Last < 2) return;
@@ -95,7 +92,7 @@ public class StepOrder
         }
         else
         {
-            foreach (Node o in d.Nodes.Where(o => IsStep(o) && o.Step > s)) o.Step++;
+            foreach (Node o in d.Nodes.Where(o => o.Kind.IsStep && o.Step > s)) o.Step++;
             n.Step = s + 1;
         }
     }
@@ -109,7 +106,7 @@ public class StepOrder
     /// A shape that is a step of its own doesn't move when dropped in the gap just before or just after it.</summary>
     public bool CanMoveBefore(Node n, int gap)
     {
-        if (!IsStep(n) || n.Step is not int s || gap < 1 || gap > Next) return false;
+        if (!n.Kind.IsStep || n.Step is not int s || gap < 1 || gap > Next) return false;
         return IsParallel(n) || (gap != s && gap != s + 1);
     }
 
@@ -134,7 +131,7 @@ public class StepOrder
     public int LaterGap(Node n) => n.Step is int s ? (IsParallel(n) ? s + 1 : s + 2) : 0;
 
     /// <summary>True when <paramref name="n"/> could join step <paramref name="step"/> (a different, existing step).</summary>
-    public bool CanJoin(Node n, int step) => IsStep(n) && n.Step is int s && s != step && step >= 1 && step <= Last;
+    public bool CanJoin(Node n, int step) => n.Kind.IsStep && n.Step is int s && s != step && step >= 1 && step <= Last;
 
     /// <summary><paramref name="n"/> takes number <paramref name="step"/> so it runs in parallel with that step; if it was
     /// a step of its own, the gap it leaves closes up.</summary>
@@ -148,7 +145,7 @@ public class StepOrder
     /// <summary>The shapes all take the earliest of their numbers, so they run in parallel; the gaps close up.</summary>
     public void MakeParallel(IEnumerable<Node> nodes)
     {
-        List<Node> steps = nodes.Where(n => IsStep(n) && n.Step is not null).ToList();
+        List<Node> steps = nodes.Where(n => n.Kind.IsStep && n.Step is not null).ToList();
         if (steps.Count < 2) return;
         int first = steps.Min(n => n.Step!.Value);
         foreach (Node n in steps) n.Step = first;

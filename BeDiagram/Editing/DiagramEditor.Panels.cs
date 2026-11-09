@@ -16,7 +16,7 @@ public partial class DiagramEditor
     /// groups around it. Doesn't record undo: callers have already called <see cref="Change"/>.</summary>
     public void FitPanel(Node n)
     {
-        if (!PanelGeometry.IsPanel(n)) return;
+        if (!n.Kind.IsPanel) return;
         n.Items ??= new List<ListItem>();
         n.H = PanelGeometry.NeededHeight(n);
         n.W = Math.Max(n.W, PanelGeometry.MinWidth(n));
@@ -122,9 +122,9 @@ public partial class DiagramEditor
     /// stops being one drops its rows, with connectors on them moving to the node itself.</summary>
     void RetypeRows(Node n)
     {
-        if (PanelGeometry.IsPanel(n))
+        if (n.Kind.IsPanel)
         {
-            n.Items ??= NodeFactory.DefaultItems(n.Type);
+            n.Items ??= n.Kind.NewItems() ?? new List<ListItem>();
             foreach (ListItem i in n.Items) i.Section = n.Type == NodeTypes.Ipo ? IpoSections.Of(i.Section) : null;
             if (n.Type == NodeTypes.Ipo) n.Items = n.Items.OrderBy(i => IpoSections.IndexOf(i.Section)).ToList();
             FitPanel(n);

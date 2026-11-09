@@ -13,30 +13,11 @@ public static class Geometry
 {
     static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
-    /// <summary>The outline actually drawn: the type's shape, or for outcome nodes the outcome's own shape.</summary>
-    public static string ShapeOf(Node n) =>
-        n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Shape
-        : DrawnAsCircle(n) ? NodeTypes.Get(NodeTypes.Circle).Shape
-        : NodeTypes.Get(n.Type).Shape;
-
-    /// <summary>A Circle, or one of the classic shapes drawn as a circle (<see cref="Node.Round"/>).</summary>
-    public static bool DrawnAsCircle(Node n) => n.Type == NodeTypes.Circle || (n.Round && NodeTypes.CanBeRound(n.Type));
-
-    /// <summary>The icon drawn in a node: the outcome glyph for outcome nodes, otherwise the chosen icon.</summary>
-    public static string? IconOf(Node n) => n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Glyph : n.Icon;
-
-    /// <summary>Icon stroke width in 24-unit icon space (outcome glyphs are bolder).</summary>
-    public static double IconStroke(Node n) => n.Type == NodeTypes.Outcome ? 2.75 : 2;
-
     /// <summary>The outline strategy a node is drawn with (see <see cref="IShapeOutline"/>).</summary>
-    public static IShapeOutline OutlineOf(Node n) => ShapeOutlines.Get(ShapeOf(n));
+    public static IShapeOutline OutlineOf(Node n) => ShapeOutlines.Get(n.Kind.ShapeOf(n));
 
     /// <summary>The outline of any box: a node's own outline, a plain rectangle for text boxes and groups.</summary>
     public static IShapeOutline OutlineOf(IBox b) => b is Node n ? OutlineOf(n) : ShapeOutlines.Rect;
-
-    /// <summary>Shapes whose label sits underneath (icon in the middle): circles with an icon, and every outcome.</summary>
-    public static bool LabelBelow(Node n) =>
-        n.Type == NodeTypes.Outcome || (OutlineOf(n).IconMovesLabelBelow && Icons.Exists(n.Icon));
 
     /// <summary>Label font weight, or null for regular: circles and major steps are semibold (see <see cref="IEmphasis.LabelWeight"/>).</summary>
     public static string? LabelWeight(Node n) => Emphases.Of(n).LabelWeight(n);
@@ -125,7 +106,7 @@ public static class Geometry
     public const double StepFontSize = 11.5;
 
     /// <summary>The step number drawn on <paramref name="n"/>, or null when numbers are hidden or it has none (outcomes).</summary>
-    public static int? ShownStep(Diagram d, Node n) => d.ShowSteps && StepOrder.IsStep(n) ? n.Step : null;
+    public static int? ShownStep(Diagram d, Node n) => d.ShowSteps && n.Kind.IsStep ? n.Step : null;
 
     /// <summary>Centre of the step badge: the top-left of the drawn outline (see <see cref="IShapeOutline.StepBadgeCentre"/>).</summary>
     public static (double X, double Y) StepBadgeCentre(Node n) => OutlineOf(n).StepBadgeCentre(n);
@@ -179,13 +160,13 @@ public static class Geometry
     public static double TextWidth(Node n) =>
         n.TextWidth is > 0 ? n.TextWidth.Value : DefaultTextWidth(n);
 
-    public static double DefaultTextWidth(Node n) => LabelBelow(n) ? Math.Max(n.W * 1.7, 130) : Math.Max(n.W, 160);
+    public static double DefaultTextWidth(Node n) => n.Kind.LabelBelow(n) ? Math.Max(n.W * 1.7, 130) : Math.Max(n.W, 160);
 
     public static LabelLayout Layout(Node n) => Layout(n, LabelText(n));
 
     public static LabelLayout Layout(Node n, string label)
     {
-        LabelLayout lay = LayoutLabel(n, label);
+        LabelLayout lay = n.Kind.LayoutLabel(n, label);
         if (n.Description is not { } desc) return lay;
         // Under the label when the label is below the shape; otherwise just under the shape.
         List<string> lines = Wrap(desc, TextWidth(n), DescCharWidth);
@@ -227,52 +208,6 @@ public static class Geometry
             bottom = lay.DescY + (lay.Desc.Count - 1) * DescLineHeight + 5;
         }
         return (cx - w / 2, top, w, bottom - top);
-    }
-
-    static LabelLayout LayoutLabel(Node n, string label)
-    {
-        if (PanelGeometry.IsPanel(n)) return PanelGeometry.HeaderLabel(n, label);
-        IShapeOutline outline = OutlineOf(n);
-        double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
-        bool icon = Icons.Exists(n.Icon);
-
-        if (n.Type == NodeTypes.Outcome)
-        {
-            // Glyph centred in the outline, label underneath. A triangle's visual centre is lower down.
-            double size = Math.Min(n.W, n.H) * outline.GlyphScale;
-            double gy = n.Y + n.H * outline.GlyphCentreY;
-            List<string> lines = Wrap(label, TextWidth(n));
-            return new(lines, cx, n.Y + n.H + HaloOut(n) + 18, true, true, cx - size / 2, gy - size / 2, size);
-        }
-
-        if (icon && outline.IconMovesLabelBelow)
-        {
-            // Presentation style: icon centred in the circle, label underneath.
-            double size = Math.Min(n.W, n.H) * 0.46;
-            List<string> lines = Wrap(label, TextWidth(n));
-            return new(lines, cx, n.Y + n.H + HaloOut(n) + 18, true, true, cx - size / 2, cy - size / 2, size);
-        }
-
-        if (icon && outline.IconAboveTextWrap is double aboveWrap)
-        {
-            // Narrow-sided shapes: icon above the text.
-            List<string> lines = Wrap(label, n.W * aboveWrap);
-            double block = 22 + lines.Count * LineHeight;
-            double top = cy - block / 2;
-            return new(lines, cx, top + 22 + 12, false, true, cx - 10, top, 20);
-        }
-
-        if (icon)
-        {
-            // Icon on the left, text centred in the remaining space.
-            double left = n.X + outline.IconInset;
-            List<string> lines = Wrap(label, n.X + n.W - (left + 26) - 10);
-            double textX = (left + 26 + n.X + n.W - 8) / 2;
-            return new(lines, textX, cy - (lines.Count - 1) * LineHeight / 2 + 4, false, true, left, cy - 10, 20);
-        }
-
-        List<string> wrapped = Wrap(label, n.W * outline.TextWrap);
-        return new(wrapped, cx, cy - (wrapped.Count - 1) * LineHeight / 2 + 4, false, false, 0, 0, 0);
     }
 
     public static TextBoxLayout Layout(TextBox t)
@@ -390,7 +325,7 @@ public static class Geometry
     public static double ExtraBelow(IBox b)
     {
         if (b is Group g) return TitleBelowBox(g) ? Group.Header : 0;
-        if (b is not Node n || (!LabelBelow(n) && n.Description is null)) return 0;
+        if (b is not Node n || (!n.Kind.LabelBelow(n) && n.Description is null)) return 0;
         LabelLayout lay = Layout(n);
         return OutsideTextBox(n, lay) is { } r ? r.Y + r.H - (n.Y + n.H) + 8 : 0;
     }

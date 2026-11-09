@@ -6,6 +6,7 @@ using BeDiagram.Editing.Routing;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
+using BeDiagram.Models.Kinds;
 using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Editing;
@@ -610,7 +611,7 @@ public partial class DiagramEditor
 
     /// <summary>The shape a quick branch would start from: exactly one shape selected (not an outcome); otherwise null.</summary>
     public Node? BranchSource =>
-        Selection.Count == 1 && FindBox(Selection[0]) is Node { Type: not NodeTypes.Outcome } n ? n : null;
+        Selection.Count == 1 && FindBox(Selection[0]) is Node { Kind.IsStep: true } n ? n : null;
 
     /// <summary>
     /// Quick branch from the selected shape: a Pass and a Fail outcome at 45° either side of the flow (left → right:
@@ -804,7 +805,7 @@ public partial class DiagramEditor
     {
         Node n = exact ? NodeFactory.Create(key, cx, cy) : NodeFactory.Create(key, SnapV(cx), SnapV(cy));
         // A new step goes on the end of the flow; reorder it in the panel.
-        if (StepOrder.IsStep(n)) n.Step = Steps.Next;
+        if (n.Kind.IsStep) n.Step = Steps.Next;
         Diagram.Nodes.Add(n);
         return n;
     }
@@ -1052,20 +1053,21 @@ public partial class DiagramEditor
         Change();
         NodeTypeInfo oldT = NodeTypes.Get(n.Type);
         NodeTypeInfo t = NodeTypes.Get(type);
-        string oldDisplay = n.Type == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : oldT.Display;
-        if (t.Key == NodeTypes.Outcome) { n.Outcome ??= Outcomes.Pass; n.Filled = true; }
-        else n.Outcome = null;
-        if (n.Label == oldDisplay) n.Label = t.Key == NodeTypes.Outcome ? Outcomes.Get(n.Outcome).Display : t.Key == NodeTypes.Ipo ? "Process" : t.Display;
+        // A label still showing the old type's (or outcome's) name follows the new type.
+        bool namedForType = n.Label == n.Kind.NameOf(n);
         double cx = n.X + n.W / 2; double cy = n.Y + n.H / 2;
+        n.Type = t.Key;
+        INodeKind kind = n.Kind;
         // A circle-drawn shape stays a circle when the new type can be one, and its type's icon follows the type.
-        bool round = n.Round && NodeTypes.CanBeRound(t.Key);
-        if (n.Round && n.Icon == NodeFactory.RoundIcon(oldT.Key)) n.Icon = round ? NodeFactory.RoundIcon(t.Key) : NodeFactory.DefaultIcon(t.Key);
+        bool round = n.Round && kind.CanBeRound;
+        if (n.Round && n.Icon == oldT.RoundIcon) n.Icon = round ? t.RoundIcon : t.Icon;
         n.Round = round;
-        (double w, double h) = round ? (NodeTypes.RoundSize, NodeTypes.RoundSize) : (t.W, t.H);
-        n.Type = t.Key; n.W = w; n.H = h;
+        kind.Adopt(n);
+        if (namedForType) n.Label = kind.RetypeLabel(n);
+        (double w, double h) = t.SizeFor(round);
+        n.W = w; n.H = h;
         n.X = SnapV(cx) - w / 2; n.Y = SnapV(cy) - h / 2;
-        if (t.Key == NodeTypes.Circle && n.Icon is null) n.Icon = "layers";
-        foreach ((string k, string v) in NodeFactory.DefaultProperties(t.Key)) n.Properties.TryAdd(k, v);
+        foreach ((string k, string v) in t.NewProperties()) n.Properties.TryAdd(k, v);
         RetypeRows(n);
         // Becoming an outcome drops the number (and closes the gap); leaving one goes on the end of the flow.
         Steps.Normalise();
@@ -1098,14 +1100,14 @@ public partial class DiagramEditor
     /// </summary>
     public void SetRound(Node n, bool round)
     {
-        if (!NodeTypes.CanBeRound(n.Type) || n.Round == round) return;
+        if (!n.Kind.CanBeRound || n.Round == round) return;
         Change();
         double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
         NodeTypeInfo t = NodeTypes.Get(n.Type);
         n.Round = round;
-        if (round) n.Icon ??= NodeFactory.RoundIcon(n.Type);
-        else if (n.Icon == NodeFactory.RoundIcon(n.Type)) n.Icon = NodeFactory.DefaultIcon(n.Type);
-        (n.W, n.H) = round ? (NodeTypes.RoundSize, NodeTypes.RoundSize) : (t.W, t.H);
+        if (round) n.Icon ??= t.RoundIcon;
+        else if (n.Icon == t.RoundIcon) n.Icon = t.Icon;
+        (n.W, n.H) = t.SizeFor(round);
         n.X = cx - n.W / 2;
         n.Y = cy - n.H / 2;
         GrowAround(n);
@@ -1166,7 +1168,7 @@ public partial class DiagramEditor
     /// <summary>The selected shapes all take the earliest of their step numbers, so they run in parallel.</summary>
     public void MakeSelectionParallel()
     {
-        List<Node> nodes = Diagram.Nodes.Where(n => Selection.Contains(n.Id) && StepOrder.IsStep(n)).ToList();
+        List<Node> nodes = Diagram.Nodes.Where(n => Selection.Contains(n.Id) && n.Kind.IsStep).ToList();
         if (nodes.Count < 2) { view.ShowToast("Select two or more steps to run in parallel"); return; }
         Change();
         Steps.MakeParallel(nodes);
@@ -1191,7 +1193,7 @@ public partial class DiagramEditor
     {
         if (SwapPair() is not (Node a, Node b)) { view.ShowToast("Select exactly two shapes to swap"); return; }
         Change();
-        bool keepSteps = StepOrder.IsStep(a) && StepOrder.IsStep(b);
+        bool keepSteps = a.Kind.IsStep && b.Kind.IsStep;
         Node atA = TakePlace(b, a, keepSteps);
         Node atB = TakePlace(a, b, keepSteps);
         Diagram.Nodes[Diagram.Nodes.IndexOf(a)] = atA;
@@ -1218,7 +1220,7 @@ public partial class DiagramEditor
     /// <summary>The selected shapes become separate steps in turn (by position), starting where the first of them is.</summary>
     public void MakeSelectionSequential()
     {
-        List<Node> nodes = Diagram.Nodes.Where(n => Selection.Contains(n.Id) && StepOrder.IsStep(n) && n.Step is not null)
+        List<Node> nodes = Diagram.Nodes.Where(n => Selection.Contains(n.Id) && n.Kind.IsStep && n.Step is not null)
             .OrderBy(n => n.Step).ThenBy(n => n.Y).ThenBy(n => n.X).ToList();
         if (nodes.Count < 2) { view.ShowToast("Select two or more steps"); return; }
         Change();

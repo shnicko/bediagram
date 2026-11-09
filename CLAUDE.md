@@ -33,11 +33,15 @@ BeDiagram/
                          Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (lookup by shape key)
   Models/PanelGeometry.cs  list / IPO nodes ("panels"): title band, sections, fixed-height rows, row ends for connectors
                          (End / Ends → ItemBox), row ports; ListItem = one row; Catalogue/IpoSections
+  Models/Kinds/          node kinds (Strategy pattern, BeDiagram.Models.Kinds): INodeKind, NodeKind base, ClassicKind,
+                         CircleKind, OutcomeKind, PanelKind → ListKind / IpoKind; each NodeTypeInfo holds its Kind, a node
+                         reaches it as Node.Kind
   Models/GroupTree.cs    group hierarchy (Composite): parent / children / descendants / ancestors / paint order from GroupId
   Models/Emphasis/       major / normal / minor looks (Strategy pattern, BeDiagram.Models.Emphasis): IEmphasis, NodeEmphasis
                          base, NormalEmphasis, MajorEmphasis, MinorEmphasis, Emphases (lookup by Node.Emphasis)
   Models/StepOrder.cs    step order (Node.Step): numbering, gap-closing, move / parallel, flow order for unnumbered shapes
-  Models/NodeFactory.cs  new nodes: size, label, icon, fill and default properties per type (palette keys incl. "outcome:pass")
+  Models/NodeFactory.cs  new nodes from a palette key ("process", "outcome:pass", "round:decision"): size, icon and
+                         default properties from NodeTypeInfo, label / outcome / rows from the kind
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
   Editing/DiagramEditor.cs   the editor model, no UI (BeDiagram.Editing): open Diagram, Selection / SelectedEdgeId /
                              EditingId, Dirty, AutoConnect / Snap, undo / redo (snapshots), and every editing action
@@ -102,8 +106,18 @@ tools/regression/                side-by-side regression suites (master vs worki
 
 - **Typed nodes.** Every shape has a `Type` (start, process, decision, check, action, data, status, end, circle, outcome, list, ipo)
   and free-form `Properties`. Outcome nodes carry `Outcome` (pass, fail, rework, conditional, hold — see `Outcomes`);
-  `Geometry.ShapeOf`/`OutlineOf`/`IconOf` turn that into the drawn outline and glyph, so use those rather than `NodeTypes.Get(..).Shape`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`, `value`.
+  `n.Kind.ShapeOf(n)` / `Geometry.OutlineOf(n)` / `n.Kind.IconOf(n)` turn that into the drawn outline and glyph, so use
+  those rather than `NodeTypes.Get(..).Shape`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`,
+  `value` (`NodeTypeInfo.PropertyKeys`).
   This is what lets the audit tool read diagrams later — don't replace types with purely visual styling.
+- **Node kinds use the Strategy pattern.** What depends on the *kind* of node (classic shape, circle, outcome, list,
+  IPO box) belongs in its `INodeKind` class in `Models/Kinds/`, reached as `n.Kind` (or `NodeTypes.Get(type).Kind`):
+  whether it's a step (`IsStep`), can be round (`CanBeRound`), is a panel (`IsPanel`), has an outcome (`HasOutcome`),
+  its outline key, icon and icon stroke, label placement (`LabelBelow`, `LayoutLabel`), colours (`Colours`, used by
+  `NodeStyle.For`), names (`NameOf`, `PanelTitle`, `NewLabel`, `RetypeLabel`) and what a new or retyped node starts with
+  (`NewItems`, `Init`, `Adopt`). Don't test `n.Type == NodeTypes.Outcome` (or `Ipo`, `Circle`) elsewhere. A new per-kind
+  behaviour is a new `INodeKind` member with its usual answer in `NodeKind`. Per-type *data* (icons, default
+  properties, size) stays on `NodeTypeInfo` in `NodeTypes.All`.
 - **One geometry, two renderers.** The canvas (Designer.razor) and the SVG export (Exporters.cs) must draw the
   same thing. Put shape/connector/label maths in `Geometry.cs` and call it from both. Any new visual feature
   needs both renderers updated, and the Mermaid export updated where Mermaid can express it.
@@ -116,7 +130,8 @@ tools/regression/                side-by-side regression suites (master vs worki
   The Designer keeps only view concerns (pan/zoom, gestures, dialogs, toasts, files, export, render helpers) and passes
   input to `Editor`. The markup calls `Editor.X(...)` directly and reads the diagram as `D`. If the editor needs
   something from the screen, add it to `IEditorView` (implemented in `Designer.EditorView.cs`). New node defaults
-  go in `NodeFactory`.
+  are data on `NodeTypeInfo` (icon, round icon, property keys, size) or behaviour on the kind (`NewLabel`, `Init`);
+  `NodeFactory` puts them together.
 - **Undo.** Every model change goes through `Editor.Change()` (snapshot + dirty) or, for drags, a snapshot taken at
   gesture start and pushed on pointer-up (`UndoableDragGesture` does this). Panel inputs call `Editor.Checkpoint` on focus.
 - **Gestures use the State pattern.** A drag is an `IGesture` object held in `gesture` (null when idle). New drags are
@@ -170,9 +185,9 @@ tools/regression/                side-by-side regression suites (master vs worki
   Quick branch (`Editor.QuickBranch`, `QuickBranchCommand`, key B) places Pass / Fail outcomes at 45° and their next
   steps in the same (flow, cross) coordinates; Pass is on the −cross side (above / left).
 - **Circle versions of the classic shapes.** `Node.Round` draws start / process / decision / check / action / data /
-  status / end as a circle (`NodeTypes.CanBeRound`, size `NodeTypes.RoundSize`) without changing `Type`, so the meaning
-  stays data. `Geometry.ShapeOf` / `DrawnAsCircle` pick the circle outline, so everything else (label below, badges,
-  Mermaid `(( ))`, semibold label) follows from the outline. Circle icons per type: `NodeFactory.RoundIcon`. Palette keys
+  status / end as a circle (`ClassicKind.CanBeRound`, size `NodeTypes.RoundSize`) without changing `Type`, so the meaning
+  stays data. `ClassicKind.ShapeOf` / `DrawnAsCircle` pick the circle outline, so everything else (label below, badges,
+  Mermaid `(( ))`, semibold label) follows from the outline. Circle icons per type: `NodeTypeInfo.RoundIcon`. Palette keys
   `round:<type>` (`NodeFactory.RoundPrefix`, `SizeFor`); panel toggle `Editor.SetRound`; `ChangeType` keeps a circle a circle.
 - **Lists and IPO boxes ("panels").** `list` / `ipo` nodes keep their rows in `Node.Items` (`ListItem`: id, label,
   description, icon, IPO `Section`); IPO adds `SectionTitles` and `Stacked`. Rows have a fixed height and the node is
