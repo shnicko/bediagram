@@ -38,7 +38,8 @@ const [url, dir, out] = process.argv.slice(2);
     fs.copyFileSync(`${dir}/gest.diagram.json`, `${out}/${String(++step).padStart(2, '0')}-${label}.json`);
   };
   await p.mouse.click(700, 300);
-  for (const k of ['1', '2', '3']) { await p.keyboard.press(k); await p.waitForTimeout(W); }
+  // A new shape opens its label for typing, so Escape closes it before the next key (else the key goes into the label).
+  for (const k of ['1', '2', '3']) { await p.keyboard.press(k); await p.waitForTimeout(W); await p.keyboard.press('Escape'); await p.waitForTimeout(W); }
   await snap('added');
   // 1 Move one shape (Move gesture)
   await drag(await centre('.node > path:not(.node-shadow)', 1), (c => [c[0] + 160, c[1] + 33])(await centre('.node > path:not(.node-shadow)', 1)));
