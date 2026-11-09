@@ -162,6 +162,7 @@ BeDiagram/                   the web app project
   Models/Styles/               looks and colours: Palette, Swatch, TextPalette, LineLook, TextLook, GroupLook, NodeStyle, TextStyle
   Models/Layout/               geometry results shared by canvas + export: EdgeRoute, EdgeGeom, LabelLayout, Rect, …
   Models/Shapes/               one class per shape outline (Strategy pattern, see below)
+  Models/Kinds/                one class per kind of node: classic, circle, outcome, list, IPO (Strategy pattern, see below)
   Models/PanelGeometry.cs      layout of list / IPO nodes: title band, sections, rows, and the row a connector ends on
   Models/ListItem.cs           one row of a list / IPO node
   Services/DiagramStore.cs     local folder save / open / list / delete
@@ -173,7 +174,7 @@ BeDiagram/                   the web app project
   Editing/DiagramEditor.Panels.cs   list / IPO rows: add, remove, reorder, sections, fit to rows
   Editing/IEditorView.cs       what the editor needs from the screen (toast, view centre, start text editing)
   Editing/Angles/              angle lock for moves and placed steps (Strategy pattern): IAngleLock, FreeAngle, StepAngle, AngleLocks
-  Models/NodeFactory.cs        new shapes with their default size, look and properties
+  Models/NodeFactory.cs        new shapes from a palette key (defaults from NodeTypes, label / outcome / rows from the kind)
   Models/GroupTree.cs          the group hierarchy (Composite pattern) worked out from the GroupId fields
   Models/StepOrder.cs          the step order: numbering, closing gaps, moving and parallel steps
   Models/Emphasis/             major / normal / minor looks (Strategy pattern, see below)
@@ -215,7 +216,22 @@ The **Designer** page (`Designer.razor` + partial classes) is the view. It owns 
 - gestures (`IEditorContext`) and commands (`ICommandContext`) reach the editor through the Designer, which also adds the view-only parts (panning, zoom, save);
 - the editor talks back through **`IEditorView`** (show a toast, the view centre, focus the inline text box), which the Designer implements in `Designer.EditorView.cs`.
 
-New shapes come from **`NodeFactory`** (`Models/`), the one place that knows a fresh node's size, label, icon, fill and default properties.
+New shapes come from **`NodeFactory`** (`Models/`). It takes the type's data from `NodeTypes.All` (size, icon, circle icon, default property keys) and asks the type's kind for the rest (label, outcome, starter rows).
+
+### Node kinds: Strategy pattern
+
+Everything that depends on what *kind* of node a shape is sits behind **`INodeKind`**, with one class per kind in `Models/Kinds/`. Each entry in `NodeTypes.All` holds its kind, and a node reaches it as `n.Kind`.
+
+| Kind | Types | What's different |
+|---|---|---|
+| `ClassicKind` | Start, Process, Decision, Rule check, Action, Data / IFC, Status, End | can be drawn as a circle (`Round`) |
+| `CircleKind` | Circle | always a circle with an icon; a new one is labelled "Label" |
+| `OutcomeKind` | Outcome | not a step; outline, glyph and colour come from the outcome; label always below |
+| `ListKind`, `IpoKind` (both `PanelKind`) | List, Input / process / output | rows; title in a band at the top |
+
+- `NodeKind` is the base class with classic-shape behaviour; each kind overrides only what differs.
+- The kind answers: is it a step, can it be round, is it a panel, does it have an outcome; which outline and icon it's drawn with; where the label goes; its colours before emphasis; its names; and what a new or retyped node starts with.
+- Code elsewhere asks the kind (`n.Kind.IsStep`, `n.Kind.LayoutLabel(n, label)`) rather than testing `n.Type == "outcome"`.
 
 ### Nested groups: Composite pattern
 
@@ -281,7 +297,7 @@ The angle lock is a strategy too: `IAngleLock.Apply(dx, dy, snap)` turns a drag 
 
 To add a gesture: write a class (usually derived from `UndoableDragGesture`) and create it from a pointer-down handler. The other gestures don't change.
 
-To add a shape type: add an entry to `NodeTypes.All` (and optionally default properties in `NodeFactory.DefaultProperties`).
+To add a shape type: add an entry to `NodeTypes.All` with its kind (usually the shared classic kind) and, optionally, its icons and default property keys. A type that behaves differently gets its own `INodeKind` class.
 
 ## Known limits / next steps
 

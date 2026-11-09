@@ -633,14 +633,14 @@ public partial class Designer
 
     /// <summary>Palette shapes (outcomes have their own section), numbered for the 1–9 shortcut keys.</summary>
     static readonly List<PaletteShape> PaletteShapes = NodeTypes.All
-        .Where(t => t.Key != NodeTypes.Outcome)
+        .Where(t => !t.Kind.HasOutcome)
         .Select((t, i) => new PaletteShape(t, i + 1))
         .ToList();
 
     static string OutcomePaletteKey(OutcomeInfo o) => $"{NodeTypes.Outcome}:{o.Key}";
 
     /// <summary>The classic shapes, each offered again as a circle with its type's icon (<see cref="Node.Round"/>).</summary>
-    static readonly List<NodeTypeInfo> RoundShapes = NodeTypes.All.Where(t => NodeTypes.CanBeRound(t.Key)).ToList();
+    static readonly List<NodeTypeInfo> RoundShapes = NodeTypes.All.Where(t => t.Kind.CanBeRound).ToList();
 
     static string RoundPaletteKey(NodeTypeInfo t) => NodeFactory.RoundPrefix + t.Key;
 
@@ -654,15 +654,10 @@ public partial class Designer
         : $"{p.Type.Display}: drag onto the canvas or click to add";
 
     /// <summary>Extra lines inside a palette tile (the title band and rows of a list / IPO box), or null.</summary>
-    static string? PaletteInnerPath(string type) => type switch
-    {
-        NodeTypes.List => "M0,8 H48 M5,12 H43 V17 H5 Z M5,20 H43 V25 H5 Z",
-        NodeTypes.Ipo => "M0,8 H48 M16,8 V28 M32,8 V28 M3,13 H13 V18 H3 Z M19,13 H29 V18 H19 Z M35,13 H45 V18 H35 Z",
-        _ => null,
-    };
+    static string? PaletteInnerPath(string type) => NodeTypes.Get(type).Kind.PaletteInnerPath;
 
     /// <summary>The inside of a list / IPO node (title band, sections, rows) — same markup as the export — or null.</summary>
-    static MarkupString? PanelBody(NodeView v) => PanelGeometry.IsPanel(v.N) ? (MarkupString)PanelSvg.Body(v.N, v.Style) : null;
+    static MarkupString? PanelBody(NodeView v) => v.N.Kind.IsPanel ? (MarkupString)PanelSvg.Body(v.N, v.Style) : null;
 
     static string PaletteShapePath(string type) => Geometry.ShapePath(new Node { Type = type, W = 48, H = 28 });
 
@@ -683,7 +678,7 @@ public partial class Designer
     static string NodeIconTransform(LabelLayout lay) =>
         $"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})";
 
-    static MarkupString NodeIconMarkup(Node n) => (MarkupString)Icons.Get(Geometry.IconOf(n));
+    static MarkupString NodeIconMarkup(Node n) => (MarkupString)Icons.Get(n.Kind.IconOf(n));
 
     /// <summary>The halo ring around a major step (same markup as the export), or null.</summary>
     static MarkupString? HaloMarkup(NodeView v) => Geometry.HaloSvg(v.N, v.Style.Stroke) is { } h ? (MarkupString)h : null;
@@ -706,12 +701,11 @@ public partial class Designer
 
     /// <summary>What the text width applies to for this shape, for the panel hint.</summary>
     static string TextWidthHint(Node n) =>
-        Geometry.LabelBelow(n) ? "label and description under the shape" : "description under the shape";
+        n.Kind.LabelBelow(n) ? "label and description under the shape" : "description under the shape";
 
     static string TextWidthPlaceholder(Node n) => $"Auto ({F(Geometry.DefaultTextWidth(n))})";
 
-    static string NodePanelTitle(Node n) =>
-        n.Type == NodeTypes.Outcome ? $"Outcome · {Outcomes.Get(n.Outcome).Display}" : NodeTypes.Get(n.Type).Display;
+    static string NodePanelTitle(Node n) => n.Kind.PanelTitle(n);
 
 
     string DiagramSummary =>
@@ -804,7 +798,7 @@ public partial class Designer
 
     /// <summary>Where the inline label editor sits: under the shape for labels drawn below, otherwise inside it.</summary>
     static Rect NodeEditRect(NodeView v) =>
-        PanelGeometry.IsPanel(v.N) ? PanelGeometry.HeaderArea(v.N) with { X = v.N.X + 8, W = v.N.W - 16, Y = v.N.Y + 4, H = PanelGeometry.Header - 8 }
+        v.N.Kind.IsPanel ? PanelGeometry.HeaderArea(v.N) with { X = v.N.X + 8, W = v.N.W - 16, Y = v.N.Y + 4, H = PanelGeometry.Header - 8 }
         : v.Layout.Below
         ? new Rect(v.N.X + v.N.W / 2 - 80, v.N.Y + v.N.H + 4, 160, 44)
         : new Rect(v.N.X + 8, v.N.Y + 6, v.N.W - 16, v.N.H - 12);
@@ -827,7 +821,7 @@ public partial class Designer
     }
 
     /// <summary>How many of the selected items are steps (shapes other than outcomes).</summary>
-    int SelectedStepCount => D.Nodes.Count(n => Editor.Selection.Contains(n.Id) && StepOrder.IsStep(n));
+    int SelectedStepCount => D.Nodes.Count(n => Editor.Selection.Contains(n.Id) && n.Kind.IsStep);
 
     static bool HasProperties(Node n) => n.Properties.Values.Any(v => !string.IsNullOrWhiteSpace(v));
 

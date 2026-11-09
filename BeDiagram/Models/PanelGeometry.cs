@@ -34,8 +34,6 @@ public static class PanelGeometry
 
     static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
-    public static bool IsPanel(Node n) => NodeTypes.IsPanel(n.Type);
-
     static bool IsIpo(Node n) => n.Type == NodeTypes.Ipo;
 
     /// <summary>The rows, or none (a panel loaded without any, or not a panel).</summary>
@@ -130,7 +128,7 @@ public static class PanelGeometry
     public static List<PanelRow> Rows(Node n)
     {
         List<PanelRow> rows = new List<PanelRow>();
-        if (!IsPanel(n)) return rows;
+        if (!n.Kind.IsPanel) return rows;
         if (!IsIpo(n))
         {
             double top = n.Y + Header + Pad;
@@ -191,7 +189,7 @@ public static class PanelGeometry
     /// (no row asked for, not a panel, or the row has gone).</summary>
     public static IBox End(IBox box, string? itemId)
     {
-        if (itemId is null || box is not Node n || !IsPanel(n)) return box;
+        if (itemId is null || box is not Node n || !n.Kind.IsPanel) return box;
         PanelRow? row = Rows(n).FirstOrDefault(r => r.Item.Id == itemId);
         return row is null ? box : Box(n, row);
     }

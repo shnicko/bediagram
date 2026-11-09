@@ -23,14 +23,14 @@ public static class UiSvg
         NodeStyle st = NodeStyle.For(n);
         LabelLayout lay = Geometry.Layout(n, "");
         return new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"-1 -1 26 26\"><path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\"/>"
-                 + $"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g></svg>");
+                 + $"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(n.Kind.IconOf(n))}</g></svg>");
     }
 
     /// <summary>A shape drawn as a circle with its type's icon, for the palette (same colours as the canvas).</summary>
     public static MarkupString RoundSwatch(string type, int size)
     {
         NodeTypeInfo t = NodeTypes.Get(type);
-        string icon = NodeFactory.RoundIcon(type);
+        string icon = t.RoundIcon;
         return new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"-2 -2 28 28\"><circle cx=\"12\" cy=\"12\" r=\"12\" fill=\"{t.Fill}\" stroke=\"{t.Stroke}\" stroke-width=\"1.6\"/>"
                  + $"<g transform=\"translate(6,6) scale(0.5)\" fill=\"none\" stroke=\"{t.Stroke}\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(icon)}</g></svg>");
     }

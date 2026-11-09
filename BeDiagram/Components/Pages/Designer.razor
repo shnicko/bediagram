@@ -469,7 +469,7 @@
                         @if (v.Layout.HasIcon)
                         {
                             <g class="node-icon" transform="@NodeIconTransform(v.Layout)"
-                               fill="none" stroke="@v.Style.IconColor" stroke-width="@F(Geometry.IconStroke(v.N))" stroke-linecap="round" stroke-linejoin="round">
+                               fill="none" stroke="@v.Style.IconColor" stroke-width="@F(v.N.Kind.IconStroke)" stroke-linecap="round" stroke-linejoin="round">
                                 @NodeIconMarkup(v.N)
                             </g>
                         }
@@ -645,7 +645,7 @@
             <label>Text width <span class="muted">(px — @TextWidthHint(sn))</span></label>
             <input type="number" min="40" step="10" placeholder="@TextWidthPlaceholder(sn)" @bind="sn.TextWidth" @bind:after="() => Editor.OutsideTextChanged(sn)" @onfocus="Editor.Checkpoint" />
             <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@sn.ClearTextBack" @onchange="e => Editor.SetClearTextBack(sn, e.Value is true)" /> Transparent text background</label>
-            @if (StepOrder.IsStep(sn))
+            @if (sn.Kind.IsStep)
             {
                 <label>Step <InfoTip>The shape's place in the flow (1, 2, 3, …), kept whether or not the numbers are shown. Type a number to move it there, or tick <em>Runs in parallel</em> to share the number of the step before it.</InfoTip></label>
                 <div class="step-row">
@@ -660,7 +660,7 @@
                 }
                 <button class="small" title="See every step in order: drag to reorder, or set steps to run in parallel" @onclick="ShowStepOrder">Step order…</button>
             }
-            @if (NodeTypes.CanBeRound(sn.Type))
+            @if (sn.Kind.CanBeRound)
             {
                 <label class="check" title="Icon in a circle with the label underneath (presentation style). The shape keeps its type and meaning.">
                     <input type="checkbox" checked="@sn.Round" @onchange="e => Editor.SetRound(sn, e.Value is true)" /> Draw as circle
@@ -679,11 +679,11 @@
             </div>
             <ShapeStyle Editor="Editor" Nodes="[sn]" OnChanged="StateHasChanged" />
 
-            @if (PanelGeometry.IsPanel(sn))
+            @if (sn.Kind.IsPanel)
             {
                 <PanelItems Editor="Editor" Node="sn" OnChanged="StateHasChanged" />
             }
-            else if (sn.Type == NodeTypes.Outcome)
+            else if (sn.Kind.HasOutcome)
             {
                 <label>Outcome</label>
                 <div class="outcome-picker">

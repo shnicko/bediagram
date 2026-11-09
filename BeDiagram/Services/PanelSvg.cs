@@ -23,7 +23,7 @@ public static class PanelSvg
     /// <summary>Everything inside the panel except its title text, or an empty string for other shapes.</summary>
     public static string Body(Node n, NodeStyle st)
     {
-        if (!PanelGeometry.IsPanel(n)) return "";
+        if (!n.Kind.IsPanel) return "";
         StringBuilder sb = new StringBuilder();
         // On a solid fill the band and dividers are white, otherwise a tint of the outline colour.
         string tint = n.Filled ? "#ffffff" : st.Stroke;

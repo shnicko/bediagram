@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
+using BeDiagram.Models.Kinds;
 
 namespace BeDiagram.Models;
 
@@ -8,6 +9,9 @@ public class Node : IGroupable
 {
     public string Id { get; set; } = NewId("n");
     public string Type { get; set; } = NodeTypes.Process;
+    /// <summary>How this node behaves, from its type (Strategy pattern, see <see cref="INodeKind"/>). Not saved.</summary>
+    [JsonIgnore]
+    public INodeKind Kind => NodeTypes.Get(Type).Kind;
     public string Label { get; set; } = "";
     public double X { get; set; }
     public double Y { get; set; }
@@ -19,7 +23,7 @@ public class Node : IGroupable
     /// <summary>Optional colour key from <see cref="Palette"/>; null = the type's default colours.</summary>
     public string? Color { get; set; }
     /// <summary>Drawn as a circle with an icon in the middle and the label underneath (presentation style), keeping the
-    /// type and its meaning. Only for the classic shapes (see <see cref="NodeTypes.CanBeRound"/>). False is left out of the file.</summary>
+    /// type and its meaning. Only for the classic shapes (see <see cref="INodeKind.CanBeRound"/>). False is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Round { get; set; }
     /// <summary>Solid fill with white text/icon (presentation style).</summary>

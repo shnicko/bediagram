@@ -146,10 +146,10 @@ public static class Exporters
             sb.Append($"<path d=\"{shape}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"{F(Geometry.ShapeStrokeOf(n))}\"/>\n");
             if (Geometry.OutlineOf(n).HasSideStripe)
                 sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
-            if (PanelGeometry.IsPanel(n)) sb.Append(PanelSvg.Body(n, st)).Append('\n');
+            if (n.Kind.IsPanel) sb.Append(PanelSvg.Body(n, st)).Append('\n');
             LabelLayout lay = Geometry.Layout(n);
             if (lay.HasIcon)
-                sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(Geometry.IconStroke(n))}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(Geometry.IconOf(n))}</g>\n");
+                sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(n.Kind.IconStroke)}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(n.Kind.IconOf(n))}</g>\n");
             if (Geometry.DrawnTextBack(n, lay) is { } back)
                 sb.Append($"<rect x=\"{F(back.X)}\" y=\"{F(back.Y)}\" width=\"{F(back.W)}\" height=\"{F(back.H)}\" rx=\"4\" fill=\"#ffffff\" fill-opacity=\"0.92\"/>");
             string weight = Geometry.LabelWeight(n) is { } lw ? $" font-weight=\"{lw}\"" : "";
@@ -289,7 +289,7 @@ public static class Exporters
             string text = Geometry.ShownStep(d, n) is int step ? $"{step}. {Geometry.LabelText(n)}" : Geometry.LabelText(n);
             // Mermaid can't draw text outside a shape, so the description goes on its own line inside the label.
             string desc = n.Description is { } dsc ? "<br/>" + dsc.Replace("\"", "'").Replace("\r", "").Trim().Replace("\n", " ") : "";
-            if (PanelGeometry.IsPanel(n))
+            if (n.Kind.IsPanel)
             {
                 // A list / IPO box is a subgraph with a node per row, so connectors can still end on a row.
                 panelBlocks[n.Id] = PanelMermaid(n, id, Q(text)[..^1] + desc + "\"", rowIds);

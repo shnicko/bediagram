@@ -22,7 +22,7 @@ public class ResizeGesture : UndoableDragGesture
         {
             Group => (160.0, 100.0),
             TextBox => (40.0, 24.0),
-            Node n when PanelGeometry.IsPanel(n) => (PanelGeometry.MinWidth(n), PanelGeometry.NeededHeight(n)),
+            Node n when n.Kind.IsPanel => (PanelGeometry.MinWidth(n), PanelGeometry.NeededHeight(n)),
             _ => (80.0, 40.0),
         };
         r.W = Math.Max(minW, Ctx.SnapV(w0 + dx));

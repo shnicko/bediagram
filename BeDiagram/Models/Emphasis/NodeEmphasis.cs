@@ -18,7 +18,7 @@ public abstract class NodeEmphasis : IEmphasis
 
     /// <summary>Circles get semibold (600) so their labels read well on slides; others stay regular.
     /// 600 rather than 500 because Segoe UI has no 500 and would fall back to regular.</summary>
-    public virtual string? LabelWeight(Node n) => Geometry.DrawnAsCircle(n) ? "600" : null;
+    public virtual string? LabelWeight(Node n) => n.Kind.DrawnAsCircle(n) ? "600" : null;
 
     public virtual string BelowLabelColour => "#1f2933";
 
