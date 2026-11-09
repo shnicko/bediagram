@@ -18,5 +18,5 @@ public class VerticalLanes : ILaneLayout
     public (double X, double Y) FromLane(double flow, double cross) => (cross, flow);
 
     public (double FlowStart, double FlowEnd, double CrossStart, double CrossEnd) Insets(Group g) =>
-        (Geometry.GroupInsetTop(g) + Group.Pad, Geometry.GroupInsetBottom(g) + Group.Pad, Group.Pad, Group.Pad);
+        (g.InsetTop() + Group.Pad, g.InsetBottom() + Group.Pad, Group.Pad, Group.Pad);
 }

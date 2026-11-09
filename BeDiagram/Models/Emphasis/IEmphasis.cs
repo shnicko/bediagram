@@ -6,7 +6,7 @@ namespace BeDiagram.Models.Emphasis;
 /// Strategy pattern: how strongly a shape is drawn — <see cref="MajorEmphasis"/> for the key steps of a flow,
 /// <see cref="NormalEmphasis"/> (the default) and <see cref="MinorEmphasis"/> for supporting steps. Everything that
 /// differs by emphasis sits here: colours, outline weight, shadow, the halo ring and the label weight. The canvas and
-/// the SVG export both go through <see cref="Geometry"/>, which asks the node's emphasis (<see cref="Emphases.Of"/>),
+/// the SVG export both ask the node's emphasis (<see cref="Emphases.Of"/>),
 /// so they always match. Emphasis is a look only: it never changes the shape's size or its step number.
 /// </summary>
 public interface IEmphasis
@@ -32,7 +32,7 @@ public interface IEmphasis
     /// <summary>Opacity of the soft shadow under the shape (0 = none).</summary>
     double ShadowOpacity { get; }
 
-    /// <summary>Draws a thin ring around the outline, a little way out (see <see cref="Geometry.HaloSvg"/>).</summary>
+    /// <summary>Draws a thin ring around the outline, a little way out (see <c>SvgShapes.HaloSvg</c>).</summary>
     bool HasHalo { get; }
 
     /// <summary>SVG font weight of the label, or null for regular.</summary>

@@ -120,15 +120,15 @@ public partial class DiagramEditor
     public IBox? HitTest(double x, double y, string? exclude = null)
     {
         for (int i = Diagram.Nodes.Count - 1; i >= 0; i--)
-            if (Diagram.Nodes[i].Id != exclude && Geometry.Contains(Diagram.Nodes[i], x, y)) return Diagram.Nodes[i];
+            if (Diagram.Nodes[i].Id != exclude && Boxes.Contains(Diagram.Nodes[i], x, y)) return Diagram.Nodes[i];
         for (int i = Diagram.TextBoxes.Count - 1; i >= 0; i--)
-            if (Diagram.TextBoxes[i].Id != exclude && Geometry.Contains(Diagram.TextBoxes[i], x, y)) return Diagram.TextBoxes[i];
+            if (Diagram.TextBoxes[i].Id != exclude && Boxes.Contains(Diagram.TextBoxes[i], x, y)) return Diagram.TextBoxes[i];
         // Groups top-most first (inner groups are drawn over their parents), skipping the groups the excluded item is in.
         GroupTree tree = Tree;
         HashSet<string> around = FindBox(exclude) is IGroupable ex ? tree.Ancestors(ex).Select(a => a.Id).ToHashSet() : new HashSet<string>();
         List<Group> order = tree.PaintOrder();
         for (int i = order.Count - 1; i >= 0; i--)
-            if (order[i].Id != exclude && !around.Contains(order[i].Id) && Geometry.Contains(order[i], x, y)) return order[i];
+            if (order[i].Id != exclude && !around.Contains(order[i].Id) && Boxes.Contains(order[i], x, y)) return order[i];
         return null;
     }
 
@@ -138,7 +138,7 @@ public partial class DiagramEditor
         GroupTree tree = Tree;
         List<Group> order = tree.PaintOrder();
         for (int i = order.Count - 1; i >= 0; i--)
-            if (CanHold(tree, order[i], item) && Geometry.Contains(order[i], x, y)) return order[i];
+            if (CanHold(tree, order[i], item) && Boxes.Contains(order[i], x, y)) return order[i];
         return null;
     }
 

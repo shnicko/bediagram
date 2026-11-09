@@ -1,6 +1,7 @@
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Routing;
 
 namespace BeDiagram.Components.Pages.Gestures;
 
@@ -24,7 +25,7 @@ public abstract class EdgeHandleGesture : UndoableDragGesture
     {
         if (edge.Style == EdgeStyle.Straight) return;
         if (Ctx.EdgeEnds(edge) is not (IBox a, IBox b)) return;
-        EdgeRoute r = Geometry.Route(a, b, edge);
+        EdgeRoute r = EdgeRouter.Route(a, b, edge);
         edge.FromSide ??= r.FromSide;
         edge.ToSide ??= r.ToSide;
     }

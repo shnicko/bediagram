@@ -1,4 +1,5 @@
 using BeDiagram.Models;
+using BeDiagram.Models.Text;
 
 namespace BeDiagram.Editing.Lanes;
 
@@ -306,12 +307,12 @@ public class LaneArranger
     Placed Measure(IGroupable item, int slot, string? anchor)
     {
         double left = item.X, right = item.X + item.W;
-        if (item is Node n && Geometry.OutsideTextBox(n, Geometry.Layout(n)) is { } r)
+        if (item is Node n && TextLayout.OutsideTextBox(n, TextLayout.Layout(n)) is { } r)
         {
             left = Math.Min(left, r.X);
             right = Math.Max(right, r.X + r.W);
         }
-        double w = right - left, h = item.H + Geometry.ExtraBelow(item);
+        double w = right - left, h = item.H + TextLayout.ExtraBelow(item);
         (double flow, double cross) = layout.ToLane(w, h);
         double centreFlow = layout.ToLane(item.X - left + item.W / 2, item.H / 2).Flow;
         return new Placed

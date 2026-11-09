@@ -21,7 +21,15 @@ BeDiagram.sln
 BeDiagram/
   Models/                data model, one type per file: Diagram, Node, Edge, TextBox (IsComment flag), Group, PageSetup,
                          IBox, IGroupable, LegacyComment
-  Models/Geometry.cs     shape outlines, connector routing (elbow/straight), label + icon layout, bounds
+  Models/Routing/        connectors (BeDiagram.Models.Routing): EdgeRouter (entry point: Route, EdgeGeometry, SidePoint,
+                         AutoSides, PointAt, RoundedPathD), IConnectorRouting (Strategy) → ElbowRouting / StraightRouting,
+                         EdgeLabels (label lines and layout)
+  Models/Text/TextLayout.cs  node labels and descriptions, text boxes, wrapping, room taken under a shape (ExtraBelow)
+  Models/Boxes.cs        hit tests (Contains / Intersects), bounds (GroupBounds / ContentBounds), halo reach (HaloOut)
+  Models/Shapes/Paths.cs SVG path data from geometry: RoundRect, PathD
+  Models/Group.cs        also the group title geometry: InsetTop / InsetBottom, TitleArea, TitlePos, BandPath, FillOpacity
+  Rendering/SvgShapes.cs SVG markup shared by canvas and export (BeDiagram.Rendering): ShapePath, halo ring, shadow,
+                         step / link badges, text-box paths
   Models/Catalogue/      type tables (BeDiagram.Models.Catalogue): the enums NodeType, OutcomeType, Side, EdgeStyle,
                          LabelOrient, LabelPlace, FlowDirection, IpoSection; the tables NodeTypes / NodeTypeInfo, Outcomes /
                          OutcomeInfo, Sides, LabelPlaces, IpoSections
@@ -132,7 +140,7 @@ tools/regression/                side-by-side regression suites (master vs worki
   the user extends (palette colour keys, icon names, property keys) stay strings.
 - **Typed nodes.** Every shape has a `Type` (start, process, decision, check, action, data, status, end, circle, outcome, list, ipo)
   and free-form `Properties`. Outcome nodes carry `Outcome` (pass, fail, rework, conditional, hold — see `Outcomes`);
-  `Geometry.OutlineOf(n)` (= `n.Kind.OutlineOf(n)`) / `n.Kind.IconOf(n)` turn that into the drawn outline and glyph, so use
+  `n.Kind.OutlineOf(n)` (or `ShapeOutlines.Of(box)` for any box) / `n.Kind.IconOf(n)` turn that into the drawn outline and glyph, so use
   those rather than `NodeTypes.Get(..).Outline`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`,
   `value` (`NodeTypeInfo.PropertyKeys`).
   This is what lets the audit tool read diagrams later — don't replace types with purely visual styling.
@@ -145,10 +153,14 @@ tools/regression/                side-by-side regression suites (master vs worki
   behaviour is a new `INodeKind` member with its usual answer in `NodeKind`. Per-type *data* (icons, default
   properties, size) stays on `NodeTypeInfo` in `NodeTypes.All`.
 - **One geometry, two renderers.** The canvas (Designer.razor) and the SVG export (SvgDiagramWriter) must draw the
-  same thing. Put shape/connector/label maths in `Geometry.cs` and call it from both. Any new visual feature
+  same thing. Put the maths in the shared classes (`EdgeRouter`, `TextLayout`, `Boxes`, the outlines and kinds) and the markup in
+  `SvgShapes`, and call them from both. Any new visual feature
   needs both renderers updated, and the Mermaid export updated where Mermaid can express it.
+- **Connector routing uses the Strategy pattern.** `EdgeRouter.Route` keeps row ends on their left / right side and
+  hands the rest to the `IConnectorRouting` for the connector's style (`ElbowRouting`, `StraightRouting`). A new
+  connector style is a new routing class (and an `EdgeStyle` member), not a branch in `EdgeRouter`.
 - **Shape outlines use the Strategy pattern.** Anything that differs per outline belongs in that outline's class in
-  `Models/Shapes/`, reached through `Geometry.OutlineOf(n)`: path, connector clipping (`Boundary`), badge position,
+  `Models/Shapes/`, reached through `n.Kind.OutlineOf(n)` / `ShapeOutlines.Of(box)`: path, connector clipping (`Boundary`), badge position,
   label / icon layout hints, side stripe, Mermaid syntax. Don't add `switch`es or `== "diamond"` tests on shape
   keys elsewhere. A new per-shape behaviour is a new `IShapeOutline` member (with a default in `ShapeOutline`).
 - **Partial files by area.** `DiagramEditor` and `Designer` are split into `Type.Area.cs` partial files (see Layout). Put a
@@ -173,7 +185,7 @@ tools/regression/                side-by-side regression suites (master vs worki
   disabled, `Tip` for the tooltip). Commands reach the editor only through `ICommandContext`. A new shortcut key
   must also be added to the key list in `designer.js`. Commands don't do their own undo: the editor actions they
   call already use `Editor.Change()`.
-- **Text boxes** replace the old comments: one `TextBox` class, `IsComment` flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in `Geometry.Layout(TextBox)`, drawn with SVG text in both renderers.
+- **Text boxes** replace the old comments: one `TextBox` class, `IsComment` flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in `TextLayout.Layout(TextBox)`, drawn with SVG text in both renderers.
 - **Groups nest (Composite pattern).** Membership is `GroupId` on nodes, text boxes and groups (`Group` is an
   `IGroupable`), so the file stays flat. Walk the hierarchy with `GroupTree` (`Editor.Tree`, or `new GroupTree(d)` in
   exports): `Children`, `Descendants`, `Ancestors`, `IsInside`, `CommonParent`, `PaintOrder`. Don't compare `GroupId`
@@ -182,8 +194,8 @@ tools/regression/                side-by-side regression suites (master vs worki
   itself or one of its own groups (`CanHold`).
 - **Emphasis uses the Strategy pattern.** Anything that differs between major / normal / minor (colours via
   `Adjust`, outline width, shadow, halo ring, label weight and colour) belongs in that emphasis class, reached through
-  `Emphases.Of(n)` — via `NodeStyle.For` and the `Geometry` helpers (`ShapeStrokeOf`, `ShadowOpacityOf`, `HaloSvg`,
-  `LabelWeight`, `BelowLabelColour`). Don't test `n.Emphasis == "major"` elsewhere. Emphasis is a look only: it
+  `Emphases.Of(n)` — via `NodeStyle.For`, `SvgShapes.HaloSvg` and directly (`Emphases.Of(n).StrokeWidth`,
+  `.ShadowOpacity`, `.LabelWeight(n)`, `.BelowLabelColour`). Don't test `n.Emphasis == "major"` elsewhere. Emphasis is a look only: it
   never changes size or step.
 - **Swim lanes use the Strategy pattern.** A lane is a top-level group; `LaneArranger` works in lane coordinates
   (`flow` along a lane, `cross` across) and an `ILaneLayout` maps them to x / y and gives the title insets, so one
@@ -194,9 +206,9 @@ tools/regression/                side-by-side regression suites (master vs worki
   `ConnectorTidier`, in one `Change()` (`AutoLayoutHorizontalCommand` / `AutoLayoutVerticalCommand`).
 - **Tidy connectors is on request, never automatic** (Nick's call, 2026-11-06: auto re-routing would get frustrating).
   `ConnectorTidier` only picks values for the existing route fields (`FromSide` / `ToSide` / `Bend`) by trying candidates
-  through `Geometry.Route` and scoring them, so the renderers and file format don't change. It plans first and the
+  through `EdgeRouter.Route` and scoring them, so the renderers and file format don't change. It plans first and the
   editor calls `Change()` only when a route changes, and keeps a new route only when it scores better. Elbow connectors
-  only; obstacles are shapes, text boxes and the text under shapes (`Geometry.OutsideTextBox`).
+  only; obstacles are shapes, text boxes and the text under shapes (`TextLayout.OutsideTextBox`).
 - **Step order is data, not decoration.** Every shape except outcomes has `Node.Step` (1, 2, 3, …, no gaps; parallel
   steps share a number), whether or not `Diagram.ShowSteps` draws the badges. Change numbers only through `StepOrder`
   (`Editor.Steps`): `Normalise` / `Compact` after adding, deleting or retyping shapes, `MoveTo` / `SetParallel` /
@@ -225,10 +237,10 @@ tools/regression/                side-by-side regression suites (master vs worki
   `IpoColumnsLayout` / `IpoStackedLayout` from `Node.Stacked`), which owns sizes, sections, rows, the title band and the
   SVG body; renderers draw `n.Kind.Body(n, style)`. Row editing that differs between a list and an IPO box is on the kind
   (`PanelKind.AddRow` / `Peers` / `TidyRows`); IPO section rows and titles are `Node.RowsIn` / `Node.SectionTitle`.
-  The title is the node's label (laid out in the band via `Geometry.Layout`). A connector end on a row is
+  The title is the node's label (laid out in the band via `TextLayout.Layout`). A connector end on a row is
   `Edge.FromItem` / `ToItem`: resolve ends with `Edge.Ends(find)` / `Editor.Ends` / `IEditorContext.EdgeEnds` (never
   `FindBox(e.From)` alone), which gives an `ItemBox` for a row (`n.Kind.EndAt`, `RowAt`, `RowPorts`); a row end only
-  connects left / right (`IBox.ConnectSides`, `ItemBox.SideFacing` in `Geometry.Route`). Row ids are only unique inside their
+  connects left / right (`IBox.ConnectSides`, `ItemBox.SideFacing` in `EdgeRouter.Route`). Row ids are only unique inside their
   node and survive a copy. Connectors ending on a row draw above the shapes (`Edge.EndsOnRow`). Mermaid: a subgraph
   with a node per row.
 - **Connector labels** render in their own layer above shapes (canvas and export).
@@ -257,7 +269,7 @@ tools/regression/                side-by-side regression suites (master vs worki
   feature adds a shape or a shortcut, extend `make-shapes-diagram.py` / `keyboard.js`.
 - **How much regression to run** (agreed with Nick 2026-11-05 — he tests every merge himself and reports problems):
   - **Full run** (all four suites) for refactors (no behaviour change allowed), and for any change to shared code:
-    `Geometry`, the exporters (`Services/Export/`, including `Pdf/`), `DiagramEditor` beyond a new method or
+    `Models/Routing`, `Models/Text`, `Boxes`, `Rendering`, the exporters (`Services/Export/`, including `Pdf/`), `DiagramEditor` beyond a new method or
     two, the canvas markup in `Designer.razor`, or `CommandRegistry` / `designer.js` keys.
   - **Small features and fixes** that touch only a few classes: a hands-on Playwright test of the change itself, plus
     only the suites that cover the area touched, e.g. `SUITES="panel" tools/regression/run.sh` —

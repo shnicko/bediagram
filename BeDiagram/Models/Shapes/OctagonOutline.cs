@@ -1,10 +1,12 @@
+using BeDiagram.Models.Routing;
+
 namespace BeDiagram.Models.Shapes;
 
 /// <summary>Fail outcome: a regular octagon (stop sign) centred in the box, flat sides touching it.</summary>
 public class OctagonOutline : ShapeOutline
 {
 
-    public override string Path(IBox b) => Geometry.PathD(Polygon(b)) + " Z";
+    public override string Path(IBox b) => Paths.PathD(Polygon(b)) + " Z";
 
     protected override List<(double X, double Y)> Polygon(IBox b)
     {

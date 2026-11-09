@@ -1,6 +1,7 @@
 using BeDiagram.Editing.Lanes;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Text;
 
 namespace BeDiagram.Editing;
 
@@ -86,7 +87,7 @@ public partial class DiagramEditor
             ILaneLayout flow = FlowLayout;
             (double _, double stepAcross) = flow.ToLane(t.W + 40, t.H + 40);
             int guard = 0;
-            while (Diagram.Nodes.Any(o => Geometry.Intersects(o, cx - t.W / 2 - 10, cy - t.H / 2 - 10, cx + t.W / 2 + 10, cy + t.H / 2 + 10)) && guard++ < 20)
+            while (Diagram.Nodes.Any(o => Boxes.Intersects(o, cx - t.W / 2 - 10, cy - t.H / 2 - 10, cx + t.W / 2 + 10, cy + t.H / 2 + 10)) && guard++ < 20)
             {
                 (double f, double c) = flow.ToLane(cx, cy);
                 (cx, cy) = flow.FromLane(f, c + stepAcross);
@@ -95,7 +96,7 @@ public partial class DiagramEditor
         else
         {
             (cx, cy) = view.ViewCentre();
-            while (Diagram.Nodes.Any(o => Geometry.Contains(o, cx, cy))) cy += 100;
+            while (Diagram.Nodes.Any(o => Boxes.Contains(o, cx, cy))) cy += 100;
         }
         // A step added from a shape inside a group stays in that group.
         AddNodeAt(item, cx, cy, join: join && src is not null, groupId: (src as IGroupable)?.GroupId, centre: true);
@@ -115,7 +116,7 @@ public partial class DiagramEditor
     {
         ILaneLayout flow = FlowLayout;
         (double _, double centreAcross) = flow.ToLane(src.X + src.W / 2, src.Y + src.H / 2);
-        (double farEdge, double _) = flow.ToLane(src.X + src.W, src.Y + src.H + Geometry.ExtraBelow(src));
+        (double farEdge, double _) = flow.ToLane(src.X + src.W, src.Y + src.H + TextLayout.ExtraBelow(src));
         (double halfAlong, double _) = flow.ToLane(w / 2, h / 2);
         return flow.FromLane(farEdge + NextStepGap + halfAlong, centreAcross);
     }
@@ -140,7 +141,7 @@ public partial class DiagramEditor
 
         // Pass / Fail: the same distance along the flow and across it, so they sit on the 45° lines.
         (double srcFlow, double srcCross) = flow.ToLane(src.X + src.W / 2, src.Y + src.H / 2);
-        (double srcFar, double _) = flow.ToLane(src.X + src.W, src.Y + src.H + Geometry.ExtraBelow(src));
+        (double srcFar, double _) = flow.ToLane(src.X + src.W, src.Y + src.H + TextLayout.ExtraBelow(src));
         (double outcomeHalf, double _) = flow.ToLane(outcomeType.W / 2, outcomeType.H / 2);
         double offset = srcFar - srcFlow + NextStepGap + outcomeHalf;
 
@@ -193,7 +194,7 @@ public partial class DiagramEditor
     /// counts when the flow runs down) plus the usual gap.</summary>
     double NextAlong(ILaneLayout flow, IBox b)
     {
-        (double far, double _) = flow.ToLane(b.X + b.W, b.Y + b.H + Geometry.ExtraBelow(b));
+        (double far, double _) = flow.ToLane(b.X + b.W, b.Y + b.H + TextLayout.ExtraBelow(b));
         return far + NextStepGap;
     }
 

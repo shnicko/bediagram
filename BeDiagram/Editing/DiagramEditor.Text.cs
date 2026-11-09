@@ -1,6 +1,8 @@
 using BeDiagram.Models.Serialization;
 using System.Globalization;
 using BeDiagram.Models;
+using BeDiagram.Models.Text;
+using BeDiagram.Models.Routing;
 
 namespace BeDiagram.Editing;
 
@@ -49,7 +51,7 @@ public partial class DiagramEditor
     }
 
     /// <summary>The height at which the wrapped text just fits.</summary>
-    static double TextHeight(TextBox t) => Math.Max(24, Math.Ceiling(Geometry.Layout(t).ContentHeight / 2) * 2);
+    static double TextHeight(TextBox t) => Math.Max(24, Math.Ceiling(TextLayout.Layout(t).ContentHeight / 2) * 2);
 
     public void SetFontSize(IReadOnlyList<TextBox> boxes, object? value)
     {
@@ -96,7 +98,7 @@ public partial class DiagramEditor
         if (EditingId is null) return;
         if (Diagram.Nodes.FirstOrDefault(n => n.Id == EditingId) is { } n) n.Label = n.Label.TrimEnd('\n', '\r');
         if (Diagram.TextBoxes.FirstOrDefault(t => t.Id == EditingId) is { } tb) GrowToText(tb);
-        if (Diagram.Edges.FirstOrDefault(x => x.Id == EditingId) is { } edge) edge.Label = Geometry.ClampEdgeLabel(edge.Label).Trim();
+        if (Diagram.Edges.FirstOrDefault(x => x.Id == EditingId) is { } edge) edge.Label = EdgeLabels.ClampEdgeLabel(edge.Label).Trim();
         EditingId = null;
     }
 }

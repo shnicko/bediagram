@@ -9,6 +9,9 @@ using BeDiagram.Editing.Angles;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
+using BeDiagram.Models.Text;
+using BeDiagram.Models.Routing;
+using BeDiagram.Rendering;
 
 namespace BeDiagram.Components.Pages;
 
@@ -46,29 +49,29 @@ public partial class Designer
     static MarkupString NodeIconMarkup(Node n) => (MarkupString)Icons.Get(n.Kind.IconOf(n));
 
     /// <summary>The halo ring around a major step (same markup as the export), or null.</summary>
-    static MarkupString? HaloMarkup(NodeView v) => Geometry.HaloSvg(v.N, v.Style.Stroke) is { } h ? (MarkupString)h : null;
+    static MarkupString? HaloMarkup(NodeView v) => SvgShapes.HaloSvg(v.N, v.Style.Stroke) is { } h ? (MarkupString)h : null;
 
     /// <summary>Major steps are always solid, so the panel's Solid fill box is ticked and greyed out.</summary>
 
     /// <summary>The step-number badge on a shape (same markup as the export).</summary>
-    static MarkupString StepBadgeMarkup(NodeView v, int step) => (MarkupString)Geometry.StepBadgeSvg(v.N, step, v.Style.Stroke);
+    static MarkupString StepBadgeMarkup(NodeView v, int step) => (MarkupString)SvgShapes.StepBadgeSvg(v.N, step, v.Style.Stroke);
 
     static string EdgeLabelTransform(EdgeGeom geo) =>
         $"translate({F(geo.LabelX)},{F(geo.LabelY)}) rotate({F(geo.LabelAngle)})";
 
     /// <summary>A node's label lines with the tspan line offset (first line 0, then one line height each).</summary>
     static IEnumerable<(string Text, string Dy)> LabelLines(LabelLayout lay) =>
-        lay.Lines.Select((line, i) => (line, i == 0 ? "0" : F(Geometry.LineHeight)));
+        lay.Lines.Select((line, i) => (line, i == 0 ? "0" : F(TextLayout.LineHeight)));
 
     /// <summary>Description lines with the tspan line offset.</summary>
     static IEnumerable<(string Text, string Dy)> DescLines(LabelLayout lay) =>
-        lay.Desc.Select((line, i) => (line, i == 0 ? "0" : F(Geometry.DescLineHeight)));
+        lay.Desc.Select((line, i) => (line, i == 0 ? "0" : F(TextLayout.DescLineHeight)));
 
     /// <summary>What the text width applies to for this shape, for the panel hint.</summary>
     static string TextWidthHint(Node n) =>
         n.Kind.LabelBelow(n) ? "label and description under the shape" : "description under the shape";
 
-    static string TextWidthPlaceholder(Node n) => $"Auto ({F(Geometry.DefaultTextWidth(n))})";
+    static string TextWidthPlaceholder(Node n) => $"Auto ({F(TextLayout.DefaultTextWidth(n))})";
 
     static string NodePanelTitle(Node n) => n.Kind.PanelTitle(n);
 
@@ -101,16 +104,16 @@ public partial class Designer
     IEnumerable<GroupView> GroupViews() =>
         Editor.Tree.PaintOrder().Select(g =>
         {
-            (double ax, double ay, double aw, double ah) = Geometry.GroupTitleArea(g);
-            (double tx, double ty, string anchor) = Geometry.GroupTitlePos(g);
+            (double ax, double ay, double aw, double ah) = g.TitleArea();
+            (double tx, double ty, string anchor) = g.TitlePos();
             double width = GroupLook.Width(g.BorderWeight) + (Editor.Selection.Contains(g.Id) ? 1 : 0);
-            return new GroupView(g, Palette.Get(g.Color), Editor.Selection.Contains(g.Id), Geometry.GroupBandPath(g), new Rect(ax, ay, aw, ah),
-                                 tx, ty, anchor, Geometry.GroupFillOpacity(g), LineLook.Dash(g.Border, width), width);
+            return new GroupView(g, Palette.Get(g.Color), Editor.Selection.Contains(g.Id), g.BandPath(), new Rect(ax, ay, aw, ah),
+                                 tx, ty, anchor, g.FillOpacity(), LineLook.Dash(g.Border, width), width);
         });
 
     /// <summary>Selection outline drawn just outside a group (and around a title shown under it).</summary>
     static Rect GroupSelectionRect(Group g) =>
-        new Rect(g.X - 5, g.Y - 5, g.W + 10, g.H + 10 + Geometry.ExtraBelow(g));
+        new Rect(g.X - 5, g.Y - 5, g.W + 10, g.H + 10 + TextLayout.ExtraBelow(g));
 
     /// <summary>Inline title editor: inside the title area, at least 120px wide.</summary>
     static Rect GroupTitleEditRect(GroupView v) =>
@@ -120,7 +123,7 @@ public partial class Designer
         D.TextBoxes.Select(t =>
         {
             TextStyle ts = TextStyle.For(t);
-            return new TextBoxView(t, ts, Editor.Selection.Contains(t.Id), Geometry.Layout(t), Geometry.TextBoxPath(t, ts.Radius));
+            return new TextBoxView(t, ts, Editor.Selection.Contains(t.Id), TextLayout.Layout(t), SvgShapes.TextBoxPath(t, ts.Radius));
         });
 
     /// <summary>Connectors to draw: the ones under the shapes, or (<paramref name="rowLayer"/>) the ones that end on a
@@ -132,7 +135,7 @@ public partial class Designer
             if (Editor.Ends(e) is not (IBox a, IBox b)) continue;
             double lw = LineLook.Width(e.Weight);
             string lc = LineLook.Colour(e.Color);
-            yield return new EdgeView(e, Editor.SelectedEdgeId == e.Id, Geometry.EdgeGeometry(a, b, e), lw, lc, $"url(#{LineLook.MarkerId(lc, e.Weight)})");
+            yield return new EdgeView(e, Editor.SelectedEdgeId == e.Id, EdgeRouter.EdgeGeometry(a, b, e), lw, lc, $"url(#{LineLook.MarkerId(lc, e.Weight)})");
         }
     }
 
@@ -144,17 +147,17 @@ public partial class Designer
             bool editing = Editor.EditingId == e.Id;
             if (string.IsNullOrWhiteSpace(e.Label) && !editing) continue;
             if (Editor.Ends(e) is not (IBox a, IBox b)) continue;
-            EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
-            yield return new EdgeLabelView(e, Editor.SelectedEdgeId == e.Id, editing, geo, Geometry.LayoutEdgeLabel(e, geo));
+            EdgeGeom geo = EdgeRouter.EdgeGeometry(a, b, e);
+            yield return new EdgeLabelView(e, Editor.SelectedEdgeId == e.Id, editing, geo, EdgeLabels.LayoutEdgeLabel(e, geo));
         }
     }
 
     IEnumerable<NodeView> NodeViews() =>
         D.Nodes.Select(n =>
         {
-            LabelLayout lay = Geometry.Layout(n);
-            Rect? back = Geometry.DrawnTextBack(n, lay) is { } r ? new Rect(r.X, r.Y, r.W, r.H) : null;
-            return new NodeView(n, NodeTypes.Get(n.Type), Geometry.OutlineOf(n), NodeStyle.For(n), Editor.Selection.Contains(n.Id), lay, Geometry.ExtraBelow(n), back);
+            LabelLayout lay = TextLayout.Layout(n);
+            Rect? back = TextLayout.DrawnTextBack(n, lay) is { } r ? new Rect(r.X, r.Y, r.W, r.H) : null;
+            return new NodeView(n, NodeTypes.Get(n.Type), n.Kind.OutlineOf(n), NodeStyle.For(n), Editor.Selection.Contains(n.Id), lay, TextLayout.ExtraBelow(n), back);
         });
 
     /// <summary>Where the inline label editor sits: under the shape for labels drawn below, otherwise inside it.</summary>
@@ -193,14 +196,14 @@ public partial class Designer
         IBox? target = cg.Target;
         (double dropX, double dropY) = cg.DropPoint;
         IBox to = target ?? new TextBox { X = dropX, Y = dropY, W = 0, H = 0 };
-        return new ConnectPreview(Geometry.EdgeGeometry(from, to, D.DefaultConnector).D, target);
+        return new ConnectPreview(EdgeRouter.EdgeGeometry(from, to, D.DefaultConnector).D, target);
     }
 
     /// <summary>Handles on the selected connector: ends (move to another side) and the bend (drag sideways).</summary>
     EdgeHandleView? SelectedEdgeHandles()
     {
         if (Editor.SelectedEdge is not { } he || Editor.Ends(he) is not (IBox ha, IBox hb) || Editor.EditingId == he.Id) return null;
-        EdgeRoute hr = Geometry.Route(ha, hb, he);
+        EdgeRoute hr = EdgeRouter.Route(ha, hb, he);
         List<SideTarget> sides = new();
         if (gesture is EdgeEndGesture eg)
         {
@@ -208,7 +211,7 @@ public partial class Designer
             Side? current = eg.FromEnd ? hr.FromSide : hr.ToSide;
             foreach (Side side in box.ConnectSides)
             {
-                (double sx, double sy) = Geometry.SidePoint(box, side);
+                (double sx, double sy) = EdgeRouter.SidePoint(box, side);
                 sides.Add(new SideTarget(sx, sy, side == current));
             }
         }

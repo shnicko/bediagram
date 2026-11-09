@@ -7,6 +7,9 @@ using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Kinds;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
+using BeDiagram.Models.Text;
+using BeDiagram.Rendering;
+using BeDiagram.Models.Routing;
 
 namespace BeDiagram.Services.Export;
 
@@ -28,7 +31,7 @@ public class MermaidExportFormat : IExportFormat
     /// <summary>Mermaid link syntax: dotted for any broken pattern, thick for heavy solid lines.</summary>
     string MermaidLink(Edge e)
     {
-        static string Q(string s) => "\"" + string.Join("<br/>", Geometry.EdgeLabelLines((s ?? "").Replace("\"", "'"))) + "\"";
+        static string Q(string s) => "\"" + string.Join("<br/>", EdgeLabels.EdgeLabelLines((s ?? "").Replace("\"", "'"))) + "\"";
         bool label = !string.IsNullOrWhiteSpace(e.Label);
         bool dotted = e.Pattern != LineLook.Solid;
         bool thick = !dotted && e.Weight == LineLook.Heavy;
@@ -110,7 +113,7 @@ public class MermaidExportFormat : IExportFormat
         {
             string id = $"N{++i}";
             ids[n.Id] = id;
-            string text = Geometry.ShownStep(d, n) is int step ? $"{step}. {Geometry.LabelText(n)}" : Geometry.LabelText(n);
+            string text = SvgShapes.ShownStep(d, n) is int step ? $"{step}. {TextLayout.LabelText(n)}" : TextLayout.LabelText(n);
             // Mermaid can't draw text outside a shape, so the description goes on its own line inside the label.
             string desc = n.Description is { } dsc ? "<br/>" + dsc.Replace("\"", "'").Replace("\r", "").Trim().Replace("\n", " ") : "";
             if (n.Kind.IsPanel)
@@ -132,7 +135,7 @@ public class MermaidExportFormat : IExportFormat
                 continue;
             }
             string label = Q(text)[..^1] + desc + "\"";
-            string shape = Geometry.OutlineOf(n).Mermaid(label);
+            string shape = n.Kind.OutlineOf(n).Mermaid(label);
             sb.Append($"    {id}{shape}\n");
             // Mermaid has no halo: a major step keeps its solid fill and gets a heavy outline; a minor one goes light.
             if (n.Emphasis != EmphasisLevel.Normal)

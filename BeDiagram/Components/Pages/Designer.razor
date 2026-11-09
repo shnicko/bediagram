@@ -372,7 +372,7 @@
                         }
                         @if (v.T.IsComment)
                         {
-                            <path d="@Geometry.FoldPath(v.T)" fill="none" stroke="@v.Style.FoldColour" />
+                            <path d="@SvgShapes.FoldPath(v.T)" fill="none" stroke="@v.Style.FoldColour" />
                         }
                         @if (v.Selected)
                         {
@@ -453,11 +453,11 @@
                         {
                             <g class="node-halo">@halo</g>
                         }
-                        @if (Geometry.ShadowOpacityOf(v.N) > 0)
+                        @if (Emphases.Of(v.N).ShadowOpacity > 0)
                         {
-                            <path d="@Geometry.ShapePath(v.N)" class="node-shadow" transform="@Geometry.ShadowTransform" fill="@v.Style.Stroke" fill-opacity="@F(Geometry.ShadowOpacityOf(v.N))" />
+                            <path d="@SvgShapes.ShapePath(v.N)" class="node-shadow" transform="@SvgShapes.ShadowTransform" fill="@v.Style.Stroke" fill-opacity="@F(Emphases.Of(v.N).ShadowOpacity)" />
                         }
-                        <path d="@Geometry.ShapePath(v.N)" fill="@v.Style.Fill" stroke="@v.Style.Stroke" stroke-width="@F(Geometry.ShapeStrokeOf(v.N))" />
+                        <path d="@SvgShapes.ShapePath(v.N)" fill="@v.Style.Fill" stroke="@v.Style.Stroke" stroke-width="@F(Emphases.Of(v.N).StrokeWidth)" />
                         @if (v.Outline.HasSideStripe)
                         {
                             <rect x="@F(v.N.X)" y="@F(v.N.Y)" width="6" height="@F(v.N.H)" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" fill-opacity="@(v.N.Filled ? "0.5" : "1")" />
@@ -487,7 +487,7 @@
                         else
                         {
                             <g>
-                                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? Geometry.BelowLabelColour(v.N) : v.Style.Text)" font-weight="@Geometry.LabelWeight(v.N)">
+                                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? Emphases.Of(v.N).BelowLabelColour : v.Style.Text)" font-weight="@Emphases.Of(v.N).LabelWeight(v.N)">
                                     @foreach ((string text, string dy) in LabelLines(v.Layout))
                                     {
                                         <tspan x="@F(v.Layout.TextX)" dy="@dy">@text</tspan>
@@ -512,11 +512,11 @@
                                 <title>Has properties</title>
                             </circle>
                         }
-                        @if (Geometry.HasLink(v.N))
+                        @if (SvgShapes.HasLink(v.N))
                         {
                             <LinkBadge Box="v.N" Colour="@v.Style.Stroke" Link="@(v.N.Link!)" OnFollow="FollowLink" />
                         }
-                        @if (Geometry.ShownStep(D, v.N) is int step)
+                        @if (SvgShapes.ShownStep(D, v.N) is int step)
                         {
                             <g class="step-badge">@StepBadgeMarkup(v, step)</g>
                         }
@@ -552,7 +552,7 @@
                 }
 
                 @* Group link badges sit above the members so they're never hidden *@
-                @foreach (Group g in D.Groups.Where(Geometry.HasLink))
+                @foreach (Group g in D.Groups.Where(SvgShapes.HasLink))
                 {
                     <LinkBadge Box="g" Colour="@Palette.Get(g.Color).Stroke" Link="@(g.Link!)" OnFollow="FollowLink" />
                 }

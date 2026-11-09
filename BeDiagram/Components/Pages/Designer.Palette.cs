@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Components.Pages.Views;
 using BeDiagram.Models;
+using BeDiagram.Rendering;
 
 namespace BeDiagram.Components.Pages;
 
@@ -34,7 +35,7 @@ public partial class Designer
     /// <summary>Extra lines inside a palette tile (the title band and rows of a list / IPO box), or null.</summary>
     static string? PaletteInnerPath(NodeType type) => NodeTypes.Get(type).Kind.PaletteInnerPath;
 
-    static string PaletteShapePath(NodeType type) => Geometry.ShapePath(new Node { Type = type, W = 48, H = 28 });
+    static string PaletteShapePath(NodeType type) => SvgShapes.ShapePath(new Node { Type = type, W = 48, H = 28 });
 
     void StartTextDrag() => paletteDrop = (x, y) => Editor.AddTextAt(x - 100, y - 30, null, comment: false);
 

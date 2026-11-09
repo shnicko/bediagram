@@ -1,6 +1,7 @@
 using BeDiagram.Models;
 using BeDiagram.Services;
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Rendering;
 
 namespace BeDiagram.Components.Shared;
 
@@ -18,7 +19,7 @@ public partial class LinkBadge
 
     string Tooltip => Found ? $"More detail: open “{Link}”" : $"Linked diagram “{Link}” not found";
 
-    MarkupString BadgeMarkup => (MarkupString)Geometry.LinkBadgeSvg(Box, Colour);
+    MarkupString BadgeMarkup => (MarkupString)SvgShapes.LinkBadgeSvg(Box, Colour);
 
     Task Click() => OnFollow.InvokeAsync(Link);
 }

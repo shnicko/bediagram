@@ -1,6 +1,7 @@
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Routing;
 
 namespace BeDiagram.Components.Pages.Gestures;
 
@@ -23,10 +24,10 @@ public class EdgeEndGesture : EdgeHandleGesture
         // Nearest side middle to the pointer (left / right only on a row of a list or IPO box).
         Side side = box.ConnectSides.MinBy(s =>
         {
-            (double px, double py) = Geometry.SidePoint(box, s);
+            (double px, double py) = EdgeRouter.SidePoint(box, s);
             return (px - CurX) * (px - CurX) + (py - CurY) * (py - CurY);
         });
-        EdgeRoute route = Geometry.Route(a, b, edge);
+        EdgeRoute route = EdgeRouter.Route(a, b, edge);
         Side? current = FromEnd ? route.FromSide : route.ToSide;
         if (side == current) return true;
         if (!Moved && Distance < 4) return true;
