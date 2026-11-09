@@ -11,8 +11,8 @@
             <DropMenu Title="File" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
                 <button @onclick="NewDiagram" title="New diagram">New</button>
                 <button @onclick="ShowOpen" title="Open a saved diagram">Open…</button>
-                <button @onclick="() => Run(SaveCmd)" title="@Tip(SaveCmd)">Save<span class="menu-key">@KeyText(SaveCmd)</span></button>
-                <button @onclick="() => Run(SaveAsCmd)" title="@Tip(SaveAsCmd)">Save as…<span class="menu-key">@KeyText(SaveAsCmd)</span></button>
+                <button @onclick="() => Run(Cmd.Save)" title="@Tip(Cmd.Save)">Save<span class="menu-key">@KeyText(Cmd.Save)</span></button>
+                <button @onclick="() => Run(Cmd.SaveAs)" title="@Tip(Cmd.SaveAs)">Save as…<span class="menu-key">@KeyText(Cmd.SaveAs)</span></button>
                 <hr class="menu-divider" />
                 <div class="menu-heading">Export <span class="muted-label">next to the saved diagram</span></div>
                 @foreach (ExportMenuItem item in ExportMenuItems())
@@ -68,17 +68,17 @@
                 </div>
             </DropMenu>
             <DropMenu Title="Edit" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
-                <button disabled="@(!CanRun(UndoCmd))" @onclick="() => Run(UndoCmd)">Undo<span class="menu-key">@KeyText(UndoCmd)</span></button>
-                <button disabled="@(!CanRun(RedoCmd))" @onclick="() => Run(RedoCmd)">Redo<span class="menu-key">@KeyText(RedoCmd)</span></button>
+                <button disabled="@(!CanRun(Cmd.Undo))" @onclick="() => Run(Cmd.Undo)">Undo<span class="menu-key">@KeyText(Cmd.Undo)</span></button>
+                <button disabled="@(!CanRun(Cmd.Redo))" @onclick="() => Run(Cmd.Redo)">Redo<span class="menu-key">@KeyText(Cmd.Redo)</span></button>
                 <hr class="menu-divider" />
-                <button @onclick="() => Run(SelectAllCmd)">Select all<span class="menu-key">@KeyText(SelectAllCmd)</span></button>
-                <button disabled="@(!CanRun(DuplicateCmd))" @onclick="() => Run(DuplicateCmd)">Duplicate<span class="menu-key">@KeyText(DuplicateCmd)</span></button>
-                <button disabled="@(!CanRun(DeleteCmd))" @onclick="() => Run(DeleteCmd)">Delete<span class="menu-key">@KeyText(DeleteCmd)</span></button>
+                <button @onclick="() => Run(Cmd.SelectAll)">Select all<span class="menu-key">@KeyText(Cmd.SelectAll)</span></button>
+                <button disabled="@(!CanRun(Cmd.Duplicate))" @onclick="() => Run(Cmd.Duplicate)">Duplicate<span class="menu-key">@KeyText(Cmd.Duplicate)</span></button>
+                <button disabled="@(!CanRun(Cmd.Delete))" @onclick="() => Run(Cmd.Delete)">Delete<span class="menu-key">@KeyText(Cmd.Delete)</span></button>
                 <hr class="menu-divider" />
-                <button disabled="@(!CanRun(JoinCmd))" @onclick="() => Run(JoinCmd)">Join in selection order<span class="menu-key">@KeyText(JoinCmd)</span></button>
-                <button disabled="@(!CanRun(BranchCmd))" @onclick="() => Run(BranchCmd)">Branch pass / fail<span class="menu-key">@KeyText(BranchCmd)</span></button>
-                <button disabled="@(!CanRun(GroupCmd))" @onclick="() => Run(GroupCmd)">Group<span class="menu-key">@KeyText(GroupCmd)</span></button>
-                <button disabled="@(!CanRun(UngroupCmd))" @onclick="() => Run(UngroupCmd)">Ungroup<span class="menu-key">@KeyText(UngroupCmd)</span></button>
+                <button disabled="@(!CanRun(Cmd.Join))" @onclick="() => Run(Cmd.Join)">Join in selection order<span class="menu-key">@KeyText(Cmd.Join)</span></button>
+                <button disabled="@(!CanRun(Cmd.Branch))" @onclick="() => Run(Cmd.Branch)">Branch pass / fail<span class="menu-key">@KeyText(Cmd.Branch)</span></button>
+                <button disabled="@(!CanRun(Cmd.Group))" @onclick="() => Run(Cmd.Group)">Group<span class="menu-key">@KeyText(Cmd.Group)</span></button>
+                <button disabled="@(!CanRun(Cmd.Ungroup))" @onclick="() => Run(Cmd.Ungroup)">Ungroup<span class="menu-key">@KeyText(Cmd.Ungroup)</span></button>
                 <hr class="menu-divider" />
                 <div class="menu-settings" @onclick:stopPropagation="true">
                     <label title="New items join to the selected item automatically"><input type="checkbox" @bind="Editor.AutoConnect" /> Auto-join new items</label>
@@ -94,14 +94,14 @@
             </DropMenu>
             <DropMenu Title="Arrange" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
                 <button title="Put the steps in order: drag to reorder, or set steps to run in parallel" @onclick="ShowStepOrder">Step order…</button>
-                <button title="@TidyTip" disabled="@(!CanRun(TidyCmd))" @onclick="() => Run(TidyCmd)">Tidy connectors</button>
+                <button title="@Cmd.TidyTip" disabled="@(!CanRun(Cmd.Tidy))" @onclick="() => Run(Cmd.Tidy)">Tidy connectors</button>
                 <hr class="menu-divider" />
                 <div class="menu-heading">Auto-layout</div>
-                <button title="@LayoutTip(LayoutAcrossCmd)" disabled="@(!CanRun(LayoutAcrossCmd))" @onclick="() => Run(LayoutAcrossCmd)">@IconSvg("arrow-right", 16) Left → right</button>
-                <button title="@LayoutTip(LayoutDownCmd)" disabled="@(!CanRun(LayoutDownCmd))" @onclick="() => Run(LayoutDownCmd)">@IconSvg("workflow", 16) Top → down</button>
+                <button title="@Cmd.LayoutTip(Cmd.LayoutAcross)" disabled="@(!CanRun(Cmd.LayoutAcross))" @onclick="() => Run(Cmd.LayoutAcross)">@IconSvg("arrow-right", 16) Left → right</button>
+                <button title="@Cmd.LayoutTip(Cmd.LayoutDown)" disabled="@(!CanRun(Cmd.LayoutDown))" @onclick="() => Run(Cmd.LayoutDown)">@IconSvg("workflow", 16) Top → down</button>
                 <div class="menu-heading">Swim lanes</div>
-                <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
-                <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
+                <button title="@Cmd.LanesTip(Cmd.LanesAcross)" disabled="@(!CanRun(Cmd.LanesAcross))" @onclick="() => Run(Cmd.LanesAcross)">@IconSvg("rows-3", 16) Left → right</button>
+                <button title="@Cmd.LanesTip(Cmd.LanesDown)" disabled="@(!CanRun(Cmd.LanesDown))" @onclick="() => Run(Cmd.LanesDown)">@IconSvg("columns-3", 16) Top → down</button>
                 <div class="menu-settings" @onclick:stopPropagation="true">
                     <label title="Adding or moving shapes won't resize the lanes. Arrange, resizing a lane by hand and Fit to contents still do."><input type="checkbox" checked="@D.LockLanes" @onchange="SetLockLanes" /> Lock lane size</label>
                 </div>
@@ -119,11 +119,11 @@
                     <label title="Show each shape's step number (the order is kept either way)"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
                 </div>
                 <hr class="menu-divider" />
-                <button @onclick="() => Run(ZoomInCmd)">Zoom in<span class="menu-key">@KeyText(ZoomInCmd)</span></button>
-                <button @onclick="() => Run(ZoomOutCmd)">Zoom out<span class="menu-key">@KeyText(ZoomOutCmd)</span></button>
-                <button @onclick="() => Run(ResetZoomCmd)">Zoom to 100%<span class="menu-key">@KeyText(ResetZoomCmd)</span></button>
-                <button @onclick="() => Run(FitCmd)">Fit to window<span class="menu-key">@KeyText(FitCmd)</span></button>
-                <button disabled="@(!CanRun(FitSelectionCmd))" @onclick="() => Run(FitSelectionCmd)">Zoom to selection<span class="menu-key">@KeyText(FitSelectionCmd)</span></button>
+                <button @onclick="() => Run(Cmd.ZoomIn)">Zoom in<span class="menu-key">@KeyText(Cmd.ZoomIn)</span></button>
+                <button @onclick="() => Run(Cmd.ZoomOut)">Zoom out<span class="menu-key">@KeyText(Cmd.ZoomOut)</span></button>
+                <button @onclick="() => Run(Cmd.ResetZoom)">Zoom to 100%<span class="menu-key">@KeyText(Cmd.ResetZoom)</span></button>
+                <button @onclick="() => Run(Cmd.Fit)">Fit to window<span class="menu-key">@KeyText(Cmd.Fit)</span></button>
+                <button disabled="@(!CanRun(Cmd.FitSelection))" @onclick="() => Run(Cmd.FitSelection)">Zoom to selection<span class="menu-key">@KeyText(Cmd.FitSelection)</span></button>
             </DropMenu>
             <DropMenu Title="Help" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
                 <button @onclick="ShowShortcuts">Keyboard shortcuts…</button>
@@ -141,8 +141,8 @@
             </div>
         }
         <div class="group">
-            <button @onclick="() => Run(UndoCmd)" disabled="@(!CanRun(UndoCmd))" title="@Tip(UndoCmd)">↶</button>
-            <button @onclick="() => Run(RedoCmd)" disabled="@(!CanRun(RedoCmd))" title="@Tip(RedoCmd)">↷</button>
+            <button @onclick="() => Run(Cmd.Undo)" disabled="@(!CanRun(Cmd.Undo))" title="@Tip(Cmd.Undo)">↶</button>
+            <button @onclick="() => Run(Cmd.Redo)" disabled="@(!CanRun(Cmd.Redo))" title="@Tip(Cmd.Redo)">↷</button>
         </div>
         <div class="group" title="Background grid (screen only, not exported)">
             <span class="muted-label">Grid</span>
@@ -154,11 +154,11 @@
             </div>
         </div>
         <div class="group">
-            <button @onclick="() => Run(ZoomOutCmd)" title="@Tip(ZoomOutCmd)">−</button>
+            <button @onclick="() => Run(Cmd.ZoomOut)" title="@Tip(Cmd.ZoomOut)">−</button>
             <span class="zoom">@((int)Math.Round(Zoom * 100))%</span>
-            <button @onclick="() => Run(ZoomInCmd)" title="@Tip(ZoomInCmd)">+</button>
-            <button @onclick="() => Run(FitCmd)" title="@Tip(FitCmd)">Fit</button>
-            <button @onclick="() => Run(FitSelectionCmd)" disabled="@(!CanRun(FitSelectionCmd))" title="@Tip(FitSelectionCmd)">Selection</button>
+            <button @onclick="() => Run(Cmd.ZoomIn)" title="@Tip(Cmd.ZoomIn)">+</button>
+            <button @onclick="() => Run(Cmd.Fit)" title="@Tip(Cmd.Fit)">Fit</button>
+            <button @onclick="() => Run(Cmd.FitSelection)" disabled="@(!CanRun(Cmd.FitSelection))" title="@Tip(Cmd.FitSelection)">Selection</button>
         </div>
         <div class="group">
             <div class="seg" title="Flow direction: where the next step goes when you add one from the sidebar, a number key or + Next step">
@@ -637,398 +637,27 @@
     <aside class="panel">
         @if (Editor.SelectedNode is { } sn)
         {
-            <h3>@NodePanelTitle(sn)</h3>
-            <label>Label</label>
-            <textarea id="prop-label" rows="2" @bind="sn.Label" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint"></textarea>
-            <label>Description <InfoTip>Smaller text under the label, e.g. who does this step and how.</InfoTip></label>
-            <textarea id="prop-desc" rows="3" placeholder="Optional — e.g. who does this step and how" @bind="sn.Description" @bind:event="oninput" @bind:after="() => Editor.OutsideTextChanged(sn)" @onfocus="Editor.Checkpoint"></textarea>
-            <label>Text width <span class="muted">(px — @TextWidthHint(sn))</span></label>
-            <input type="number" min="40" step="10" placeholder="@TextWidthPlaceholder(sn)" @bind="sn.TextWidth" @bind:after="() => Editor.OutsideTextChanged(sn)" @onfocus="Editor.Checkpoint" />
-            <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@sn.ClearTextBack" @onchange="e => Editor.SetClearTextBack(sn, e.Value is true)" /> Transparent text background</label>
-            @if (sn.Kind.IsStep)
-            {
-                <label>Step <InfoTip>The shape's place in the flow (1, 2, 3, …), kept whether or not the numbers are shown. Type a number to move it there, or tick <em>Runs in parallel</em> to share the number of the step before it.</InfoTip></label>
-                <div class="step-row">
-                    <input id="prop-step" type="number" min="1" max="@Editor.Steps.Next" value="@sn.Step" @onchange="e => StepTyped(sn, e)" />
-                    <label class="check" title="Shares its step number with the step before it — tasks that happen at the same time">
-                        <input type="checkbox" checked="@Editor.Steps.IsParallel(sn)" disabled="@(!CanBeParallel(sn))" @onchange="e => Editor.SetParallel(sn, e.Value is true)" /> Runs in parallel
-                    </label>
-                </div>
-                @if (ParallelNote(sn) is { } pn)
-                {
-                    <p class="muted small-note">@pn</p>
-                }
-                <button class="small" title="See every step in order: drag to reorder, or set steps to run in parallel" @onclick="ShowStepOrder">Step order…</button>
-            }
-            @if (sn.Kind.CanBeRound)
-            {
-                <label class="check" title="Icon in a circle with the label underneath (presentation style). The shape keeps its type and meaning.">
-                    <input type="checkbox" checked="@sn.Round" @onchange="e => Editor.SetRound(sn, e.Value is true)" /> Draw as circle
-                </label>
-            }
-            <label>Type</label>
-            <select value="@NodeTypes.Get(sn.Type).Name" @onchange="e => TypePicked(sn, e)">
-                @foreach (NodeTypeInfo t in NodeTypes.All)
-                {
-                    <option value="@t.Name">@t.Display</option>
-                }
-            </select>
-            <div class="row">
-                <div><label>Width</label><input type="number" step="10" @bind="sn.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
-                <div><label>Height</label><input type="number" step="10" @bind="sn.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
-            </div>
-            <ShapeStyle Editor="Editor" Nodes="[sn]" OnChanged="StateHasChanged" />
-
-            @if (sn.Kind.IsPanel)
-            {
-                <PanelItems Editor="Editor" Node="sn" OnChanged="StateHasChanged" />
-            }
-            else if (sn.Kind.HasOutcome)
-            {
-                <label>Outcome</label>
-                <div class="outcome-picker">
-                    @foreach (OutcomeInfo o in Outcomes.All)
-                    {
-                        <button class="@(Outcomes.Get(sn.Outcome).Key == o.Key ? "on" : "")" title="@o.Hint" @onclick="() => Editor.SetOutcome(sn, o.Key)">
-                            @OutcomeSwatch(o.Key, 26)<span>@o.Display</span>
-                        </button>
-                    }
-                </div>
-                <p class="muted small-note">@Outcomes.Get(sn.Outcome).Hint. The outline and symbol come from the outcome, so it reads the same in greyscale.</p>
-            }
-            else
-            {
-            <label>Icon <InfoTip>On a circle the icon sits in the middle and the label goes underneath; on other shapes it's shown beside the label.</InfoTip></label>
-            <div class="icon-current">
-                @if (Icons.Exists(sn.Icon))
-                {
-                    <span class="icon-preview">@IconSvg(sn.Icon!, 22)</span><code>@sn.Icon</code>
-                    <button class="small" @onclick="() => Editor.SetIcon(sn, null)">Remove</button>
-                }
-                else
-                {
-                    <span class="muted">None</span>
-                }
-            </div>
-            <input class="icon-search" placeholder="Search icons…" @bind="iconFilter" @bind:event="oninput" />
-            <div class="icon-picker">
-                @foreach ((string cat, List<string> names) in FilteredIcons())
-                {
-                    <div class="icon-cat">@cat</div>
-                    <div class="icon-grid">
-                        @foreach (string iconName in names)
-                        {
-                            <button class="icon-btn @(sn.Icon == iconName ? "on" : "")" title="@iconName" @onclick="() => Editor.SetIcon(sn, iconName)">@IconSvg(iconName, 18)</button>
-                        }
-                    </div>
-                }
-            </div>
-            }
-
-            <LinkPicker Current="@sn.Link" Exclude="@LinkExclude" OnChange="link => Editor.SetNodeLink(sn, link)" OnFollow="FollowLink" />
-
-            @if (Editor.FindGroup(sn.GroupId) is { } ng)
-            {
-                <p class="muted">In group “@ng.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(sn)">remove from group</button></p>
-            }
-
-            <label>Properties <InfoTip>Name / value pairs saved with the shape, for future rule building (rule checks start with ruleId, ifcEntity, property, operator and value).</InfoTip></label>
-            <div class="props">
-                @foreach (string key in sn.Properties.Keys.ToList())
-                {
-                    <div class="prop">
-                        <input value="@key" placeholder="name" @onfocus="Editor.Checkpoint" @onchange="e => Editor.RenameProp(sn, key, e.Value?.ToString())" />
-                        <input value="@sn.Properties[key]" placeholder="value" @onfocus="Editor.Checkpoint" @oninput="e => SetPropValue(sn, key, e)" />
-                        <button class="icon" title="Remove" @onclick="() => Editor.RemoveProp(sn, key)">✕</button>
-                    </div>
-                }
-                <button class="small" @onclick="() => Editor.AddProp(sn)">+ Add property</button>
-            </div>
-            <div class="actions">
-                <button @onclick="Editor.AddNextStep">+ Next step</button>
-                @if (CanRun(BranchCmd))
-                {
-                    <button title="@Tip(BranchCmd)" @onclick="() => Run(BranchCmd)">@IconSvg("git-branch", 16) Branch pass / fail</button>
-                }
-                <button @onclick="() => Run(AddCommentCmd)">+ Comment</button>
-                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
-            </div>
+            <ShapePanel Host="this" Node="sn" @bind-IconFilter="iconFilter" />
         }
         else if (Editor.SelectedText is { } st)
         {
-            <h3>@(st.IsComment ? "Comment" : "Text box")</h3>
-            <label>Text <InfoTip>Or double-click the box on the canvas. Enter starts a new line.</InfoTip></label>
-            <textarea rows="5" @bind="st.Text" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" @onblur="() => Editor.GrowToText(st)"></textarea>
-            <label class="check" title="Comments are annotations: sticky-note look and dashed pin lines">
-                <input type="checkbox" checked="@st.IsComment" @onchange="e => Editor.SetComment(st, e.Value is true)" /> Comment
-            </label>
-            @if (st.IsComment)
-            {
-                <div class="chips"><button class="chip" @onclick="() => Editor.ResetCommentStyle(st)">Reset to comment style</button></div>
-            }
-
-            <TextBoxStyle Editor="Editor" Boxes="[st]" OnChanged="StateHasChanged" />
-            <div class="row">
-                <div><label>Width</label><input type="number" step="10" @bind="st.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
-                <div><label>Height</label><input type="number" step="10" @bind="st.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
-            </div>
-            <div class="actions"><button @onclick="() => Editor.FitTextHeight(st)">Fit height to text</button></div>
-
-            @if (Editor.FindGroup(st.GroupId) is { } tg)
-            {
-                <p class="muted">In group “@tg.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(st)">remove from group</button></p>
-            }
-            <p class="muted">Connecting <InfoTip>Connect it like a shape: drag from a ● port, or select it with another item and press J.@(st.IsComment ? " Lines to a comment are dashed pins — restyle them like any connector." : "")</InfoTip></p>
-            <div class="actions">
-                @if (!st.IsComment)
-                {
-                    <button @onclick="Editor.AddNextStep">+ Next step</button>
-                    <button @onclick="() => Run(AddCommentCmd)">+ Comment</button>
-                }
-                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
-            </div>
+            <TextBoxPanel Host="this" Box="st" />
         }
         else if (Editor.SelectedEdge is { } se)
         {
-            <h3>Connector</h3>
-            <p class="muted">@Editor.LabelOf(se.From) → @Editor.LabelOf(se.To)</p>
-            <label>Line <InfoTip>Drag a ● end on the canvas to move it to another side@(se.Style == EdgeStyle.Straight ? "" : "; drag the ■ on the middle segment to move the bend").</InfoTip></label>
-            <div class="seg wide">
-                <button class="@(se.Style == EdgeStyle.Elbow ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(se, EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
-                <button class="@(se.Style == EdgeStyle.Straight ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(se, EdgeStyle.Straight)">@IconSvg("move-up-right", 16) Straight</button>
-            </div>
-
-            @if (se.IsManual)
-            {
-                <div class="chips">
-                    <button class="chip" title="Let the connector pick its sides and bend again" @onclick="() => Editor.ResetRoute(se)">Reset route to auto</button>
-                </div>
-            }
-
-            <label>Weight</label>
-            <div class="seg wide stacked">
-                @foreach ((string k, string name) in LineLook.Weights)
-                {
-                    <button class="@(se.Weight == k ? "on" : "")" title="@name" @onclick="() => Editor.SetEdgeLook(se, x => x.Weight = k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
-                }
-            </div>
-            <label>Line type</label>
-            <div class="seg wide patterns">
-                @foreach ((string k, string name) in LineLook.Patterns)
-                {
-                    <button class="@(se.Pattern == k ? "on" : "")" title="@name" @onclick="() => Editor.SetEdgeLook(se, x => x.Pattern = k)">@LinePreview(se.Weight, k, LineLook.ArrowNone)</button>
-                }
-            </div>
-            <label>Colour</label>
-            <div class="swatches">
-                <button class="swatch line @(se.Color is null ? "on" : "")" title="Default grey" @onclick="() => Editor.SetEdgeLook(se, x => x.Color = null)"><span style="background:@LineLook.DefaultColor"></span></button>
-                @foreach ((string k, Swatch swc) in Palette.All)
-                {
-                    <button class="swatch line @(se.Color == k ? "on" : "")" title="@k" @onclick="() => Editor.SetEdgeLook(se, x => x.Color = k)"><span style="background:@swc.Stroke"></span></button>
-                }
-            </div>
-            <label>Arrowheads</label>
-            <div class="seg wide stacked">
-                @foreach ((string k, string name) in LineLook.ArrowModes)
-                {
-                    <button class="@(se.Arrows == k ? "on" : "")" title="@name" @onclick="() => Editor.SetEdgeLook(se, x => x.Arrows = k)">@LinePreview(LineLook.Regular, LineLook.Solid, k) @name</button>
-                }
-            </div>
-
-            <label>Label <InfoTip>Or double-click the line. Up to two lines: Shift+Enter starts the second.</InfoTip></label>
-            <textarea id="prop-edge" class="two-line" rows="2" @bind="se.Label" @bind:event="oninput" @bind:after="Editor.EdgeLabelTyped" @onfocus="Editor.Checkpoint" placeholder="Type a label… (2 lines max)"></textarea>
-            <div class="chips">
-                @foreach (string lab in EdgeLabelChips)
-                {
-                    <button class="chip" @onclick="() => Editor.SetEdgeLabel(se, lab)">@(lab == "" ? "Clear" : lab)</button>
-                }
-            </div>
-
-            <label>Text direction</label>
-            <div class="seg wide three">
-                <button class="@(se.LabelOrient == LabelOrient.Horizontal ? "on" : "")" title="Always level" @onclick="() => Editor.SetLabelOrient(se, LabelOrient.Horizontal)">Level</button>
-                <button class="@(se.LabelOrient == LabelOrient.Along ? "on" : "")" title="Runs along the line" @onclick="() => Editor.SetLabelOrient(se, LabelOrient.Along)">Along line</button>
-                <button class="@(se.LabelOrient == LabelOrient.Perpendicular ? "on" : "")" title="At 90° to the line" @onclick="() => Editor.SetLabelOrient(se, LabelOrient.Perpendicular)">90° to line</button>
-            </div>
-
-            <label>Label placement <InfoTip>@LabelPlaceHint(se)</InfoTip></label>
-            <div class="seg wide three">
-                @foreach ((LabelPlace k, string name) in LabelPlaces.All)
-                {
-                    <button class="@(se.LabelPlace == k ? "on" : "")" @onclick="() => Editor.SetLabelPlace(se, k)">@name</button>
-                }
-            </div>
-
-            <label>Label position <span class="muted">@((int)Math.Round(se.LabelPos * 100))% along</span></label>
-            <input type="range" min="0.05" max="0.95" step="0.05" value="@F(se.LabelPos)"
-                   @onpointerdown="Editor.Checkpoint" @oninput="e => Editor.DragLabelPos(se, e.Value)" />
-            <div class="chips">
-                <button class="chip" @onclick="() => Editor.SetLabelPos(se, 0.15)">Near start</button>
-                <button class="chip" @onclick="() => Editor.SetLabelPos(se, 0.5)">Middle</button>
-                <button class="chip" @onclick="() => Editor.SetLabelPos(se, 0.85)">Near end</button>
-            </div>
-
-            <div class="actions">
-                <button @onclick="() => Editor.ReverseEdge(se)">Reverse</button>
-                <button @onclick="() => Editor.MakeDefaultLook(se)" title="New connectors will look like this one">Use as default</button>
-                <button @onclick="() => Editor.ApplyEdgeLookToAll(se)" title="Copy this connector's look to every connector">Apply to all</button>
-                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
-            </div>
+            <ConnectorPanel Host="this" Edge="se" />
         }
         else if (Editor.SelectedGroup is { } sg)
         {
-            <h3>Group</h3>
-            <label>Title</label>
-            <input @bind="sg.Title" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" />
-            <GroupStyle Editor="Editor" Groups="[sg]" OnChanged="StateHasChanged" />
-            <p class="muted">@MemberCount(sg) item@(MemberCount(sg) == 1 ? "" : "s") inside <InfoTip>Drag items in or out of the box to change what's in the group.</InfoTip></p>
-            @if (Editor.FindGroup(sg.GroupId) is { } pg)
-            {
-                <p class="muted">In group “@pg.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(sg)">remove from group</button></p>
-            }
-            <LinkPicker Current="@sg.Link" Exclude="@LinkExclude" OnChange="link => Editor.SetGroupLink(sg, link)" OnFollow="FollowLink" />
-            <label>Align items within the group</label>
-            <AlignBar Enabled="@(MemberCount(sg) > 0)" OnAlign="op => Editor.AlignInGroup(sg, op)" />
-            <div class="actions">
-                <button disabled="@(MemberCount(sg) == 0)" @onclick="() => Editor.AlignInGroup(sg, AlignOp.Row)">Arrange in a row</button>
-                <button disabled="@(MemberCount(sg) == 0)" @onclick="() => Editor.AlignInGroup(sg, AlignOp.Column)">Arrange in a column</button>
-                <button disabled="@(MemberCount(sg) == 0)" @onclick="() => Editor.FitGroupToContents(sg)">Fit to contents</button>
-                <button disabled="@(MemberCount(sg) == 0)" title="Move the group box (same size) so the items sit in its middle — the items stay put" @onclick="() => Editor.CentreGroupOnContents(sg)">Centre box on items</button>
-                <button disabled="@(MemberCount(sg) == 0)" title="Move the items together to the middle of the group — the box stays put" @onclick="() => Editor.CentreContentsInGroup(sg)">Centre items in box</button>
-            </div>
-            <p class="muted">Connecting <InfoTip>Connect a group like any shape: drag from its ● port, or select it with another item and press J.</InfoTip></p>
-            <div class="actions">
-                <button @onclick="() => Run(UngroupCmd)" title="Ctrl+Shift+G">Ungroup</button>
-                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete group &amp; contents</button>
-            </div>
-            @if (IsTopLevel(sg))
-            {
-                <label>Swim lanes <InfoTip>Every top-level group is a lane. <em>Arrange</em> lines the lanes up edge to edge and puts their shapes in columns by step number. Select two or more groups to arrange just those.</InfoTip></label>
-                <div class="seg wide">
-                    <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
-                    <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
-                </div>
-            }
+            <GroupPanel Host="this" Group="sg" />
         }
         else if (Editor.Selection.Count > 1)
         {
-            <h3>@Editor.Selection.Count items selected</h3>
-            <label>Align</label>
-            <AlignBar OnAlign="Editor.AlignSelection" />
-            <div class="actions">
-                <button @onclick="() => Editor.AlignSelection(AlignOp.Row)">Row</button>
-                <button @onclick="() => Editor.AlignSelection(AlignOp.Column)">Column</button>
-            </div>
-            <label>Connectors between selected items</label>
-            <div class="seg wide">
-                <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
-                <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyle.Straight)">@IconSvg("move-up-right", 16) Straight</button>
-            </div>
-            @if (SelectedStepCount > 1)
-            {
-                <label>Step order</label>
-                <div class="seg wide">
-                    <button title="Give the selected steps the same number — they happen at the same time" @onclick="Editor.MakeSelectionParallel">@IconSvg("columns-3", 16) Run in parallel</button>
-                    <button title="Number the selected steps one after another, top to bottom" @onclick="Editor.MakeSelectionSequential">@IconSvg("rows-3", 16) One after another</button>
-                </div>
-            }
-            <div class="actions col">
-                @if (Editor.SwapPair() is not null)
-                {
-                    <button title="Each shape moves to the other's place; connectors and step numbers stay where they are" @onclick="Editor.SwapSelection">@IconSvg("arrow-right-left", 16) Swap places</button>
-                }
-                <button @onclick="() => Run(JoinCmd)">Join in selection order (J)</button>
-                <button @onclick="() => Run(GroupCmd)">Group (Ctrl+G)</button>
-                <button class="danger" @onclick="() => Run(DeleteCmd)">Delete</button>
-            </div>
-            @if (SelectedNodes.Count > 0)
-            {
-                <h4 class="bulk">Shapes · @SelectedNodes.Count <InfoTip>Changes here apply to every selected shape at once (one undo step). A setting shows as on when all of them have it.</InfoTip></h4>
-                <ShapeStyle Editor="Editor" Nodes="SelectedNodes" OnChanged="StateHasChanged" />
-                <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@SelectedNodes.All(n => n.ClearTextBack)" @onchange="e => Editor.Restyle(SelectedNodes, n => n.ClearTextBack = e.Value is true)" /> Transparent text background</label>
-            }
-            @if (SelectedTextBoxes.Count > 0)
-            {
-                <h4 class="bulk">Text boxes · @SelectedTextBoxes.Count</h4>
-                <TextBoxStyle Editor="Editor" Boxes="SelectedTextBoxes" OnChanged="StateHasChanged" />
-            }
-            @if (SelectedGroups.Count > 0)
-            {
-                <h4 class="bulk">Groups · @SelectedGroups.Count</h4>
-                <GroupStyle Editor="Editor" Groups="SelectedGroups" OnChanged="StateHasChanged" />
-            }
-            @if (SelectedLaneCount >= 2)
-            {
-                <label>Swim lanes <InfoTip>Arranges the @SelectedLaneCount selected groups as lanes: edge to edge, with their shapes in columns by step number.</InfoTip></label>
-                <div class="seg wide">
-                    <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
-                    <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
-                </div>
-            }
+            <SelectionPanel Host="this" />
         }
         else
         {
-            <h3>Diagram</h3>
-            <label>Name</label>
-            <input value="@D.Name" @onchange="RenameDiagram" />
-            <p class="muted">@DiagramSummary</p>
-
-            <h4>Steps <InfoTip>Every shape except outcomes has a step number, shown or not — new shapes go on the end. Reorder them all in <em>Step order…</em>, or change one shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</InfoTip></h4>
-            <label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
-            <button class="small" @onclick="ShowStepOrder">Step order…</button>
-
-            <h4>Swim lanes <InfoTip>Each top-level group is a lane. <em>Arrange</em> lines the lanes up edge to edge and puts their shapes in columns by step number, so step 3 sits in the same column in every lane. Select two or more groups to arrange just those. Undo puts everything back.</InfoTip></h4>
-            <div class="seg wide">
-                <button title="@LanesTip(LanesAcrossCmd)" disabled="@(!CanRun(LanesAcrossCmd))" @onclick="() => Run(LanesAcrossCmd)">@IconSvg("rows-3", 16) Left → right</button>
-                <button title="@LanesTip(LanesDownCmd)" disabled="@(!CanRun(LanesDownCmd))" @onclick="() => Run(LanesDownCmd)">@IconSvg("columns-3", 16) Top → down</button>
-            </div>
-
-            <h4>Auto-layout <InfoTip>Lays out the whole diagram by step number — step 1, then 2, then 3, with parallel steps side by side — then tidies the connectors. Shapes inside a group stay put and the group moves as one block (use <em>Swim lanes</em> to lay out inside groups). Undo puts everything back.</InfoTip></h4>
-            <div class="seg wide">
-                <button title="@LayoutTip(LayoutAcrossCmd)" disabled="@(!CanRun(LayoutAcrossCmd))" @onclick="() => Run(LayoutAcrossCmd)">@IconSvg("arrow-right", 16) Left → right</button>
-                <button title="@LayoutTip(LayoutDownCmd)" disabled="@(!CanRun(LayoutDownCmd))" @onclick="() => Run(LayoutDownCmd)">@IconSvg("workflow", 16) Top → down</button>
-            </div>
-
-            <h4>Page <InfoTip>Pick a paper size to get a fixed page for documents; Export SVG or PDF then produces a file exactly that paper size (in mm), ready to insert into Word or PowerPoint or to print. The open canvas stays available — switch back any time.</InfoTip></h4>
-            <select value="@D.Page.Size" @onchange="SetPageSize">
-                <option value="@PageSetup.None">Open canvas (no fixed size)</option>
-                @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
-                {
-                    <option value="@ps.Key">@ps.Name — @ps.W.ToString("0.#") × @ps.H.ToString("0.#") mm</option>
-                }
-                <option value="@PageSetup.Custom">Custom size…</option>
-            </select>
-            @if (D.Page.Enabled)
-            {
-                <div class="seg wide" style="margin-top:8px">
-                    <button class="@(!PageIsLandscape ? "on" : "")" @onclick="SetPortrait">@IconSvg("rectangle-vertical", 16) Portrait</button>
-                    <button class="@(PageIsLandscape ? "on" : "")" @onclick="SetLandscape">@IconSvg("rectangle-horizontal", 16) Landscape</button>
-                </div>
-                @if (D.Page.Size == PageSetup.Custom)
-                {
-                    <div class="row">
-                        <div><label>Width (mm)</label><input type="number" min="20" step="1" @bind="D.Page.CustomW" @bind:after="Editor.PageChanged" @onfocus="Editor.Checkpoint" /></div>
-                        <div><label>Height (mm)</label><input type="number" min="20" step="1" @bind="D.Page.CustomH" @bind:after="Editor.PageChanged" @onfocus="Editor.Checkpoint" /></div>
-                    </div>
-                }
-                <div class="row">
-                    <div><label>Margin (mm)</label><input type="number" min="0" step="1" @bind="D.Page.MarginMm" @bind:after="Editor.PageChanged" @onfocus="Editor.Checkpoint" /></div>
-                    <div><label>Size</label><div class="page-size">@D.Page.Mm.W.ToString("0.#") × @D.Page.Mm.H.ToString("0.#") mm</div></div>
-                </div>
-                <label class="check"><input type="checkbox" checked="@D.Page.FitOnExport" @onchange="SetFitOnExport" /> Scale down to fit the margins on export</label>
-                @if (OffPageCount > 0)
-                {
-                    <p class="warn">@OffPageCount item@(OffPageCount == 1 ? " is" : "s are") off the page. <button class="link" @onclick="Editor.SelectOutsidePage">Select</button></p>
-                }
-                @if (Editor.ContentTooBigForPage())
-                {
-                    <p class="muted">The drawing is larger than the printable area@(D.Page.FitOnExport ? " — it will be scaled down on export." : ".")</p>
-                }
-                <div class="actions">
-                    <button @onclick="Editor.CentreOnPage">Centre drawing on page</button>
-                    <button @onclick="() => Run(FitCmd)">Show whole page</button>
-                </div>
-            }
+            <DiagramPanel Host="this" />
         }
     </aside>
 

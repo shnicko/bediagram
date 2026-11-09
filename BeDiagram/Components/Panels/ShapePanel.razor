@@ -1,0 +1,118 @@
+@inherits DesignerPart
+
+<h3>@NodePanelTitle(Node)</h3>
+<label>Label</label>
+<textarea id="prop-label" rows="2" @bind="Node.Label" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint"></textarea>
+<label>Description <InfoTip>Smaller text under the label, e.g. who does this step and how.</InfoTip></label>
+<textarea id="prop-desc" rows="3" placeholder="Optional — e.g. who does this step and how" @bind="Node.Description" @bind:event="oninput" @bind:after="() => Editor.OutsideTextChanged(Node)" @onfocus="Editor.Checkpoint"></textarea>
+<label>Text width <span class="muted">(px — @TextWidthHint(Node))</span></label>
+<input type="number" min="40" step="10" placeholder="@TextWidthPlaceholder(Node)" @bind="Node.TextWidth" @bind:after="() => Editor.OutsideTextChanged(Node)" @onfocus="Editor.Checkpoint" />
+<label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@Node.ClearTextBack" @onchange="e => Editor.SetClearTextBack(Node, e.Value is true)" /> Transparent text background</label>
+@if (Node.Kind.IsStep)
+{
+    <label>Step <InfoTip>The shape's place in the flow (1, 2, 3, …), kept whether or not the numbers are shown. Type a number to move it there, or tick <em>Runs in parallel</em> to share the number of the step before it.</InfoTip></label>
+    <div class="step-row">
+        <input id="prop-step" type="number" min="1" max="@Editor.Steps.Next" value="@Node.Step" @onchange="e => StepTyped(Node, e)" />
+        <label class="check" title="Shares its step number with the step before it — tasks that happen at the same time">
+            <input type="checkbox" checked="@Editor.Steps.IsParallel(Node)" disabled="@(!CanBeParallel(Node))" @onchange="e => Editor.SetParallel(Node, e.Value is true)" /> Runs in parallel
+        </label>
+    </div>
+    @if (ParallelNote(Node) is { } pn)
+    {
+        <p class="muted small-note">@pn</p>
+    }
+    <button class="small" title="See every step in order: drag to reorder, or set steps to run in parallel" @onclick="Host.ShowStepOrder">Step order…</button>
+}
+@if (Node.Kind.CanBeRound)
+{
+    <label class="check" title="Icon in a circle with the label underneath (presentation style). The shape keeps its type and meaning.">
+        <input type="checkbox" checked="@Node.Round" @onchange="e => Editor.SetRound(Node, e.Value is true)" /> Draw as circle
+    </label>
+}
+<label>Type</label>
+<select value="@NodeTypes.Get(Node.Type).Name" @onchange="e => TypePicked(Node, e)">
+    @foreach (NodeTypeInfo t in NodeTypes.All)
+    {
+        <option value="@t.Name">@t.Display</option>
+    }
+</select>
+<div class="row">
+    <div><label>Width</label><input type="number" step="10" @bind="Node.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
+    <div><label>Height</label><input type="number" step="10" @bind="Node.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
+</div>
+<ShapeStyle Editor="Editor" Nodes="[Node]" OnChanged="Redraw" />
+
+@if (Node.Kind.IsPanel)
+{
+    <PanelItems Editor="Editor" Node="Node" OnChanged="Redraw" />
+}
+else if (Node.Kind.HasOutcome)
+{
+    <label>Outcome</label>
+    <div class="outcome-picker">
+        @foreach (OutcomeInfo o in Outcomes.All)
+        {
+            <button class="@(Outcomes.Get(Node.Outcome).Key == o.Key ? "on" : "")" title="@o.Hint" @onclick="() => Editor.SetOutcome(Node, o.Key)">
+                @OutcomeSwatch(o.Key, 26)<span>@o.Display</span>
+            </button>
+        }
+    </div>
+    <p class="muted small-note">@Outcomes.Get(Node.Outcome).Hint. The outline and symbol come from the outcome, so it reads the same in greyscale.</p>
+}
+else
+{
+    <label>Icon <InfoTip>On a circle the icon sits in the middle and the label goes underneath; on other shapes it's shown beside the label.</InfoTip></label>
+    <div class="icon-current">
+        @if (Icons.Exists(Node.Icon))
+        {
+            <span class="icon-preview">@IconSvg(Node.Icon!, 22)</span><code>@Node.Icon</code>
+            <button class="small" @onclick="() => Editor.SetIcon(Node, null)">Remove</button>
+        }
+        else
+        {
+            <span class="muted">None</span>
+        }
+    </div>
+    <input class="icon-search" placeholder="Search icons…" value="@IconFilter" @oninput="FilterTyped" />
+    <div class="icon-picker">
+        @foreach ((string cat, List<string> names) in FilteredIcons())
+        {
+            <div class="icon-cat">@cat</div>
+            <div class="icon-grid">
+                @foreach (string iconName in names)
+                {
+                    <button class="icon-btn @(Node.Icon == iconName ? "on" : "")" title="@iconName" @onclick="() => Editor.SetIcon(Node, iconName)">@IconSvg(iconName, 18)</button>
+                }
+            </div>
+        }
+    </div>
+}
+
+<LinkPicker Current="@Node.Link" Exclude="@Host.LinkExclude" OnChange="link => Editor.SetNodeLink(Node, link)" OnFollow="Host.FollowLink" />
+
+@if (Editor.FindGroup(Node.GroupId) is { } ng)
+{
+    <p class="muted">In group “@ng.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(Node)">remove from group</button></p>
+}
+
+<label>Properties <InfoTip>Name / value pairs saved with the shape, for future rule building (rule checks start with ruleId, ifcEntity, property, operator and value).</InfoTip></label>
+<div class="props">
+    @foreach (string key in Node.Properties.Keys.ToList())
+    {
+        <div class="prop">
+            <input value="@key" placeholder="name" @onfocus="Editor.Checkpoint" @onchange="e => Editor.RenameProp(Node, key, e.Value?.ToString())" />
+            <input value="@Node.Properties[key]" placeholder="value" @onfocus="Editor.Checkpoint" @oninput="e => SetPropValue(Node, key, e)" />
+            <button class="icon" title="Remove" @onclick="() => Editor.RemoveProp(Node, key)">✕</button>
+        </div>
+    }
+    <button class="small" @onclick="() => Editor.AddProp(Node)">+ Add property</button>
+</div>
+<div class="actions">
+    <button @onclick="Editor.AddNextStep">+ Next step</button>
+    @if (CanRun(Cmd.Branch))
+    {
+        <button title="@Tip(Cmd.Branch)" @onclick="() => Run(Cmd.Branch)">@IconSvg("git-branch", 16) Branch pass / fail</button>
+    }
+    <button @onclick="() => Run(Cmd.AddComment)">+ Comment</button>
+    <button class="danger" @onclick="() => Run(Cmd.Delete)">Delete</button>
+</div>

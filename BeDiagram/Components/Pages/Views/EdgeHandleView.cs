@@ -1,5 +1,3 @@
-using BeDiagram.Models.Catalogue;
-
 namespace BeDiagram.Components.Pages.Views;
 
 public record EdgeHandleView(string EdgeId, List<SideTarget> Sides, bool HasBend, double BendX, double BendY, bool BendVertical,

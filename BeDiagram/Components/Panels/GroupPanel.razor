@@ -1,0 +1,34 @@
+@inherits DesignerPart
+
+<h3>Group</h3>
+<label>Title</label>
+<input @bind="Group.Title" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" />
+<GroupStyle Editor="Editor" Groups="[Group]" OnChanged="Redraw" />
+<p class="muted">@MemberCount(Group) item@(MemberCount(Group) == 1 ? "" : "s") inside <InfoTip>Drag items in or out of the box to change what's in the group.</InfoTip></p>
+@if (Editor.FindGroup(Group.GroupId) is { } pg)
+{
+    <p class="muted">In group “@pg.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(Group)">remove from group</button></p>
+}
+<LinkPicker Current="@Group.Link" Exclude="@Host.LinkExclude" OnChange="link => Editor.SetGroupLink(Group, link)" OnFollow="Host.FollowLink" />
+<label>Align items within the group</label>
+<AlignBar Enabled="@(MemberCount(Group) > 0)" OnAlign="op => Editor.AlignInGroup(Group, op)" />
+<div class="actions">
+    <button disabled="@(MemberCount(Group) == 0)" @onclick="() => Editor.AlignInGroup(Group, AlignOp.Row)">Arrange in a row</button>
+    <button disabled="@(MemberCount(Group) == 0)" @onclick="() => Editor.AlignInGroup(Group, AlignOp.Column)">Arrange in a column</button>
+    <button disabled="@(MemberCount(Group) == 0)" @onclick="() => Editor.FitGroupToContents(Group)">Fit to contents</button>
+    <button disabled="@(MemberCount(Group) == 0)" title="Move the group box (same size) so the items sit in its middle — the items stay put" @onclick="() => Editor.CentreGroupOnContents(Group)">Centre box on items</button>
+    <button disabled="@(MemberCount(Group) == 0)" title="Move the items together to the middle of the group — the box stays put" @onclick="() => Editor.CentreContentsInGroup(Group)">Centre items in box</button>
+</div>
+<p class="muted">Connecting <InfoTip>Connect a group like any shape: drag from its ● port, or select it with another item and press J.</InfoTip></p>
+<div class="actions">
+    <button @onclick="() => Run(Cmd.Ungroup)" title="Ctrl+Shift+G">Ungroup</button>
+    <button class="danger" @onclick="() => Run(Cmd.Delete)">Delete group &amp; contents</button>
+</div>
+@if (IsTopLevel(Group))
+{
+    <label>Swim lanes <InfoTip>Every top-level group is a lane. <em>Arrange</em> lines the lanes up edge to edge and puts their shapes in columns by step number. Select two or more groups to arrange just those.</InfoTip></label>
+    <div class="seg wide">
+        <button title="@Cmd.LanesTip(Cmd.LanesAcross)" disabled="@(!CanRun(Cmd.LanesAcross))" @onclick="() => Run(Cmd.LanesAcross)">@IconSvg("rows-3", 16) Left → right</button>
+        <button title="@Cmd.LanesTip(Cmd.LanesDown)" disabled="@(!CanRun(Cmd.LanesDown))" @onclick="() => Run(Cmd.LanesDown)">@IconSvg("columns-3", 16) Top → down</button>
+    </div>
+}

@@ -1,12 +1,12 @@
-using BeDiagram.Components.Pages.Commands;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using BeDiagram.Components.Pages.Commands;
 
 namespace BeDiagram.Components.Pages;
 
 /// <summary>
 /// Running editor commands (Command pattern, see Commands/IEditorCommand.cs): from the keyboard (OnKey) and from
-/// toolbar / panel buttons (Run, CanRun, Tip and the *Cmd properties the markup reads).
+/// toolbar / panel buttons (Run, CanRun, Tip and <see cref="CommandButtons"/>, read as Cmd.Save, Cmd.Delete, …).
 /// </summary>
 public partial class Designer
 {
@@ -34,57 +34,15 @@ public partial class Designer
         StateHasChanged();
     }
 
-    async Task Run(IEditorCommand command)
-    {
-        if (command.CanExecute(this)) await command.ExecuteAsync(this);
-    }
+    /// <summary>The commands with buttons (made on first use: <see cref="Commands"/> is injected after construction).</summary>
+    CommandButtons Cmd => buttons ??= new CommandButtons(Commands, this, Editor);
+    CommandButtons? buttons;
 
-    bool CanRun(IEditorCommand command) => command.CanExecute(this);
+    Task Run(IEditorCommand command) => Cmd.Run(command);
 
-    /// <summary>The first shortcut of a command for a menu item, e.g. "Ctrl+S" (empty when it has none).</summary>
-    static string KeyText(IEditorCommand command) => command.Keys.Count == 0 ? "" : command.Keys[0].ToString();
+    bool CanRun(IEditorCommand command) => Cmd.CanRun(command);
 
-    /// <summary>Tooltip with the first shortcut, e.g. "Undo (Ctrl+Z)".</summary>
-    static string Tip(IEditorCommand command) =>
-        command.Keys.Count == 0 ? command.Name : $"{command.Name} ({command.Keys[0]})";
+    static string KeyText(IEditorCommand command) => CommandButtons.KeyText(command);
 
-    /// <summary>Tooltip for the swim-lane buttons (they have no shortcut key, so say what they do or why they're off).</summary>
-    string LanesTip(IEditorCommand command) => CanRun(command)
-        ? $"{command.Name}: line the lanes up and put their shapes in columns by step number"
-        : "Group the shapes of each lane first (select them, Ctrl+G)";
-
-    /// <summary>Tooltip for the auto-layout buttons.</summary>
-    string LayoutTip(IEditorCommand command) => CanRun(command)
-        ? $"{command.Name}: put every shape in columns by step number (groups move as blocks), then tidy the connectors"
-        : "Nothing to lay out yet";
-
-    /// <summary>Tooltip for Tidy: what it will work on, given the selection.</summary>
-    string TidyTip => !CanRun(TidyCmd) ? "No connectors yet"
-        : Editor.SelectedEdge is not null ? "Tidy the selected connector: re-route it round any shape it passes through"
-        : Editor.Selection.Count > 0 ? "Tidy the connectors on the selected items: re-route any that pass through a shape"
-        : "Tidy connectors: re-route any that pass through a shape (select items first to tidy just theirs)";
-
-    // Commands wired to buttons in Designer.razor.
-    IEditorCommand SaveCmd => Commands.Get<SaveCommand>();
-    IEditorCommand SelectAllCmd => Commands.Get<SelectAllCommand>();
-    IEditorCommand DuplicateCmd => Commands.Get<DuplicateCommand>();
-    IEditorCommand ResetZoomCmd => Commands.Get<ResetZoomCommand>();
-    IEditorCommand SaveAsCmd => Commands.Get<SaveAsCommand>();
-    IEditorCommand UndoCmd => Commands.Get<UndoCommand>();
-    IEditorCommand RedoCmd => Commands.Get<RedoCommand>();
-    IEditorCommand ZoomInCmd => Commands.Get<ZoomInCommand>();
-    IEditorCommand ZoomOutCmd => Commands.Get<ZoomOutCommand>();
-    IEditorCommand FitCmd => Commands.Get<FitCommand>();
-    IEditorCommand FitSelectionCmd => Commands.Get<FitSelectionCommand>();
-    IEditorCommand BranchCmd => Commands.Get<QuickBranchCommand>();
-    IEditorCommand DeleteCmd => Commands.Get<DeleteCommand>();
-    IEditorCommand JoinCmd => Commands.Get<JoinCommand>();
-    IEditorCommand GroupCmd => Commands.Get<GroupCommand>();
-    IEditorCommand UngroupCmd => Commands.Get<UngroupCommand>();
-    IEditorCommand AddCommentCmd => Commands.Get<AddCommentCommand>();
-    IEditorCommand LanesAcrossCmd => Commands.Get<ArrangeLanesHorizontalCommand>();
-    IEditorCommand LanesDownCmd => Commands.Get<ArrangeLanesVerticalCommand>();
-    IEditorCommand TidyCmd => Commands.Get<TidyConnectorsCommand>();
-    IEditorCommand LayoutAcrossCmd => Commands.Get<AutoLayoutHorizontalCommand>();
-    IEditorCommand LayoutDownCmd => Commands.Get<AutoLayoutVerticalCommand>();
+    static string Tip(IEditorCommand command) => CommandButtons.Tip(command);
 }

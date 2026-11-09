@@ -6,11 +6,9 @@ using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Routing;
-using BeDiagram.Models.Serialization;
 using BeDiagram.Models.Styles;
 using BeDiagram.Models.Text;
 using BeDiagram.Rendering;
-using BeDiagram.Services;
 using BeDiagram.Services.Export;
 using static BeDiagram.Models.SvgNumbers;
 
@@ -22,8 +20,6 @@ public partial class Designer
     // ───────────── Render helpers (read by Designer.razor) ─────────────
     // The markup only loops and reads values; anything that needs working out lives here.
 
-    static readonly string[] EdgeLabelChips = { "Yes", "No", "Pass", "Fail", "" };
-
     /// <summary>Palette shapes (outcomes have their own section), numbered for the 1–9 shortcut keys.</summary>
     static readonly List<PaletteShape> PaletteShapes = NodeTypes.All
         .Where(t => !t.Kind.HasOutcome)
@@ -32,9 +28,6 @@ public partial class Designer
 
     /// <summary>The classic shapes, each offered again as a circle with its type's icon (<see cref="Node.Round"/>).</summary>
     static readonly List<NodeTypeInfo> RoundShapes = NodeTypes.All.Where(t => t.Kind.CanBeRound).ToList();
-
-    /// <summary>The Type dropdown: options carry the saved type names ("decision").</summary>
-    void TypePicked(Node n, ChangeEventArgs e) => Editor.ChangeType(n, EnumNames.Parse<NodeType>(e.Value?.ToString()));
 
     /// <summary>The inside of a list / IPO node (title band, sections, rows) — same markup as the export — or null.</summary>
     static MarkupString? PanelBody(NodeView v) => v.N.Kind.Body(v.N, v.Style) is { } body ? (MarkupString)body : null;
@@ -68,18 +61,6 @@ public partial class Designer
     static IEnumerable<(string Text, string Dy)> DescLines(LabelLayout lay) =>
         lay.Desc.Select((line, i) => (line, i == 0 ? "0" : F(TextLayout.DescLineHeight)));
 
-    /// <summary>What the text width applies to for this shape, for the panel hint.</summary>
-    static string TextWidthHint(Node n) =>
-        n.Kind.LabelBelow(n) ? "label and description under the shape" : "description under the shape";
-
-    static string TextWidthPlaceholder(Node n) => $"Auto ({F(TextLayout.DefaultTextWidth(n))})";
-
-    static string NodePanelTitle(Node n) => n.Kind.PanelTitle(n);
-
-
-    string DiagramSummary =>
-        $"{D.Nodes.Count} shapes · {D.Edges.Count} connectors · {D.TextBoxes.Count(t => !t.IsComment)} text boxes · " +
-        $"{D.TextBoxes.Count(t => t.IsComment)} comments · {D.Groups.Count} groups";
 
     IEnumerable<Crumb> Crumbs => trail.Select((name, i) => new Crumb(i, name));
 
@@ -168,26 +149,6 @@ public partial class Designer
         ? new Rect(v.N.X + v.N.W / 2 - 80, v.N.Y + v.N.H + 4, 160, 44)
         : new Rect(v.N.X + 8, v.N.Y + 6, v.N.W - 16, v.N.H - 12);
 
-    /// <summary>Step number typed in the panel: a whole number makes the shape that step (others move down one).</summary>
-    void StepTyped(Node n, ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int step)) Editor.SetStep(n, step);
-    }
-
-    /// <summary>A shape can run in parallel when there's another step to share a number with (or it already does).</summary>
-    bool CanBeParallel(Node n) => Editor.Steps.IsParallel(n) || Editor.Steps.Last > 1;
-
-    /// <summary>"Shares step 4 with Design Review" under the step box, or null when the shape has a number of its own.</summary>
-    string? ParallelNote(Node n)
-    {
-        List<Node> others = Editor.Steps.ParallelWith(n);
-        if (others.Count == 0) return null;
-        return $"Shares step {n.Step} with {string.Join(", ", others.Select(o => string.IsNullOrWhiteSpace(o.Label) ? NodeTypes.Get(o.Type).Display : o.Label.Replace("\n", " ")))}";
-    }
-
-    /// <summary>How many of the selected items are steps (shapes other than outcomes).</summary>
-    int SelectedStepCount => D.Nodes.Count(n => Editor.Selection.Contains(n.Id) && n.Kind.IsStep);
-
     static bool HasProperties(Node n) => n.Properties.Values.Any(v => !string.IsNullOrWhiteSpace(v));
 
     /// <summary>The live connector drawn while dragging from a port (null when not connecting).</summary>
@@ -222,15 +183,6 @@ public partial class Designer
         return new EdgeHandleView(he.Id, sides, hr.BendIndex >= 0 && he.Style != EdgeStyle.Straight, bx, by, hr.BendIsVertical, p0x, p0y, p1x, p1y);
     }
 
-    /// <summary>Icon picker contents, filtered by the search box (empty categories dropped).</summary>
-    List<(string Category, List<string> Names)> FilteredIcons() =>
-        Icons.Categories
-            .Select(c => (c.Category, Names: c.Names.Where(nm => string.IsNullOrWhiteSpace(iconFilter) || nm.Contains(iconFilter.Trim(), StringComparison.OrdinalIgnoreCase)).ToList()))
-            .Where(c => c.Names.Count > 0)
-            .ToList();
-
-    int MemberCount(Group g) => Editor.Members(g).Count();
-
     int OffPageCount => Editor.OutsidePage().Count;
 
     string? LinkExclude => hasFile ? D.Name : null;
@@ -243,18 +195,11 @@ public partial class Designer
     // Small UI handlers that used to be inline lambdas in the markup.
 
     /// <summary>After the lane creator adds lanes: fit them in view.</summary>
-    Task FitAfterLanes() => Run(FitCmd);
+    Task FitAfterLanes() => Run(Cmd.Fit);
 
     void SetOpenMenu(string? menu) => openMenu = menu;
     void CloseMenus() => openMenu = null;
     void AskDelete(string name) => confirmDelete = name;
     void DiscardAndNew() { Reset(); CloseDialog(); }
 
-    void SetPropValue(Node n, string key, ChangeEventArgs e)
-    {
-        n.Properties[key] = e.Value?.ToString() ?? string.Empty;
-        Editor.MarkDirty();
-    }
-
-    void SetFitOnExport(ChangeEventArgs e) { Editor.Change(); D.Page.FitOnExport = e.Value is true; }
 }

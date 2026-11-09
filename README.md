@@ -181,9 +181,13 @@ BeDiagram/                   the web app project
   Models/GroupTree.cs          the group hierarchy (Composite pattern) worked out from the GroupId fields
   Models/StepOrder.cs          the step order: numbering, closing gaps, moving and parallel steps
   Models/Emphasis/             major / normal / minor looks (Strategy pattern, see below)
-  Components/Pages/Designer.razor(.cs)   the editor page: canvas, panel, dialogs, files, export; passes input to the editor.
+  Components/Pages/Designer.razor(.cs)   the editor page: toolbar, palette, canvas, dialogs, files, export; shows the side
+                               panel for the selection; passes input to the editor.
                                The code is in partial files by area: .Pointer, .Palette, .View, .Page, .Files,
-                               .Navigation, .Render, .Commands, .CommandContext, .EditorContext, .EditorView
+                               .Navigation, .Render, .Commands, .CommandContext, .EditorContext, .EditorView, .Host
+  Components/Pages/IDesignerHost.cs, DesignerPart.cs   how the page's child components reach it (Mediator, see below)
+  Components/Panels/           the side panel, one component per kind of selection (shape, text box, connector, group,
+                               several items, nothing selected)
   Components/Pages/Gestures/   mouse gestures (State pattern, see below)
   Components/Pages/Commands/   editor commands and keyboard shortcuts (Command pattern, see below)
   Components/Pages/Views/      view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
@@ -278,11 +282,26 @@ Every keyboard shortcut is an **`IEditorCommand`** object: a `Name`, its `Keys` 
 | Command | `IEditorCommand`, with the `EditorCommand` base class for the usual synchronous, always-available case |
 | Concrete commands | `SaveCommand`, `UndoCommand`, `DuplicateCommand`, `DeleteCommand`, `GroupCommand`, `NudgeCommand` (one per direction and step), `AddShapeCommand` (one per number key), `ZoomInCommand`, … — one class per file in `Components/Pages/Commands/` |
 | Receiver | The Designer, seen through **`ICommandContext`** (implemented in `Designer.CommandContext.cs`) |
-| Invoker | **`CommandRegistry`** (a singleton registered in `Program.cs`): finds the command for a key press. The Designer's `OnKey` and button helpers (`Run`, `CanRun`, `Tip`) live in `Designer.Commands.cs` |
+| Invoker | **`CommandRegistry`** (a singleton registered in `Program.cs`): finds the command for a key press. The Designer's `OnKey` lives in `Designer.Commands.cs`; buttons go through **`CommandButtons`** (`Run`, `CanRun`, `Tip`, and the commands that have buttons: `Cmd.Save`, `Cmd.Delete`, …) |
 
 Shortcut matching: a key press first looks for an exact match. If there is none and Shift was held, it tries the same key without Shift. So Shift only matters where a command asks for it (Ctrl+Shift+S, Ctrl+Shift+G, Shift+arrows), and Shift+J still joins. The registry refuses two commands with the same shortcut.
 
 To add a command: write a class (usually derived from `EditorCommand`), add it to `CommandRegistry.CreateDefault()`, and add any new editor action it needs to `ICommandContext` and `Designer.CommandContext.cs`. If it's a new key, add it to the key list in `wwwroot/js/designer.js` so the browser forwards it. Undo stays snapshot-based (Memento): commands call editor actions that already record undo.
+
+### Page parts: Mediator
+
+The editor page is split into child components (Blazor components with their own markup and code-behind), so no one
+file holds the whole UI. So far the side panel is split: `ShapePanel`, `TextBoxPanel`, `ConnectorPanel`, `GroupPanel`,
+`SelectionPanel` and `DiagramPanel` in `Components/Panels/`, one of which the page shows for the current selection.
+
+| Role (GoF) | In BeDiagram |
+|---|---|
+| Mediator | **`IDesignerHost`**, implemented by the Designer in `Designer.Host.cs`: the editor, the command buttons, redraw, and what only the page can do (dialogs, following links, page size) |
+| Colleagues | The parts, each derived from **`DesignerPart`** and given `Host="this"`. They don't know about each other, only the host |
+
+Blazor redraws only the component that handled an event, so a click in a panel would leave the canvas out of date.
+`DesignerPart` therefore redraws the whole page after every event a part handles, just as when the markup was all in
+`Designer.razor`. To give a part something new from the page, add it to `IDesignerHost` and `Designer.Host.cs`.
 
 ### Mouse gestures: State pattern
 

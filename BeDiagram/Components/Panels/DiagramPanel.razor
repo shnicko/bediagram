@@ -1,0 +1,63 @@
+@inherits DesignerPart
+
+<h3>Diagram</h3>
+<label>Name</label>
+<input value="@D.Name" @onchange="RenameDiagram" />
+<p class="muted">@DiagramSummary</p>
+
+<h4>Steps <InfoTip>Every shape except outcomes has a step number, shown or not — new shapes go on the end. Reorder them all in <em>Step order…</em>, or change one shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</InfoTip></h4>
+<label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
+<button class="small" @onclick="Host.ShowStepOrder">Step order…</button>
+
+<h4>Swim lanes <InfoTip>Each top-level group is a lane. <em>Arrange</em> lines the lanes up edge to edge and puts their shapes in columns by step number, so step 3 sits in the same column in every lane. Select two or more groups to arrange just those. Undo puts everything back.</InfoTip></h4>
+<div class="seg wide">
+    <button title="@Cmd.LanesTip(Cmd.LanesAcross)" disabled="@(!CanRun(Cmd.LanesAcross))" @onclick="() => Run(Cmd.LanesAcross)">@IconSvg("rows-3", 16) Left → right</button>
+    <button title="@Cmd.LanesTip(Cmd.LanesDown)" disabled="@(!CanRun(Cmd.LanesDown))" @onclick="() => Run(Cmd.LanesDown)">@IconSvg("columns-3", 16) Top → down</button>
+</div>
+
+<h4>Auto-layout <InfoTip>Lays out the whole diagram by step number — step 1, then 2, then 3, with parallel steps side by side — then tidies the connectors. Shapes inside a group stay put and the group moves as one block (use <em>Swim lanes</em> to lay out inside groups). Undo puts everything back.</InfoTip></h4>
+<div class="seg wide">
+    <button title="@Cmd.LayoutTip(Cmd.LayoutAcross)" disabled="@(!CanRun(Cmd.LayoutAcross))" @onclick="() => Run(Cmd.LayoutAcross)">@IconSvg("arrow-right", 16) Left → right</button>
+    <button title="@Cmd.LayoutTip(Cmd.LayoutDown)" disabled="@(!CanRun(Cmd.LayoutDown))" @onclick="() => Run(Cmd.LayoutDown)">@IconSvg("workflow", 16) Top → down</button>
+</div>
+
+<h4>Page <InfoTip>Pick a paper size to get a fixed page for documents; Export SVG or PDF then produces a file exactly that paper size (in mm), ready to insert into Word or PowerPoint or to print. The open canvas stays available — switch back any time.</InfoTip></h4>
+<select value="@D.Page.Size" @onchange="PageSizePicked">
+    <option value="@PageSetup.None">Open canvas (no fixed size)</option>
+    @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
+    {
+        <option value="@ps.Key">@ps.Name — @ps.W.ToString("0.#") × @ps.H.ToString("0.#") mm</option>
+    }
+    <option value="@PageSetup.Custom">Custom size…</option>
+</select>
+@if (D.Page.Enabled)
+{
+    <div class="seg wide" style="margin-top:8px">
+        <button class="@(!PageIsLandscape ? "on" : "")" @onclick="() => Host.SetLandscape(false)">@IconSvg("rectangle-vertical", 16) Portrait</button>
+        <button class="@(PageIsLandscape ? "on" : "")" @onclick="() => Host.SetLandscape(true)">@IconSvg("rectangle-horizontal", 16) Landscape</button>
+    </div>
+    @if (D.Page.Size == PageSetup.Custom)
+    {
+        <div class="row">
+            <div><label>Width (mm)</label><input type="number" min="20" step="1" @bind="D.Page.CustomW" @bind:after="Editor.PageChanged" @onfocus="Editor.Checkpoint" /></div>
+            <div><label>Height (mm)</label><input type="number" min="20" step="1" @bind="D.Page.CustomH" @bind:after="Editor.PageChanged" @onfocus="Editor.Checkpoint" /></div>
+        </div>
+    }
+    <div class="row">
+        <div><label>Margin (mm)</label><input type="number" min="0" step="1" @bind="D.Page.MarginMm" @bind:after="Editor.PageChanged" @onfocus="Editor.Checkpoint" /></div>
+        <div><label>Size</label><div class="page-size">@D.Page.Mm.W.ToString("0.#") × @D.Page.Mm.H.ToString("0.#") mm</div></div>
+    </div>
+    <label class="check"><input type="checkbox" checked="@D.Page.FitOnExport" @onchange="SetFitOnExport" /> Scale down to fit the margins on export</label>
+    @if (OffPageCount > 0)
+    {
+        <p class="warn">@OffPageCount item@(OffPageCount == 1 ? " is" : "s are") off the page. <button class="link" @onclick="Editor.SelectOutsidePage">Select</button></p>
+    }
+    @if (Editor.ContentTooBigForPage())
+    {
+        <p class="muted">The drawing is larger than the printable area@(D.Page.FitOnExport ? " — it will be scaled down on export." : ".")</p>
+    }
+    <div class="actions">
+        <button @onclick="Editor.CentreOnPage">Centre drawing on page</button>
+        <button @onclick="() => Run(Cmd.Fit)">Show whole page</button>
+    </div>
+}

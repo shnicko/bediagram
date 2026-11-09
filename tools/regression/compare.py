@@ -6,6 +6,8 @@ What counts as "the same":
 - SVG / Mermaid / PDF: equal text after the same id replacement; PDFs ignore their /CreationDate timestamp
 - PNG: every pixel equal on all four channels (red, green, blue, alpha)
 - step logs (keyboard / panel): every recorded field equal, after replacing each build's storage folder name
+- canvas / panel HTML: Blazor's component markers (<!--!-->) and the whitespace around them are dropped first, so
+  moving markup into a child component isn't a difference (they don't draw anything)
 Toasts disappear after 3.5 s, so a toast can vanish one step earlier on one build. If that's the only difference and
 the step moves when you run again, it's timing, not a change in behaviour.
 """
@@ -15,8 +17,13 @@ from PIL import Image, ImageChops
 work = sys.argv[1]
 
 
+def unmark(s: str) -> str:
+    """Drops Blazor's component boundary markers and the whitespace next to them."""
+    return re.sub(r'\s*<!--!-->\s*', '', s)
+
+
 def norm(data: bytes) -> str:
-    s = re.sub(r'/CreationDate \(D:\d+Z\)', '', data.decode('latin-1'))
+    s = unmark(re.sub(r'/CreationDate \(D:\d+Z\)', '', data.decode('latin-1')))
     ids = {}
     return re.sub(r'\b[netg]_[0-9a-f]{8}\b', lambda m: ids.setdefault(m.group(0), f'#{len(ids)}'), s)
 
@@ -52,7 +59,7 @@ def compare_folder(name: str, skip=lambda f: False) -> int:
 def compare_log(name: str, by_label: bool = False) -> int:
     def load(side):
         text = open(f'{work}/{side}-out/{name}.json').read().replace(f'{work}/{side}-store', '<storage>')
-        return json.loads(text)
+        return [{k: unmark(v) if isinstance(v, str) else v for k, v in step.items()} for step in json.loads(text)]
     a, b = load('base'), load('head')
 
     if by_label:

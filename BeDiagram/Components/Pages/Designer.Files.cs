@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using BeDiagram.Models;
 using BeDiagram.Services;
@@ -38,12 +37,6 @@ public partial class Designer
         _ = module?.InvokeVoidAsync("focus", "saveas-name");
     }
 
-    /// <summary>True for a group not inside another group (one that can be a swim lane).</summary>
-    bool IsTopLevel(Group g) => Editor.Tree.Parent(g) is null;
-
-    /// <summary>Selected groups that are lanes (top-level); with two or more, Arrange works on just those.</summary>
-    int SelectedLaneCount => Editor.TopLevelGroups().Count(g => Editor.Selection.Contains(g.Id));
-
     /// <summary>Opens the step order pop-up (Components/Shared/StepOrderDialog).</summary>
     void ShowStepOrder() => dialog = Dialog.StepOrder;
 
@@ -81,9 +74,4 @@ public partial class Designer
 
     string SaveAsPath => Path.Combine(Store.Folder, DiagramStore.SafeName(saveAsName) + DiagramStore.Extension);
 
-    void RenameDiagram(ChangeEventArgs e)
-    {
-        D.Name = DiagramStore.SafeName(e.Value?.ToString() ?? string.Empty);
-        Editor.MarkDirty();
-    }
 }

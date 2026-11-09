@@ -1,0 +1,55 @@
+@inherits DesignerPart
+
+<h3>@Editor.Selection.Count items selected</h3>
+<label>Align</label>
+<AlignBar OnAlign="Editor.AlignSelection" />
+<div class="actions">
+    <button @onclick="() => Editor.AlignSelection(AlignOp.Row)">Row</button>
+    <button @onclick="() => Editor.AlignSelection(AlignOp.Column)">Column</button>
+</div>
+<label>Connectors between selected items</label>
+<div class="seg wide">
+    <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
+    <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyle.Straight)">@IconSvg("move-up-right", 16) Straight</button>
+</div>
+@if (SelectedStepCount > 1)
+{
+    <label>Step order</label>
+    <div class="seg wide">
+        <button title="Give the selected steps the same number — they happen at the same time" @onclick="Editor.MakeSelectionParallel">@IconSvg("columns-3", 16) Run in parallel</button>
+        <button title="Number the selected steps one after another, top to bottom" @onclick="Editor.MakeSelectionSequential">@IconSvg("rows-3", 16) One after another</button>
+    </div>
+}
+<div class="actions col">
+    @if (Editor.SwapPair() is not null)
+    {
+        <button title="Each shape moves to the other's place; connectors and step numbers stay where they are" @onclick="Editor.SwapSelection">@IconSvg("arrow-right-left", 16) Swap places</button>
+    }
+    <button @onclick="() => Run(Cmd.Join)">Join in selection order (J)</button>
+    <button @onclick="() => Run(Cmd.Group)">Group (Ctrl+G)</button>
+    <button class="danger" @onclick="() => Run(Cmd.Delete)">Delete</button>
+</div>
+@if (SelectedNodes.Count > 0)
+{
+    <h4 class="bulk">Shapes · @SelectedNodes.Count <InfoTip>Changes here apply to every selected shape at once (one undo step). A setting shows as on when all of them have it.</InfoTip></h4>
+    <ShapeStyle Editor="Editor" Nodes="SelectedNodes" OnChanged="Redraw" />
+    <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@SelectedNodes.All(n => n.ClearTextBack)" @onchange="e => Editor.Restyle(SelectedNodes, n => n.ClearTextBack = e.Value is true)" /> Transparent text background</label>
+}
+@if (SelectedTextBoxes.Count > 0)
+{
+    <h4 class="bulk">Text boxes · @SelectedTextBoxes.Count</h4>
+    <TextBoxStyle Editor="Editor" Boxes="SelectedTextBoxes" OnChanged="Redraw" />
+}
+@if (SelectedGroups.Count > 0)
+{
+    <h4 class="bulk">Groups · @SelectedGroups.Count</h4>
+    <GroupStyle Editor="Editor" Groups="SelectedGroups" OnChanged="Redraw" />
+}
+@if (SelectedLaneCount >= 2)
+{
+    <label>Swim lanes <InfoTip>Arranges the @SelectedLaneCount selected groups as lanes: edge to edge, with their shapes in columns by step number.</InfoTip></label>
+    <div class="seg wide">
+        <button title="@Cmd.LanesTip(Cmd.LanesAcross)" disabled="@(!CanRun(Cmd.LanesAcross))" @onclick="() => Run(Cmd.LanesAcross)">@IconSvg("rows-3", 16) Left → right</button>
+        <button title="@Cmd.LanesTip(Cmd.LanesDown)" disabled="@(!CanRun(Cmd.LanesDown))" @onclick="() => Run(Cmd.LanesDown)">@IconSvg("columns-3", 16) Top → down</button>
+    </div>
+}
