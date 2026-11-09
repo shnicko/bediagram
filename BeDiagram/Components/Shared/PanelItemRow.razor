@@ -21,7 +21,7 @@
         <select class="panel-item-section" value="@IpoSections.Of(Item.Section)" title="Section" @onchange="SectionPicked">
             @foreach (string s in IpoSections.All)
             {
-                <option value="@s">@PanelGeometry.SectionTitle(Node, s)</option>
+                <option value="@s">@Node.SectionTitle(s)</option>
             }
         </select>
     }

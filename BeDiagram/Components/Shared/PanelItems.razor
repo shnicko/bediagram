@@ -8,11 +8,11 @@
         <div class="panel-section">
             <input class="section-title" value="@SectionValue(section)" placeholder="@IpoSections.DefaultTitle(section)" title="Section title (blank = @IpoSections.DefaultTitle(section))"
                    @onfocus="Editor.Checkpoint" @oninput="e => SectionTyped(section, e)" />
-            @foreach (ListItem item in PanelGeometry.InSection(Node, section))
+            @foreach (ListItem item in Node.RowsIn(section))
             {
                 <PanelItemRow Editor="Editor" Node="Node" Item="item" Ipo="true" IconOpen="@(iconFor == item.Id)" OnToggleIcon="ToggleIcon" OnChanged="Changed" />
             }
-            <button class="small" @onclick="() => Add(section)">+ Add to @PanelGeometry.SectionTitle(Node, section)</button>
+            <button class="small" @onclick="() => Add(section)">+ Add to @Node.SectionTitle(section)</button>
         </div>
     }
 }

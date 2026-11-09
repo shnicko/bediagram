@@ -23,13 +23,13 @@ public class ConnectGesture : DragGesture
     public string? FromItem { get; }
 
     /// <summary>What the connector starts from: the row, or the shape (null when it has gone).</summary>
-    public IBox? From => Ctx.FindBox(FromId) is { } box ? PanelGeometry.End(box, FromItem) : null;
+    public IBox? From => Ctx.FindBox(FromId) is { } box ? (box is Node n ? n.Kind.EndAt(n, FromItem) : box) : null;
 
     /// <summary>What the connector would join to if released now: a row of a list / IPO node when over one
     /// (an <see cref="ItemBox"/>), the item under the pointer, or null over empty canvas.</summary>
     public IBox? Target =>
         Ctx.HitTest(CurX, CurY, FromId) is { } hit
-            ? (hit is Node n && PanelGeometry.RowAt(n, CurX, CurY) is { } row ? row : hit)
+            ? (hit is Node n && n.Kind.RowAt(n, CurX, CurY) is { } row ? row : hit)
             : null;
 
     /// <summary>

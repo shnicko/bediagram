@@ -525,7 +525,7 @@
                             <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
                                     @onpointerdown="e => PortDown(e, v.N.Id)" @onpointerdown:stopPropagation="true" />
                         }
-                        @foreach ((double px, double py, string itemId) in PanelGeometry.RowPorts(v.N))
+                        @foreach ((double px, double py, string itemId) in v.N.Kind.RowPorts(v.N))
                         {
                             <circle class="port row-port" cx="@F(px)" cy="@F(py)" r="5"
                                     @onpointerdown="e => PortDown(e, v.N.Id, itemId)" @onpointerdown:stopPropagation="true" />

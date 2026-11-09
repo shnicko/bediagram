@@ -1,6 +1,7 @@
 using BeDiagram.Editing;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Kinds;
 using Microsoft.AspNetCore.Components;
 
 namespace BeDiagram.Components.Shared;
@@ -22,11 +23,11 @@ public partial class PanelItems
     /// <summary>The row whose icon picker is open, or null.</summary>
     string? iconFor;
 
-    bool IsIpo => Node.Type == NodeTypes.Ipo;
+    bool IsIpo => Node.Kind is IpoKind;
 
     string SectionValue(string section)
     {
-        string t = PanelGeometry.SectionTitle(Node, section);
+        string t = Node.SectionTitle(section);
         return t == IpoSections.DefaultTitle(section) ? "" : t;
     }
 

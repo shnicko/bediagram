@@ -31,8 +31,9 @@ BeDiagram/
   Models/Shapes/         shape outlines (Strategy pattern, BeDiagram.Models.Shapes): IShapeOutline, ShapeOutline base,
                          one class per outline (Rect, Check, RoundedRect, Pill, Diamond, Parallelogram, Hexagon, Circle,
                          Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (lookup by shape key)
-  Models/PanelGeometry.cs  list / IPO nodes ("panels"): title band, sections, fixed-height rows, row ends for connectors
-                         (End / Ends → ItemBox), row ports; ListItem = one row; Catalogue/IpoSections
+  Models/Panels/         list / IPO layouts (Strategy pattern, BeDiagram.Models.Panels): IPanelLayout, PanelLayout base
+                         (title band, row layout, SVG body, row ends / ports), ListLayout, IpoLayout → IpoColumnsLayout /
+                         IpoStackedLayout; ListItem = one row; Catalogue/IpoSections
   Models/Kinds/          node kinds (Strategy pattern, BeDiagram.Models.Kinds): INodeKind, NodeKind base, ClassicKind,
                          CircleKind, OutcomeKind, PanelKind → ListKind / IpoKind; each NodeTypeInfo holds its Kind, a node
                          reaches it as Node.Kind
@@ -59,7 +60,6 @@ BeDiagram/
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
   Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
   Services/ExportView.cs     the window onto the drawing that a current-view export uses
-  Services/PanelSvg.cs       inside of a list / IPO node as SVG markup, used by the canvas and the export
   Services/PdfExporter.cs    PDF = Exporters.ToSvg output converted to PDF operators (own SVG-subset reader, core fonts)
   Services/Export/           export strategies: IExportFormat (Svg/Png/Pdf/Mermaid), IExportArea (WholeDrawing/CurrentView),
                              ExportService (context: lists menu choices, renders + saves), IPngRasterizer (BrowserPngRasterizer)
@@ -191,11 +191,15 @@ tools/regression/                side-by-side regression suites (master vs worki
   `round:<type>` (`NodeFactory.RoundPrefix`, `SizeFor`); panel toggle `Editor.SetRound`; `ChangeType` keeps a circle a circle.
 - **Lists and IPO boxes ("panels").** `list` / `ipo` nodes keep their rows in `Node.Items` (`ListItem`: id, label,
   description, icon, IPO `Section`); IPO adds `SectionTitles` and `Stacked`. Rows have a fixed height and the node is
-  always as tall as its rows (`Editor.FitPanel` after every row change, `ResizeGesture` won't go shorter). All layout is in
-  `PanelGeometry`; the inside is drawn by `PanelSvg.Body` in both renderers; the title is the node's label (laid out in
-  the band via `Geometry.Layout`). A connector end on a row is `Edge.FromItem` / `ToItem`: resolve ends with
-  `PanelGeometry.Ends` / `Editor.Ends` / `IEditorContext.EdgeEnds` (never `FindBox(e.From)` alone), which gives an
-  `ItemBox` for a row; `Geometry.Route` keeps a row end on its left / right side. Row ids are only unique inside their
+  always as tall as its rows (`Editor.FitPanel` after every row change, `ResizeGesture` won't go shorter via
+  `n.Kind.MinSize`). Layout is a Strategy: `PanelKind.LayoutOf(n)` gives the node's `IPanelLayout` (`ListLayout`, or
+  `IpoColumnsLayout` / `IpoStackedLayout` from `Node.Stacked`), which owns sizes, sections, rows, the title band and the
+  SVG body; renderers draw `n.Kind.Body(n, style)`. Row editing that differs between a list and an IPO box is on the kind
+  (`PanelKind.AddRow` / `Peers` / `TidyRows`); IPO section rows and titles are `Node.RowsIn` / `Node.SectionTitle`.
+  The title is the node's label (laid out in the band via `Geometry.Layout`). A connector end on a row is
+  `Edge.FromItem` / `ToItem`: resolve ends with `Edge.Ends(find)` / `Editor.Ends` / `IEditorContext.EdgeEnds` (never
+  `FindBox(e.From)` alone), which gives an `ItemBox` for a row (`n.Kind.EndAt`, `RowAt`, `RowPorts`); a row end only
+  connects left / right (`IBox.ConnectSides`, `ItemBox.SideFacing` in `Geometry.Route`). Row ids are only unique inside their
   node and survive a copy. Connectors ending on a row draw above the shapes (`Edge.EndsOnRow`). Mermaid: a subgraph
   with a node per row.
 - **Connector labels** render in their own layer above shapes (canvas and export).

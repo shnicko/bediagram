@@ -354,8 +354,8 @@ public static class Geometry
     public static EdgeRoute Route(IBox a, IBox b, string style, string? fromSide, string? toSide, double bend)
     {
         // A row of a list / IPO node only has ports on its left and right.
-        if (a is ItemBox) fromSide = PanelGeometry.RowSide(a, b, fromSide);
-        if (b is ItemBox) toSide = PanelGeometry.RowSide(b, a, toSide);
+        if (a is ItemBox ra) fromSide = ra.SideFacing(b, fromSide);
+        if (b is ItemBox rb) toSide = rb.SideFacing(a, toSide);
         if (style == EdgeStyles.Straight) return StraightRoute(a, b, fromSide, toSide);
         if (fromSide is null && toSide is null)
         {

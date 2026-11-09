@@ -66,6 +66,25 @@ public interface INodeKind
     /// <summary>The label a node gets when its type changes to this kind and it still had its old type's name.</summary>
     string RetypeLabel(Node n);
 
+    /// <summary>Smallest width and height a resize may leave (a panel can't get shorter than its rows).</summary>
+    (double W, double H) MinSize(Node n);
+
+    /// <summary>Where the inline label editor sits, or null for the usual place (inside the shape, or under it).</summary>
+    Rect? LabelEditRect(Node n);
+
+    /// <summary>SVG markup drawn inside the node between its outline and its label (a panel's band and rows), or null.</summary>
+    string? Body(Node n, NodeStyle style);
+
+    /// <summary>What a connector end on this node attaches to: the row <paramref name="itemId"/> of a panel
+    /// (an <see cref="ItemBox"/>), or the node itself (no row asked for, no rows, or the row has gone).</summary>
+    IBox EndAt(Node n, string? itemId);
+
+    /// <summary>The row under a world point, as a connectable box, or null (not on a row, or no rows).</summary>
+    ItemBox? RowAt(Node n, double x, double y);
+
+    /// <summary>The ● ports on each row (the middle of its left and right sides); none for kinds without rows.</summary>
+    IEnumerable<(double X, double Y, string ItemId)> RowPorts(Node n);
+
     /// <summary>The rows a new list / IPO node starts with; null for kinds without rows.</summary>
     List<ListItem>? NewItems();
 

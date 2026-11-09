@@ -657,7 +657,7 @@ public partial class Designer
     static string? PaletteInnerPath(string type) => NodeTypes.Get(type).Kind.PaletteInnerPath;
 
     /// <summary>The inside of a list / IPO node (title band, sections, rows) — same markup as the export — or null.</summary>
-    static MarkupString? PanelBody(NodeView v) => v.N.Kind.IsPanel ? (MarkupString)PanelSvg.Body(v.N, v.Style) : null;
+    static MarkupString? PanelBody(NodeView v) => v.N.Kind.Body(v.N, v.Style) is { } body ? (MarkupString)body : null;
 
     static string PaletteShapePath(string type) => Geometry.ShapePath(new Node { Type = type, W = 48, H = 28 });
 
@@ -798,7 +798,7 @@ public partial class Designer
 
     /// <summary>Where the inline label editor sits: under the shape for labels drawn below, otherwise inside it.</summary>
     static Rect NodeEditRect(NodeView v) =>
-        v.N.Kind.IsPanel ? PanelGeometry.HeaderArea(v.N) with { X = v.N.X + 8, W = v.N.W - 16, Y = v.N.Y + 4, H = PanelGeometry.Header - 8 }
+        v.N.Kind.LabelEditRect(v.N) is { } own ? own
         : v.Layout.Below
         ? new Rect(v.N.X + v.N.W / 2 - 80, v.N.Y + v.N.H + 4, 160, 44)
         : new Rect(v.N.X + 8, v.N.Y + 6, v.N.W - 16, v.N.H - 12);
@@ -845,7 +845,7 @@ public partial class Designer
         {
             IBox box = eg.FromEnd ? ha : hb;
             string? current = eg.FromEnd ? hr.FromSide : hr.ToSide;
-            foreach (string side in PanelGeometry.SidesOf(box))
+            foreach (string side in box.ConnectSides)
             {
                 (double sx, double sy) = Geometry.SidePoint(box, side);
                 sides.Add(new SideTarget(sx, sy, side == current));

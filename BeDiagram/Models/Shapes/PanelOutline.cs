@@ -1,6 +1,6 @@
 namespace BeDiagram.Models.Shapes;
 
-/// <summary>List and input–process–output nodes: a box with rounded corners and a title band (see <see cref="PanelGeometry"/>).</summary>
+/// <summary>List and input–process–output nodes: a box with rounded corners and a title band (see <see cref="Panels.IPanelLayout"/>).</summary>
 public class PanelOutline : ShapeOutline
 {
     public const double Radius = 12;
