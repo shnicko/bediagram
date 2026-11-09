@@ -167,7 +167,7 @@ BeDiagram/                   the web app project
   Models/Panels/               layout of list / IPO nodes (Strategy pattern): list, IPO side by side, IPO stacked
   Models/ListItem.cs           one row of a list / IPO node
   Services/DiagramStore.cs     local folder save / open / list / delete
-  Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
+  Services/Export/Pdf/         vector PDF made from the exported SVG (no third-party libraries): PdfWriter, PdfRenderer, …
   Services/Export/             export strategies (see below)
   Editing/DiagramEditor.cs     the diagram being edited: state, lookups and undo (no UI code); the editing actions are
                                in partial files by area: .Creating, .Groups, .Alignment, .Selection, .Actions, .Page,

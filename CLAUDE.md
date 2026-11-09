@@ -69,12 +69,15 @@ BeDiagram/
                              StepAngle (90 / 45 / 30), AngleLocks. Editor.LockOffset (moves) / LockPoint (placed steps)
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
   Services/ExportView.cs     the window onto the drawing that a current-view export uses
-  Services/PdfExporter.cs    PDF = SvgDiagramWriter output converted to PDF operators (own SVG-subset reader, core fonts)
   Services/Export/           export strategies: IExportFormat (Svg/Png/Pdf/Mermaid), IExportArea (WholeDrawing/CurrentView),
                              ExportService (context: lists menu choices, renders + saves), ExportChoice (menu entry: Label /
                              Tip), IPngRasterizer (BrowserPngRasterizer), SvgDiagramWriter (the SVG renderer behind SVG / PNG /
                              PDF, page-sized in mm when a page is set, or an ExportView window; injected); the Mermaid writer
                              lives in MermaidExportFormat
+  Services/Export/Pdf/       PDF = SvgDiagramWriter output converted to PDF operators, no libraries (BeDiagram.Services.Export.Pdf):
+                             PdfWriter (SVG → file; injected into PdfExportFormat), PdfRenderer (SVG elements → content
+                             stream), PdfStyle, SvgPath / SvgPathTokens (path data → operators), PdfMatrix (transforms),
+                             PdfFonts (core fonts + metrics), Win1252Encoding; SvgValues / PdfSyntax (pure parse / format helpers)
   Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs) — markup only
   Components/Pages/Designer.razor.cs   the page: fields, lifecycle, canvas coordinates, panel helpers. The rest is in partial
                                        files by area: Designer.Pointer (pointer handlers → gestures), .Palette (tiles, drag
@@ -106,7 +109,7 @@ tools/regression/                side-by-side regression suites (master vs worki
   collection use the plain type, not `Edge?`.
 - **One type per file, named after the type.** Every class, record, interface, enum and struct gets its own `.cs`
   file (`MoveGesture` → `MoveGesture.cs`). Partial classes use `Type.Area.cs` (`Designer.EditorContext.cs`).
-  Private nested helpers may stay nested (`Designer.Dialog`, the parser classes inside `PdfExporter`); public nested
+  Private nested helpers may stay nested (`Designer.Dialog`, `PdfRenderer`'s local functions); public nested
   types get their own file. Folders match namespaces (`Models/Styles/` = `BeDiagram.Models.Styles`), with explicit
   `using`s, no global usings. Run `tools/Check-OneTypePerFile.ps1` before opening a PR (in the cloud workspace:
   download PowerShell from its GitHub releases tarball and run `pwsh -File tools/Check-OneTypePerFile.ps1`).
@@ -200,7 +203,8 @@ tools/regression/                side-by-side regression suites (master vs worki
   `MakeParallel` for edits; the step order pop-up uses `MoveBefore` (a gap between slots) and `Join` (onto a slot). The badge sits at
   `IShapeOutline.StepBadgeCentre` (default: the link badge's spot mirrored through the centre).
 - **PDF is drawn from the SVG export**, so it has no geometry of its own. If a new visual feature uses an SVG
-  element or attribute `PdfExporter` doesn't read yet (gradients, images, …), extend `PdfExporter` as well.
+  element or attribute the PDF writer doesn't read yet (gradients, images, …), extend `PdfRenderer` (`Element`,
+  `ShapePath`) as well.
 - **Export uses the strategy pattern** (owner's preference — he knows it well). A new format or area is a new class
   implementing `IExportFormat` / `IExportArea`, registered in `Program.cs`; don't add format-specific export methods to
   the Designer. PNG is rasterised from the SVG export in the browser, so like PDF it has no geometry of its own.
@@ -253,7 +257,7 @@ tools/regression/                side-by-side regression suites (master vs worki
   feature adds a shape or a shortcut, extend `make-shapes-diagram.py` / `keyboard.js`.
 - **How much regression to run** (agreed with Nick 2026-11-05 — he tests every merge himself and reports problems):
   - **Full run** (all four suites) for refactors (no behaviour change allowed), and for any change to shared code:
-    `Geometry`, the exporters (`PdfExporter`, `Services/Export/`), `DiagramEditor` beyond a new method or
+    `Geometry`, the exporters (`Services/Export/`, including `Pdf/`), `DiagramEditor` beyond a new method or
     two, the canvas markup in `Designer.razor`, or `CommandRegistry` / `designer.js` keys.
   - **Small features and fixes** that touch only a few classes: a hands-on Playwright test of the change itself, plus
     only the suites that cover the area touched, e.g. `SUITES="panel" tools/regression/run.sh` —
