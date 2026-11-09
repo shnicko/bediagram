@@ -169,15 +169,18 @@ BeDiagram/                   the web app project
   Services/DiagramStore.cs     local folder save / open / list / delete
   Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
   Services/Export/             export strategies (see below)
-  Editing/DiagramEditor.cs     the diagram being edited: selection, undo, and every editing action (no UI code)
-  Editing/DiagramEditor.Panels.cs   list / IPO rows: add, remove, reorder, sections, fit to rows
+  Editing/DiagramEditor.cs     the diagram being edited: state, lookups and undo (no UI code); the editing actions are
+                               in partial files by area: .Creating, .Groups, .Alignment, .Selection, .Actions, .Page,
+                               .Connectors, .Styling, .StepOrder, .Layout, .Text, .Panels (list / IPO rows)
   Editing/IEditorView.cs       what the editor needs from the screen (toast, view centre, start text editing)
   Editing/Angles/              angle lock for moves and placed steps (Strategy pattern): IAngleLock, FreeAngle, StepAngle, AngleLocks
   Models/NodeFactory.cs        new shapes from a PaletteItem (defaults from NodeTypes, label / outcome / rows from the kind)
   Models/GroupTree.cs          the group hierarchy (Composite pattern) worked out from the GroupId fields
   Models/StepOrder.cs          the step order: numbering, closing gaps, moving and parallel steps
   Models/Emphasis/             major / normal / minor looks (Strategy pattern, see below)
-  Components/Pages/Designer.razor(.cs)   the editor page: canvas, panel, dialogs, files, export; passes input to the editor
+  Components/Pages/Designer.razor(.cs)   the editor page: canvas, panel, dialogs, files, export; passes input to the editor.
+                               The code is in partial files by area: .Pointer, .Palette, .View, .Page, .Files,
+                               .Navigation, .Render, .Commands, .CommandContext, .EditorContext, .EditorView
   Components/Pages/Gestures/   mouse gestures (State pattern, see below)
   Components/Pages/Commands/   editor commands and keyboard shortcuts (Command pattern, see below)
   Components/Pages/Views/      view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
