@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
@@ -6,13 +5,13 @@ using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Models.Routing;
 
 /// <summary>Connector routes between two boxes: picks the routing for the connector's style (see IConnectorRouting), and turns a route into path data and a label position. Shared by the canvas, the exports, gestures and Tidy.</summary>
 public static class EdgeRouter
 {
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     /// <summary>Radius of the rounded bends on elbow connectors.</summary>
     public const double BendRadius = 6;

@@ -1,3 +1,5 @@
+using static BeDiagram.Models.SvgNumbers;
+
 namespace BeDiagram.Models.Shapes;
 
 /// <summary>Decision: a diamond. Text wraps narrower; an icon goes above the text.</summary>

@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
@@ -12,7 +11,6 @@ namespace BeDiagram.Models.Text;
 /// <summary>Text on the drawing: node labels and descriptions (inside or under the shape), text boxes, wrapping, and the room text takes under a shape. Pure functions shared by the canvas, the export and the editor.</summary>
 public static class TextLayout
 {
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     public const double LineHeight = 16;
     public const double DescFontSize = 11;

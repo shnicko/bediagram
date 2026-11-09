@@ -72,7 +72,7 @@ BeDiagram/
   Editing/Lanes/             swim lanes (Strategy pattern, BeDiagram.Editing.Lanes): ILaneLayout, HorizontalLanes,
                              VerticalLanes, LaneLayouts, LaneArranger (the one-off arrange). Editor.ArrangeLanes(layout);
                              auto-layout = LaneArranger.ArrangeAll (whole diagram, one lane, no box) + Tidy: Editor.AutoLayout(layout)
-  Editing/Routing/           Tidy connectors (BeDiagram.Editing.Routing): ConnectorTidier (Plan → TidyPlan, Apply). Editor.TidyConnectors()
+  Editing/Routing/           Tidy connectors (BeDiagram.Editing.Routing): ConnectorTidier (Plan → TidyPlan, plan.Apply()). Editor.TidyConnectors()
   Editing/Angles/            angle lock (Strategy pattern, BeDiagram.Editing.Angles): IAngleLock, LockedOffset, FreeAngle,
                              StepAngle (90 / 45 / 30), AngleLocks. Editor.LockOffset (moves) / LockPoint (placed steps)
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
@@ -121,6 +121,10 @@ tools/regression/                side-by-side regression suites (master vs worki
   types get their own file. Folders match namespaces (`Models/Styles/` = `BeDiagram.Models.Styles`), with explicit
   `using`s, no global usings. Run `tools/Check-OneTypePerFile.ps1` before opening a PR (in the cloud workspace:
   download PowerShell from its GitHub releases tarball and run `pwsh -File tools/Check-OneTypePerFile.ps1`).
+- **Numbers in SVG** are written with `SvgNumbers.F` (`using static BeDiagram.Models.SvgNumbers;`, already imported in
+  `_Imports.razor`): two decimals, invariant culture. Don't add another local `F`. The PDF writer's `PdfSyntax.F` is
+  finer on purpose.
+- **`using` order:** `System` / `Microsoft` first, then `BeDiagram.*`, then `using static`, each alphabetical.
 - **No C# in `.razor` files.** No `@code` blocks and no `@{ }` blocks: every `.razor` has a `.razor.cs` partial class.
   The markup only loops, branches and reads values. Anything that needs working out (layouts, paths, transforms,
   filtered lists) is a method, property or view record in the partial class. Event handlers are named methods;

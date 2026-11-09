@@ -1,5 +1,3 @@
-using BeDiagram.Models.Serialization;
-using System.Globalization;
 using System.Text.Json;
 using BeDiagram.Editing.Angles;
 using BeDiagram.Editing.Lanes;
@@ -8,6 +6,7 @@ using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Kinds;
+using BeDiagram.Models.Serialization;
 using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Editing;

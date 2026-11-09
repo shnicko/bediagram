@@ -1,5 +1,5 @@
-using BeDiagram.Models;
 using Microsoft.JSInterop;
+using BeDiagram.Models;
 using BeDiagram.Models.Text;
 
 namespace BeDiagram.Components.Pages;

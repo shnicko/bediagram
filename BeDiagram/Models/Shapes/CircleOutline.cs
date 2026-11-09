@@ -1,3 +1,5 @@
+using static BeDiagram.Models.SvgNumbers;
+
 namespace BeDiagram.Models.Shapes;
 
 /// <summary>Circle (and the Rework outcome). With an icon: icon in the middle, label underneath.</summary>

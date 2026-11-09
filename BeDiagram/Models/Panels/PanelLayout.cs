@@ -1,10 +1,10 @@
-using System.Globalization;
 using System.Net;
 using System.Text;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
 using BeDiagram.Models.Text;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Models.Panels;
 
@@ -35,7 +35,6 @@ public abstract class PanelLayout : IPanelLayout
     const double TitleCharWidth = 6.9;
     const double DescCharWidth = 6.1;
 
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
     static string E(string s) => WebUtility.HtmlEncode(s ?? "");
 
     public abstract double NeededHeight(Node n);

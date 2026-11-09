@@ -1,7 +1,7 @@
+using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Panels;
 using BeDiagram.Models.Styles;
-using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Models.Kinds;
 

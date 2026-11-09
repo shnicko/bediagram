@@ -1,7 +1,7 @@
-using BeDiagram.Services;
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using BeDiagram.Models;
-using Microsoft.AspNetCore.Components;
+using BeDiagram.Services;
 
 namespace BeDiagram.Components.Pages;
 

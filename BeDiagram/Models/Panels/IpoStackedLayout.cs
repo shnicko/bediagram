@@ -1,13 +1,12 @@
-using System.Globalization;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Models.Panels;
 
 /// <summary>An IPO box with its sections one under another (narrower, for slides and portrait pages).</summary>
 public class IpoStackedLayout : IpoLayout
 {
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     /// <summary>Every section's title strip and rows, one after another.</summary>
     public override double NeededHeight(Node n) =>

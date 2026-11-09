@@ -1,3 +1,5 @@
+using static BeDiagram.Models.SvgNumbers;
+
 namespace BeDiagram.Models.Shapes;
 
 /// <summary>Status: a flat hexagon. An icon goes above the text.</summary>

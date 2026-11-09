@@ -15,5 +15,8 @@ public static class Palette
         ["slate"] = new("#f1f3f5", "#55606e", "#4a5563"),
     };
 
-    public static Swatch Get(string? key) => key is not null && All.TryGetValue(key, out Swatch? s) ? s : All["blue"];
+    /// <summary>The colour used for an unknown or missing key.</summary>
+    public const string DefaultColour = "blue";
+
+    public static Swatch Get(string? key) => key is not null && All.TryGetValue(key, out Swatch? s) ? s : All[DefaultColour];
 }

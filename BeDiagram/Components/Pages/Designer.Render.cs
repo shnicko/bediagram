@@ -1,17 +1,18 @@
-using BeDiagram.Models.Serialization;
-using BeDiagram.Models;
-using BeDiagram.Components.Pages.Gestures;
-using BeDiagram.Services;
-using BeDiagram.Services.Export;
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Components.Pages.Views;
 using BeDiagram.Editing.Angles;
+using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Routing;
+using BeDiagram.Models.Serialization;
 using BeDiagram.Models.Styles;
 using BeDiagram.Models.Text;
-using BeDiagram.Models.Routing;
 using BeDiagram.Rendering;
+using BeDiagram.Services;
+using BeDiagram.Services.Export;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Components.Pages;
 

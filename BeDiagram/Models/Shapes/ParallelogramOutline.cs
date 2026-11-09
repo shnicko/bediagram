@@ -1,3 +1,5 @@
+using static BeDiagram.Models.SvgNumbers;
+
 namespace BeDiagram.Models.Shapes;
 
 /// <summary>Data / IFC: a parallelogram slanting right.</summary>

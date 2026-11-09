@@ -1,8 +1,8 @@
-using System.Globalization;
+using Microsoft.AspNetCore.Components;
 using BeDiagram.Editing;
 using BeDiagram.Models;
 using BeDiagram.Models.Styles;
-using Microsoft.AspNetCore.Components;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Components.Shared;
 
@@ -27,7 +27,6 @@ public partial class TextBoxStyle
     static readonly (string Key, string Name)[] HAligns = { (TextLook.Left, "Left"), (TextLook.Center, "Centre"), (TextLook.Right, "Right") };
     static readonly (string Key, string Name)[] VAligns = { (TextLook.Top, "Top"), (TextLook.Middle, "Middle"), (TextLook.Bottom, "Bottom") };
 
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     string On(Func<TextBox, bool> test) => Boxes.Count > 0 && Boxes.All(test) ? "on" : "";
 

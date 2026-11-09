@@ -1,5 +1,5 @@
-using BeDiagram.Components.Pages.Gestures;
 using Microsoft.AspNetCore.Components.Web;
+using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Components.Pages;

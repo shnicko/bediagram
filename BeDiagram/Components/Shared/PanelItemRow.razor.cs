@@ -1,8 +1,8 @@
-using BeDiagram.Models.Serialization;
+using Microsoft.AspNetCore.Components;
 using BeDiagram.Editing;
 using BeDiagram.Models;
-using Microsoft.AspNetCore.Components;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Serialization;
 
 namespace BeDiagram.Components.Shared;
 

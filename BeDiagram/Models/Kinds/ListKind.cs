@@ -1,5 +1,5 @@
-using BeDiagram.Models.Panels;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Panels;
 
 namespace BeDiagram.Models.Kinds;
 

@@ -1,4 +1,3 @@
-using System.Globalization;
 
 namespace BeDiagram.Models.Shapes;
 
@@ -74,5 +73,4 @@ public abstract class ShapeOutline : IShapeOutline
         return (b.X + b.W / 2 + r * D45, b.Y + b.H / 2 + r * D45);
     }
 
-    protected static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 }

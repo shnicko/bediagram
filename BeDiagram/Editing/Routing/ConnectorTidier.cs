@@ -86,12 +86,6 @@ public class ConnectorTidier
         return plan;
     }
 
-    /// <summary>Stores the planned routes the same way as hand-placed ones (sides + bend).</summary>
-    public static void Apply(TidyPlan plan)
-    {
-        foreach ((Edge e, Side from, Side to, double bend) in plan.Routes) { e.FromSide = from; e.ToSide = to; e.Bend = bend; }
-    }
-
     /// <summary>What a connector's candidate routes are scored against.</summary>
     sealed class Context
     {

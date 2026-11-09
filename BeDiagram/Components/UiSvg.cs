@@ -1,18 +1,17 @@
-using System.Globalization;
-using BeDiagram.Models;
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
 using BeDiagram.Models.Text;
 using BeDiagram.Rendering;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Components;
 
 /// <summary>Small inline SVGs used by the editor UI (toolbar, palette, panel). Imported with <c>@using static</c>.</summary>
 public static class UiSvg
 {
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     /// <summary>A Lucide icon at the given pixel size, drawn in the current text colour.</summary>
     public static MarkupString IconSvg(string name, int size) =>

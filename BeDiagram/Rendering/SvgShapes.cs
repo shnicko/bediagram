@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
@@ -6,13 +5,13 @@ using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Rendering;
 
 /// <summary>SVG markup shared by the canvas and the SVG export: shape paths, the halo ring, the shadow, step and link badges, rounded rectangles. Keeping one copy keeps the two renderers in step.</summary>
 public static class SvgShapes
 {
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     /// <summary>Soft shadow under each shape: the same outline moved down, in the shape's own colour, faint.
     /// Drawn as a plain shape (no SVG blur filter), so the PDF export and greyscale prints show it too.</summary>
