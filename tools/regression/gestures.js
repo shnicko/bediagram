@@ -92,7 +92,9 @@ const [url, dir, out] = process.argv.slice(2);
   await snap('undo');
   await p.screenshot({ path: `${out}/final.png` });
   // Every export, open canvas then A4 page (with a text box and a comment added)
-  await p.keyboard.press('t'); await p.waitForTimeout(W); await p.keyboard.press('Escape'); await p.keyboard.press('c'); await p.waitForTimeout(W); await p.keyboard.press('Escape');
+  // As with the shapes: wait until the new box's text editor has focus before Escape, or Escape runs Cancel and
+  // clears the selection (then the comment isn't pinned to the selected shape).
+  for (const k of ['t', 'c']) { await p.keyboard.press(k); await closeEditor(); }
   const exportAll = async (tag) => {
     await openExport();
     const labels = (await p.$$eval('.menu button', bs => bs.map(b => b.textContent))).filter(isExport);
