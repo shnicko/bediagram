@@ -79,8 +79,9 @@ const [url, out] = process.argv.slice(2);
   const canvas = async () => p.evaluate(() => document.querySelector('svg.surface').outerHTML.replace(/\b[netg]_[0-9a-f]{8}\b/g, ''));
   // After an action: wait up to 400 ms for the canvas to start changing (the server may not have started yet), then
   // until it stops changing (slow actions such as Auto-layout finish well after the click returns).
-  const afterAction = async (pre) => {
-    for (let k = 0; k < 8 && (await canvas()) === pre; k++) await p.waitForTimeout(50);
+  // Arrange / auto-layout / tidy take about a second on a 2-core machine, so they get up to 4 s to start.
+  const afterAction = async (pre, slow = false) => {
+    for (let k = 0; k < (slow ? 80 : 8) && (await canvas()) === pre; k++) await p.waitForTimeout(50);
     await settle();
   };
   // Wait until the canvas stops changing.
@@ -120,7 +121,7 @@ const [url, out] = process.argv.slice(2);
           await c.evaluate(e => { e.value = '0.25'; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); });
         } else await c.click({ timeout: 2000 });
       } catch (e) { log.push({ label: `${name} · ${ctrl} — could not interact` }); await restore(before); continue; }
-      await p.waitForTimeout(W); await afterAction(pre);
+      await p.waitForTimeout(W); await afterAction(pre, /Left → right|Top → down|Tidy|Auto-layout|lanes/i.test(ctrl));
       // close a dialog if one opened (e.g. confirm leave on a link)
       if (await p.$('.modal')) { await p.keyboard.press('Escape'); await p.keyboard.press('Escape'); await p.waitForTimeout(150); }
       await state(`${name} · ${ctrl}`);

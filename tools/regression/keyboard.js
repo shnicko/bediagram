@@ -36,11 +36,21 @@ const [url, out] = process.argv.slice(2);
     log.push({ label, ...s });
   };
   const key = async (k, label) => { await p.keyboard.press(k); await p.waitForTimeout(W); await state(label || k); };
+  // A new shape opens its label for typing: wait until the label box has focus and record that, then Escape closes it
+  // so the next key isn't typed into the label. (An Escape before the box has focus runs Cancel and clears the selection.)
+  const add = async (k) => {
+    await p.keyboard.press(k);
+    await p.waitForFunction(() => document.activeElement?.id === 'edit-box', null, { timeout: 3000 }).catch(() => {});
+    await p.waitForTimeout(W); await state(k);
+    await p.keyboard.press('Escape');
+    await p.waitForSelector('#edit-box', { state: 'detached', timeout: 3000 }).catch(() => {});
+    await p.waitForTimeout(W);
+  };
   const click = async (sel, label) => { await p.click(sel); await p.waitForTimeout(W); await state(label || sel); };
   const node = async i => p.evaluate(i => { const r = document.querySelectorAll('.node > path:not(.node-shadow)')[i].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, i);
 
   await p.mouse.click(700, 300); await p.waitForTimeout(W); await state('start');
-  for (const k of ['1', '2', '3', '4']) await key(k);
+  for (const k of ['1', '2', '3', '4']) await add(k);
   await key('Control+a'); await key('j'); await key('Escape');
   await p.mouse.click(...await node(1)); await p.waitForTimeout(W); await state('click node 1');
   for (const k of ['ArrowUp', 'ArrowRight', 'Shift+ArrowDown', 'Shift+ArrowLeft', 'ArrowLeft', 'ArrowDown']) await key(k);
@@ -61,7 +71,7 @@ const [url, out] = process.argv.slice(2);
   await key('l'); await key('Shift+L'); await key('l'); await key('Enter'); await key('Escape'); await key('Escape');
   await key('l', 'l with nothing selected');
   for (const k of ['f', '+', '=', '-', '-', '0', 'f', 'Shift+J', 'Backspace']) await key(k);
-  for (const k of ['5', '6', '7', '8', '9']) await key(k);
+  for (const k of ['5', '6', '7', '8', '9']) await add(k);
   await key('Control+a'); await key('Backspace');
   // Buttons
   await click('button[title^="Undo"]', 'Undo button'); await click('button[title^="Undo"]', 'Undo button 2');
