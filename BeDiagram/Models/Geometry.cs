@@ -73,24 +73,6 @@ public static class Geometry
     /// <summary>Radius of the rounded bends on elbow connectors.</summary>
     public const double BendRadius = 6;
 
-    /// <summary>Scalloped seal: a ring of semicircular bumps whose tips touch radius <paramref name="r"/>.</summary>
-    public static string SealPath(double cx, double cy, double r)
-    {
-        const int bumps = 16;
-        double step = 2 * Math.PI / bumps;
-        // Chord points sit inside so that each bump's tip reaches r.
-        double r0 = r / (Math.Cos(step / 2) + Math.Sin(step / 2));
-        double bump = r0 * Math.Sin(step / 2);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i <= bumps; i++)
-        {
-            double a = -Math.PI / 2 + i * step;
-            (double px, double py) = (cx + r0 * Math.Cos(a), cy + r0 * Math.Sin(a));
-            sb.Append(i == 0 ? $"M{F(px)},{F(py)}" : $" A{F(bump)},{F(bump)} 0 0 1 {F(px)},{F(py)}");
-        }
-        return sb.Append(" Z").ToString();
-    }
-
     public static string RoundRect(double x, double y, double w, double h, double r)
     {
         r = Math.Min(r, Math.Min(w, h) / 2);
@@ -100,7 +82,7 @@ public static class Geometry
     // ───────────── Step badge ─────────────
 
     /// <summary>Radius of the step-number badge (a little wider for two-digit numbers).</summary>
-    public static double StepBadgeR(int step) => step >= 10 ? 11.5 : 10;
+    static double StepBadgeR(int step) => step >= 10 ? 11.5 : 10;
 
     /// <summary>Font size of the number in the step badge.</summary>
     public const double StepFontSize = 11.5;
@@ -108,14 +90,11 @@ public static class Geometry
     /// <summary>The step number drawn on <paramref name="n"/>, or null when numbers are hidden or it has none (outcomes).</summary>
     public static int? ShownStep(Diagram d, Node n) => d.ShowSteps && n.Kind.IsStep ? n.Step : null;
 
-    /// <summary>Centre of the step badge: the top-left of the drawn outline (see <see cref="IShapeOutline.StepBadgeCentre"/>).</summary>
-    public static (double X, double Y) StepBadgeCentre(Node n) => OutlineOf(n).StepBadgeCentre(n);
-
-    /// <summary>SVG markup for the step badge: a disc in the shape's colour with a white ring and a white number.
-    /// Used by the canvas and the export.</summary>
+    /// <summary>SVG markup for the step badge: a disc in the shape's colour with a white ring and a white number, at
+    /// the top-left of the drawn outline (see <see cref="IShapeOutline.StepBadgeCentre"/>). Used by the canvas and the export.</summary>
     public static string StepBadgeSvg(Node n, int step, string colour)
     {
-        (double cx, double cy) = StepBadgeCentre(n);
+        (double cx, double cy) = OutlineOf(n).StepBadgeCentre(n);
         return $"<circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(StepBadgeR(step))}\" fill=\"{colour}\" stroke=\"#ffffff\" stroke-width=\"2\"/>"
              + $"<text x=\"{F(cx)}\" y=\"{F(cy + StepFontSize * 0.36)}\" font-size=\"{F(StepFontSize)}\" font-weight=\"700\" text-anchor=\"middle\" fill=\"#ffffff\">{step}</text>";
     }
@@ -129,16 +108,13 @@ public static class Geometry
     public static bool HasLink(IBox b) => !string.IsNullOrWhiteSpace(b switch { Node n => n.Link, Group g => g.Link, _ => null });
 
     /// <summary>
-    /// Centre of the link badge: the bottom-right of the drawn outline (on the curve for circles, seals and
-    /// octagons, on the lower-right edge for diamonds), or tucked inside the bottom-right corner of a group.
+    /// SVG markup for the link badge (white disc, coloured ring, Lucide "link" glyph). Used by canvas and export.
+    /// It sits at the bottom-right of the drawn outline (see <see cref="IShapeOutline.LinkBadgeCentre"/>: on the curve
+    /// for circles, seals and octagons, on the lower-right edge for diamonds), or inside the bottom-right corner of a group.
     /// </summary>
-    public static (double X, double Y) LinkBadgeCentre(IBox b) =>
-        b is Node n ? OutlineOf(n).LinkBadgeCentre(n) : (b.X + b.W - 18, b.Y + b.H - 18);
-
-    /// <summary>SVG markup for the link badge (white disc, coloured ring, Lucide "link" glyph). Used by canvas and export.</summary>
     public static string LinkBadgeSvg(IBox b, string colour)
     {
-        (double cx, double cy) = LinkBadgeCentre(b);
+        (double cx, double cy) = b is Node n ? OutlineOf(n).LinkBadgeCentre(n) : (b.X + b.W - 18, b.Y + b.H - 18);
         const double glyph = 12;
         return $"<circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(BadgeR)}\" fill=\"#ffffff\" stroke=\"{colour}\" stroke-width=\"1.4\"/>"
              + $"<g transform=\"translate({F(cx - glyph / 2)},{F(cy - glyph / 2)}) scale({F(glyph / 24)})\" fill=\"none\" stroke=\"{colour}\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get("link")}</g>";

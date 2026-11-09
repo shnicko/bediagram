@@ -37,11 +37,6 @@ public class ExportService
         }
     }
 
-    public static string Label(ExportChoice c, Diagram d) =>
-        c.Area is null ? c.Format.Name : $"{c.Format.Name} — {c.Area.Label(d)}";
-
-    public static string Tip(ExportChoice c, Diagram d) => c.Area?.Tip(d) ?? "";
-
     /// <summary>Renders the choice and saves it next to the diagram. Returns the saved path and any note.</summary>
     public async Task<(string Path, string? Note)> ExportAsync(ExportChoice c, Diagram d, ScreenView screen, ExportOptions options)
     {

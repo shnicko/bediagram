@@ -17,10 +17,12 @@ public partial class PngExportFormat : IExportFormat
     const double MaxPixels = 100_000_000;
 
     readonly IPngRasterizer rasterizer;
+    readonly SvgDiagramWriter writer;
 
-    public PngExportFormat(IPngRasterizer rasterizer)
+    public PngExportFormat(IPngRasterizer rasterizer, SvgDiagramWriter writer)
     {
         this.rasterizer = rasterizer;
+        this.writer = writer;
     }
 
     public string Name => "PNG image";
@@ -37,7 +39,7 @@ public partial class PngExportFormat : IExportFormat
 
     public async Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options)
     {
-        string svg = Exporters.ToSvg(d, view, background: !options.PngTransparent);
+        string svg = writer.Write(d, view, background: !options.PngTransparent);
         (double svgW, double svgH) = SvgSizePx(svg);
 
         IReadOnlyList<PngResolution> choices = Resolutions(d);

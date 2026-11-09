@@ -585,7 +585,7 @@ public partial class Designer
         IExportFormat? previous = null;
         foreach (ExportChoice c in Exports.Choices())
         {
-            items.Add(new ExportMenuItem(c, ExportService.Label(c, D), ExportService.Tip(c, D), previous is not null && previous != c.Format));
+            items.Add(new ExportMenuItem(c, c.Label(D), c.Tip(D), previous is not null && previous != c.Format));
             previous = c.Format;
         }
         return items;
