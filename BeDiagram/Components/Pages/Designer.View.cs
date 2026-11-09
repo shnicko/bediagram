@@ -1,5 +1,6 @@
 using BeDiagram.Models;
 using Microsoft.JSInterop;
+using BeDiagram.Models.Text;
 
 namespace BeDiagram.Components.Pages;
 
@@ -21,7 +22,7 @@ public partial class Designer
     void Fit()
     {
         double minX, minY, maxX, maxY;
-        (double X, double Y, double W, double H)? cb = Geometry.ContentBounds(D);
+        (double X, double Y, double W, double H)? cb = Boxes.ContentBounds(D);
         if (D.Page.Enabled)
         {
             // Show the whole page (plus anything hanging off it).
@@ -44,7 +45,7 @@ public partial class Designer
         if (Editor.SelectedEdge is { } e) boxes.AddRange(new[] { Editor.FindBox(e.From), Editor.FindBox(e.To) }.OfType<IBox>());
         if (boxes.Count == 0) { ShowToast("Select something to zoom to"); return; }
         ZoomToBounds(boxes.Min(b => b.X), boxes.Min(b => b.Y),
-                     boxes.Max(b => b.X + b.W), boxes.Max(b => b.Y + b.H + Geometry.ExtraBelow(b)));
+                     boxes.Max(b => b.X + b.W), boxes.Max(b => b.Y + b.H + TextLayout.ExtraBelow(b)));
     }
 
     /// <summary>Zooms so the area fits the canvas with a 40px margin (at most 150%), centred.</summary>

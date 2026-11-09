@@ -50,7 +50,7 @@ public interface INodeKind
     /// <summary>The label sits underneath the shape (an icon fills the middle).</summary>
     bool LabelBelow(Node n);
 
-    /// <summary>Where the label lines (and the icon, if any) go. The description is added by <see cref="Geometry.Layout(Node, string)"/>.</summary>
+    /// <summary>Where the label lines (and the icon, if any) go. The description is added by <see cref="TextLayout.Layout(Node, string)"/>.</summary>
     LabelLayout LayoutLabel(Node n, string label);
 
     /// <summary>Fill, outline and text colours from the type (or outcome), palette colour and fill, before emphasis.</summary>

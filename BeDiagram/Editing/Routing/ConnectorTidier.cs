@@ -1,6 +1,8 @@
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Routing;
+using BeDiagram.Models.Text;
 
 namespace BeDiagram.Editing.Routing;
 
@@ -8,7 +10,7 @@ namespace BeDiagram.Editing.Routing;
 /// "Tidy connectors": a one-off clean-up the user runs when they want it (never automatic). For each elbow connector
 /// that passes through a shape, a text box or the text drawn under a shape, it tries every pair of sides and a range of
 /// positions for the middle segment, using the normal router
-/// (<see cref="Geometry.Route(IBox, IBox, string, string?, string?, double)"/>), and keeps the cheapest route:
+/// (<see cref="EdgeRouter.Route(IBox, IBox, string, string?, string?, double)"/>), and keeps the cheapest route:
 /// <list type="number">
 /// <item>no shape, text box or shape text crossed;</item>
 /// <item>then not squeezing past a shape closer than <see cref="Clearance"/>, not reaching its target through the
@@ -56,7 +58,7 @@ public class ConnectorTidier
         // Where every connector runs now, so a new route can keep off the others (updated as routes are planned).
         Dictionary<string, (Edge Edge, EdgeRoute Route)> lines = new Dictionary<string, (Edge, EdgeRoute)>();
         foreach (Edge o in d.Edges)
-            if (o.Ends(find) is (IBox oa, IBox ob)) lines[o.Id] = (o, Geometry.Route(oa, ob, o));
+            if (o.Ends(find) is (IBox oa, IBox ob)) lines[o.Id] = (o, EdgeRouter.Route(oa, ob, o));
         foreach (Edge e in edges.Where(e => e.Style == EdgeStyle.Elbow))
         {
             if (e.Ends(find) is not (IBox a, IBox b) || e.From == e.To) continue;
@@ -68,7 +70,7 @@ public class ConnectorTidier
                 Others = lines.Values.Where(l => l.Edge.Id != e.Id && !SharesEnd(l.Edge, e)).Select(l => l.Route.Points).ToList(),
                 Ports = lines.Values.Where(l => l.Edge.Id != e.Id).ToList(),
             };
-            EdgeRoute now = Geometry.Route(a, b, e);
+            EdgeRoute now = EdgeRouter.Route(a, b, e);
             Score current = ScoreOf(now, e.Bend, ctx);
             if (current.Hits == 0 && current.OwnText == 0 && current.PortClashes == 0) continue;
             plan.Crossing++;
@@ -78,7 +80,7 @@ public class ConnectorTidier
                 continue;
             }
             plan.Routes.Add((e, pick.From, pick.To, pick.Bend));
-            lines[e.Id] = (e, Geometry.Route(a, b, EdgeStyle.Elbow, pick.From, pick.To, pick.Bend));
+            lines[e.Id] = (e, EdgeRouter.Route(a, b, EdgeStyle.Elbow, pick.From, pick.To, pick.Bend));
             if (pick.Score.Hits == 0) plan.Cleared++;
         }
         return plan;
@@ -113,10 +115,10 @@ public class ConnectorTidier
         foreach (Side s1 in Sides.All)
             foreach (Side s2 in Sides.All)
             {
-                EdgeRoute plain = Geometry.Route(ctx.A, ctx.B, EdgeStyle.Elbow, s1, s2, 0);
+                EdgeRoute plain = EdgeRouter.Route(ctx.A, ctx.B, EdgeStyle.Elbow, s1, s2, 0);
                 foreach (double bend in BendsToTry(plain, ctx.Obstacles))
                 {
-                    EdgeRoute r = bend == 0 ? plain : Geometry.Route(ctx.A, ctx.B, EdgeStyle.Elbow, s1, s2, bend);
+                    EdgeRoute r = bend == 0 ? plain : EdgeRouter.Route(ctx.A, ctx.B, EdgeStyle.Elbow, s1, s2, bend);
                     Score score = ScoreOf(r, bend, ctx);
                     if (best is null || score.Cost < best.Value.Score.Cost) best = (s1, s2, bend, score);
                 }
@@ -212,7 +214,7 @@ public class ConnectorTidier
 
     /// <summary>The block of text drawn outside a shape (a label under a circle, a description), or null.</summary>
     static Rect? TextUnder(Node n) =>
-        Geometry.OutsideTextBox(n, Geometry.Layout(n)) is { } r ? new Rect(r.X, r.Y, r.W, r.H) : null;
+        TextLayout.OutsideTextBox(n, TextLayout.Layout(n)) is { } r ? new Rect(r.X, r.Y, r.W, r.H) : null;
 
     /// <summary>
     /// How many obstacles the route passes through. The route's own ends count too when a middle segment runs back

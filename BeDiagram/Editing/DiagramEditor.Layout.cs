@@ -93,7 +93,7 @@ public partial class DiagramEditor
     {
         List<IBox> members = Members(g).Cast<IBox>().ToList();
         if (members.Count == 0) return null;
-        (double x, double y, double w, double h) = Geometry.GroupBounds(members, g);
+        (double x, double y, double w, double h) = Boxes.GroupBounds(members, g);
         return (g.X + g.W / 2 - (x + w / 2), g.Y + g.H / 2 - (y + h / 2));
     }
 }

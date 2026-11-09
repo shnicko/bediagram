@@ -62,7 +62,7 @@ public class Node : IGroupable
     }
     string? description;
     /// <summary>Wrap width (px) for text drawn outside the shape: a label under a circle or outcome, and the description.
-    /// Null = automatic (see <see cref="Geometry.TextWidth"/>).</summary>
+    /// Null = automatic (see <see cref="TextLayout.TextWidth"/>).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? TextWidth { get; set; }
     /// <summary>Text drawn outside the shape (label below / description) has no white backing, so a tinted group or

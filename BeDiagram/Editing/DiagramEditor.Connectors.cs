@@ -2,6 +2,7 @@ using BeDiagram.Models.Serialization;
 using System.Globalization;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Routing;
 
 namespace BeDiagram.Editing;
 
@@ -24,7 +25,7 @@ public partial class DiagramEditor
     /// <summary>Panel label box: keeps the text to two lines (e.g. after a paste).</summary>
     public void EdgeLabelTyped()
     {
-        if (SelectedEdge is { } e) e.Label = Geometry.ClampEdgeLabel(e.Label);
+        if (SelectedEdge is { } e) e.Label = EdgeLabels.ClampEdgeLabel(e.Label);
         MarkDirty();
     }
 

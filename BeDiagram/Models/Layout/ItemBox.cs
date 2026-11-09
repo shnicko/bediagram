@@ -5,7 +5,7 @@ namespace BeDiagram.Models.Layout;
 /// <summary>
 /// One row of a list or IPO node, as a box a connector can attach to. <see cref="Id"/> is the node's id (so code that
 /// joins items by id joins the node) and <see cref="ItemId"/> the row's. Connectors leave and arrive on the row's
-/// left or right side only (see <see cref="Geometry.Route(IBox, IBox, string, string?, string?, double)"/>).
+/// left or right side only (see <see cref="EdgeRouter.Route(IBox, IBox, string, string?, string?, double)"/>).
 /// </summary>
 public class ItemBox : IBox
 {

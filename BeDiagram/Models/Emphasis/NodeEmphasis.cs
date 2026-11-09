@@ -7,13 +7,17 @@ namespace BeDiagram.Models.Emphasis;
 /// <summary>Base emphasis with the normal look; <see cref="MajorEmphasis"/> and <see cref="MinorEmphasis"/> override what differs.</summary>
 public abstract class NodeEmphasis : IEmphasis
 {
+    /// <summary>Outline width of a normal shape (the presentation look: a firm ring that holds up on slides and prints).</summary>
+    public const double ShapeStroke = 2.4;
+    public const double ShadowOpacityNormal = 0.22;
+
     public abstract EmphasisLevel Level { get; }
     public abstract string Name { get; }
     public abstract string Hint { get; }
     public virtual bool ForcesSolidFill => false;
     public virtual NodeStyle Adjust(NodeStyle normal) => normal;
-    public virtual double StrokeWidth => Geometry.ShapeStroke;
-    public virtual double ShadowOpacity => Geometry.ShadowOpacity;
+    public virtual double StrokeWidth => ShapeStroke;
+    public virtual double ShadowOpacity => ShadowOpacityNormal;
     public virtual bool HasHalo => false;
 
     /// <summary>Circles get semibold (600) so their labels read well on slides; others stay regular.

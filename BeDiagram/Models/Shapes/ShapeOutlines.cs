@@ -21,4 +21,8 @@ public static class ShapeOutlines
     public static readonly IShapeOutline Triangle = new TriangleOutline();
     public static readonly IShapeOutline RoundedSquare = new RoundedSquareOutline();
     public static readonly IShapeOutline Panel = new PanelOutline();
+
+    /// <summary>The outline a box is drawn with: a node's own (<see cref="Kinds.INodeKind.OutlineOf"/>), a rectangle for
+    /// text boxes, groups and rows.</summary>
+    public static IShapeOutline Of(IBox b) => b is Node n ? n.Kind.OutlineOf(n) : Rect;
 }

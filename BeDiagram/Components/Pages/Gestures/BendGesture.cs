@@ -1,5 +1,6 @@
 using BeDiagram.Models;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Routing;
 
 namespace BeDiagram.Components.Pages.Gestures;
 
@@ -21,7 +22,7 @@ public class BendGesture : EdgeHandleGesture
     {
         Edge? edge = ctx.Diagram.Edges.FirstOrDefault(e => e.Id == edgeId);
         if (edge is null || ctx.EdgeEnds(edge) is not (IBox a, IBox b)) return null;
-        EdgeRoute r = Geometry.Route(a, b, edge);
+        EdgeRoute r = EdgeRouter.Route(a, b, edge);
         if (r.BendIndex < 0) return null;
         bool vertical = r.BendIsVertical;
         double coord0 = vertical ? r.Points[r.BendIndex].X : r.Points[r.BendIndex].Y;

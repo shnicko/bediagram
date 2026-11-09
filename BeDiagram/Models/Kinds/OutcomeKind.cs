@@ -2,6 +2,7 @@ using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
+using BeDiagram.Models.Text;
 
 namespace BeDiagram.Models.Kinds;
 
@@ -25,12 +26,12 @@ public class OutcomeKind : NodeKind
     /// <summary>Glyph centred in the outline, label underneath. A triangle's visual centre is lower down.</summary>
     public override LabelLayout LayoutLabel(Node n, string label)
     {
-        IShapeOutline outline = Geometry.OutlineOf(n);
+        IShapeOutline outline = n.Kind.OutlineOf(n);
         double cx = n.X + n.W / 2;
         double size = Math.Min(n.W, n.H) * outline.GlyphScale;
         double gy = n.Y + n.H * outline.GlyphCentreY;
-        List<string> lines = Geometry.Wrap(label, Geometry.TextWidth(n));
-        return new(lines, cx, n.Y + n.H + Geometry.HaloOut(n) + 18, true, true, cx - size / 2, gy - size / 2, size);
+        List<string> lines = TextLayout.Wrap(label, TextLayout.TextWidth(n));
+        return new(lines, cx, n.Y + n.H + Boxes.HaloOut(n) + 18, true, true, cx - size / 2, gy - size / 2, size);
     }
 
     /// <summary>Outcomes default to their own colour (green pass, red fail, ...). Solid with no palette colour,

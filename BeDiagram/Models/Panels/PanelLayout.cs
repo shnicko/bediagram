@@ -4,6 +4,7 @@ using System.Text;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
+using BeDiagram.Models.Text;
 
 namespace BeDiagram.Models.Panels;
 
@@ -116,7 +117,7 @@ public abstract class PanelLayout : IPanelLayout
                 sb.Append($"<g transform=\"translate({F(r.IconX)},{F(r.IconY)}) scale({F(IconSize / 24)})\" fill=\"none\" stroke=\"{st.Stroke}\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(r.Item.Icon)}</g>");
             sb.Append($"<text x=\"{F(r.TextX)}\" y=\"{F(r.TitleY)}\" font-size=\"{F(TitleFontSize)}\" font-weight=\"600\" fill=\"{RowText}\">{E(r.Title)}</text>");
             if (r.Desc is { } desc)
-                sb.Append($"<text x=\"{F(r.TextX)}\" y=\"{F(r.DescY)}\" font-size=\"{F(Geometry.DescFontSize)}\" fill=\"{RowDesc}\">{E(desc)}</text>");
+                sb.Append($"<text x=\"{F(r.TextX)}\" y=\"{F(r.DescY)}\" font-size=\"{F(TextLayout.DescFontSize)}\" fill=\"{RowDesc}\">{E(desc)}</text>");
         }
         return sb.ToString();
     }

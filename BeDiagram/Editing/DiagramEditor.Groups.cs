@@ -51,7 +51,7 @@ public partial class DiagramEditor
         if (SizeLocked(g)) return;
         List<IBox> members = Members(g).Cast<IBox>().ToList();
         if (members.Count == 0) return;
-        (double x, double y, double w, double h) = Geometry.GroupBounds(members, g);
+        (double x, double y, double w, double h) = Boxes.GroupBounds(members, g);
         double right = Math.Max(g.X + g.W, x + w), bottom = Math.Max(g.Y + g.H, y + h);
         g.X = Math.Min(g.X, x); g.Y = Math.Min(g.Y, y);
         g.W = right - g.X; g.H = bottom - g.Y;
@@ -66,7 +66,7 @@ public partial class DiagramEditor
         if (!force && SizeLocked(g)) return;
         List<IBox> members = Members(g).Cast<IBox>().ToList();
         if (members.Count == 0) return;
-        (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(members, g);
+        (g.X, g.Y, g.W, g.H) = Boxes.GroupBounds(members, g);
         foreach (Group outer in Tree.Ancestors(g)) GrowOne(outer);
     }
 
@@ -90,7 +90,7 @@ public partial class DiagramEditor
         Change();
         Group? outer = tree.CommonParent(items);
         Group g = new Group { Title = "Group", Color = NextGroupColour(), GroupId = outer?.Id };
-        (g.X, g.Y, g.W, g.H) = Geometry.GroupBounds(items);
+        (g.X, g.Y, g.W, g.H) = Boxes.GroupBounds(items);
         Diagram.Groups.Add(g);
         foreach (IGroupable it in items) it.GroupId = g.Id;
         if (outer is not null) GrowGroup(outer);

@@ -1,5 +1,6 @@
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Text;
 
 namespace BeDiagram.Editing;
 
@@ -14,13 +15,13 @@ public partial class DiagramEditor
         if (!Diagram.Page.Enabled) return new();
         double W = Diagram.Page.WidthPx, H = Diagram.Page.HeightPx;
         return Diagram.Nodes.Cast<IBox>().Concat(Diagram.TextBoxes).Concat(Diagram.Groups)
-            .Where(b => b.X < -0.5 || b.Y < -0.5 || b.X + b.W > W + 0.5 || b.Y + b.H + Geometry.ExtraBelow(b) > H + 0.5)
+            .Where(b => b.X < -0.5 || b.Y < -0.5 || b.X + b.W > W + 0.5 || b.Y + b.H + TextLayout.ExtraBelow(b) > H + 0.5)
             .ToList();
     }
 
     public bool ContentTooBigForPage()
     {
-        if (!Diagram.Page.Enabled || Geometry.ContentBounds(Diagram) is not { } cb) return false;
+        if (!Diagram.Page.Enabled || Boxes.ContentBounds(Diagram) is not { } cb) return false;
         double m = Diagram.Page.MarginPx;
         return cb.W > Diagram.Page.WidthPx - 2 * m + 0.5 || cb.H > Diagram.Page.HeightPx - 2 * m + 0.5;
     }
@@ -30,7 +31,7 @@ public partial class DiagramEditor
     /// <summary>Moves the whole drawing so it is centred inside the page margins.</summary>
     public void CentreOnPage(bool checkpoint)
     {
-        if (!Diagram.Page.Enabled || Geometry.ContentBounds(Diagram) is not { } cb) return;
+        if (!Diagram.Page.Enabled || Boxes.ContentBounds(Diagram) is not { } cb) return;
         if (checkpoint) Change();
         double W = Diagram.Page.WidthPx, H = Diagram.Page.HeightPx, m = Diagram.Page.MarginPx;
         double dx = SnapV(m + (W - 2 * m - cb.W) / 2 - cb.X);

@@ -2,6 +2,7 @@ using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
+using BeDiagram.Models.Text;
 
 namespace BeDiagram.Models.Kinds;
 
@@ -24,11 +25,11 @@ public abstract class NodeKind : INodeKind
 
     public virtual string? IconOf(Node n) => n.Icon;
 
-    public virtual bool LabelBelow(Node n) => Geometry.OutlineOf(n).IconMovesLabelBelow && Icons.Exists(n.Icon);
+    public virtual bool LabelBelow(Node n) => n.Kind.OutlineOf(n).IconMovesLabelBelow && Icons.Exists(n.Icon);
 
     public virtual LabelLayout LayoutLabel(Node n, string label)
     {
-        IShapeOutline outline = Geometry.OutlineOf(n);
+        IShapeOutline outline = n.Kind.OutlineOf(n);
         double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
         bool icon = Icons.Exists(n.Icon);
 
@@ -36,15 +37,15 @@ public abstract class NodeKind : INodeKind
         {
             // Presentation style: icon centred in the circle, label underneath.
             double size = Math.Min(n.W, n.H) * 0.46;
-            List<string> lines = Geometry.Wrap(label, Geometry.TextWidth(n));
-            return new(lines, cx, n.Y + n.H + Geometry.HaloOut(n) + 18, true, true, cx - size / 2, cy - size / 2, size);
+            List<string> lines = TextLayout.Wrap(label, TextLayout.TextWidth(n));
+            return new(lines, cx, n.Y + n.H + Boxes.HaloOut(n) + 18, true, true, cx - size / 2, cy - size / 2, size);
         }
 
         if (icon && outline.IconAboveTextWrap is double aboveWrap)
         {
             // Narrow-sided shapes: icon above the text.
-            List<string> lines = Geometry.Wrap(label, n.W * aboveWrap);
-            double block = 22 + lines.Count * Geometry.LineHeight;
+            List<string> lines = TextLayout.Wrap(label, n.W * aboveWrap);
+            double block = 22 + lines.Count * TextLayout.LineHeight;
             double top = cy - block / 2;
             return new(lines, cx, top + 22 + 12, false, true, cx - 10, top, 20);
         }
@@ -53,13 +54,13 @@ public abstract class NodeKind : INodeKind
         {
             // Icon on the left, text centred in the remaining space.
             double left = n.X + outline.IconInset;
-            List<string> lines = Geometry.Wrap(label, n.X + n.W - (left + 26) - 10);
+            List<string> lines = TextLayout.Wrap(label, n.X + n.W - (left + 26) - 10);
             double textX = (left + 26 + n.X + n.W - 8) / 2;
-            return new(lines, textX, cy - (lines.Count - 1) * Geometry.LineHeight / 2 + 4, false, true, left, cy - 10, 20);
+            return new(lines, textX, cy - (lines.Count - 1) * TextLayout.LineHeight / 2 + 4, false, true, left, cy - 10, 20);
         }
 
-        List<string> wrapped = Geometry.Wrap(label, n.W * outline.TextWrap);
-        return new(wrapped, cx, cy - (wrapped.Count - 1) * Geometry.LineHeight / 2 + 4, false, false, 0, 0, 0);
+        List<string> wrapped = TextLayout.Wrap(label, n.W * outline.TextWrap);
+        return new(wrapped, cx, cy - (wrapped.Count - 1) * TextLayout.LineHeight / 2 + 4, false, false, 0, 0, 0);
     }
 
     public virtual NodeStyle Colours(Node n, bool filled)

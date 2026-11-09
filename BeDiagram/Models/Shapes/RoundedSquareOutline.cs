@@ -1,3 +1,4 @@
+
 namespace BeDiagram.Models.Shapes;
 
 /// <summary>Hold outcome: a rounded square centred in the box.</summary>
@@ -7,7 +8,7 @@ public class RoundedSquareOutline : ShapeOutline
     public override string Path(IBox b)
     {
         double s = Math.Min(b.W, b.H), sx = b.X + (b.W - s) / 2, sy = b.Y + (b.H - s) / 2;
-        return Geometry.RoundRect(sx, sy, s, s, s * 0.22);
+        return Paths.RoundRect(sx, sy, s, s, s * 0.22);
     }
 
     protected override List<(double X, double Y)> Polygon(IBox b)

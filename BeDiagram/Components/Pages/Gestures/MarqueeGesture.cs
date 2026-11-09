@@ -31,7 +31,7 @@ public class MarqueeGesture : DragGesture
             double x1 = X, y1 = Y, x2 = X + W, y2 = Y + H;
             Diagram d = Ctx.Diagram;
             IOrderedEnumerable<IBox> hits = d.Nodes.Cast<IBox>().Concat(d.TextBoxes)
-                .Where(b => Geometry.Intersects(b, x1, y1, x2, y2))
+                .Where(b => Boxes.Intersects(b, x1, y1, x2, y2))
                 // Groups only when fully enclosed, so dragging inside a group selects its contents.
                 .Concat(d.Groups.Where(g => g.X >= x1 && g.Y >= y1 && g.X + g.W <= x2 && g.Y + g.H <= y2))
                 .OrderBy(b => b.Y).ThenBy(b => b.X);

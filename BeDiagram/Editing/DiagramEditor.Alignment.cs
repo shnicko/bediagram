@@ -1,4 +1,5 @@
 using BeDiagram.Models;
+using BeDiagram.Models.Text;
 
 namespace BeDiagram.Editing;
 
@@ -21,9 +22,9 @@ public partial class DiagramEditor
         if (within is not null)
         {
             L = within.X + Group.Pad; R = within.X + within.W - Group.Pad;
-            T = within.Y + Geometry.GroupInsetTop(within) + Group.Pad;
+            T = within.Y + within.InsetTop() + Group.Pad;
             // Leave room inside the group for a bottom title band and for the tallest label hanging below an outline.
-            B = within.Y + within.H - Group.Pad - Geometry.GroupInsetBottom(within) - items.Max(Geometry.ExtraBelow);
+            B = within.Y + within.H - Group.Pad - within.InsetBottom() - items.Max(TextLayout.ExtraBelow);
         }
         else
         {
@@ -90,7 +91,7 @@ public partial class DiagramEditor
                 double widest = sorted.Max(b => b.W);
                 double mid = within is not null ? L + widest / 2 : (L + R) / 2;
                 double y = T;
-                foreach (IBox b in sorted) { MoveBox(b, mid - b.W / 2, SnapV(y)); y += b.H + Geometry.ExtraBelow(b) + gap; }
+                foreach (IBox b in sorted) { MoveBox(b, mid - b.W / 2, SnapV(y)); y += b.H + TextLayout.ExtraBelow(b) + gap; }
                 break;
             }
         }
@@ -123,11 +124,11 @@ public partial class DiagramEditor
     }
 
     /// <summary>Space a block of side-by-side items takes under its tallest outline: the lowest label or description
-    /// hanging below any of them (see <see cref="Geometry.ExtraBelow"/>), measured from the block's centred bottom edge.</summary>
+    /// hanging below any of them (see <see cref="TextLayout.ExtraBelow"/>), measured from the block's centred bottom edge.</summary>
     static double BlockExtraBelow(List<IBox> block)
     {
         double h = block.Max(b => b.H);
-        return Math.Max(0, block.Max(b => Geometry.ExtraBelow(b) - (h - b.H) / 2));
+        return Math.Max(0, block.Max(b => TextLayout.ExtraBelow(b) - (h - b.H) / 2));
     }
 
     public void AlignSelection(AlignOp op) => Align(op, Selection.Select(FindBox).Where(b => b is not null).Cast<IBox>().ToList(), null);

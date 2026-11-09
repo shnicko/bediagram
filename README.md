@@ -156,7 +156,10 @@ Node types: `start`, `process`, `decision`, `check`, `action`, `data`, `status`,
 BeDiagram.sln                solution (open this in Visual Studio)
 BeDiagram/                   the web app project
   Models/                      the diagram model: Diagram, Node, Edge, TextBox, Group, PageSetup, IBox, IGroupable
-  Models/Geometry.cs           shape paths, elbow connectors, text wrap (shared by canvas + export)
+  Models/Routing/               connector routes (Strategy: ElbowRouting / StraightRouting) and connector labels
+  Models/Text/TextLayout.cs    node labels, descriptions, text boxes, wrapping
+  Models/Boxes.cs              hit tests and bounds
+  Rendering/SvgShapes.cs       SVG markup shared by canvas + export (halo, shadow, badges)
   Models/Icons.cs              built-in icon set (Lucide, ISC licence — see LICENSE-lucide.txt)
   Models/Catalogue/            the fixed value sets as enums (NodeType, OutcomeType, Side, EdgeStyle, …) and the type tables (NodeTypes, Outcomes, …)
   Models/Serialization/        enums saved by name, so the file reads "decision", not 3
@@ -258,13 +261,13 @@ Everything that depends on a shape's outline sits behind **`IShapeOutline`**, wi
 
 - `ShapeOutline` is the base class with plain-rectangle behaviour; each outline overrides only what differs.
 - `ShapeOutlines` holds one shared instance of each outline; `NodeTypes` and `Outcomes` point at them directly (`ShapeOutlines.Diamond`), so there is no lookup by name.
-- `Geometry.OutlineOf(node)` gives the outline a node is drawn with. The canvas and the SVG export both go through it, so they always match.
+- `node.Kind.OutlineOf(node)` (or `ShapeOutlines.Of(box)`) gives the outline a node is drawn with. The canvas and the SVG export both go through it, so they always match.
 
 To add a shape: write a class (usually derived from `ShapeOutline`), add an instance to `ShapeOutlines`, and point a `NodeTypes` (or `Outcomes`) entry at it. Nothing else changes.
 
 ### Shape emphasis: Strategy pattern
 
-How strongly a shape is drawn sits behind **`IEmphasis`**, with one class per level in `Models/Emphasis/`: `MajorEmphasis`, `NormalEmphasis` (the default) and `MinorEmphasis`, all derived from the `NodeEmphasis` base (the normal look). Each says what differs: it adjusts the colours (`Adjust`, used by `NodeStyle.For`), and gives the outline width, the shadow opacity, whether a halo ring is drawn, and the label's weight and colour. `Emphases.Of(node)` finds the strategy from the node's `emphasis` field; the canvas and the SVG export ask it through `Geometry` (`ShapeStrokeOf`, `ShadowOpacityOf`, `HaloSvg`, `LabelWeight`, `BelowLabelColour`), so they always match. To add a level: write a class derived from `NodeEmphasis` and add it to `Emphases.All` — the panel buttons come from that list.
+How strongly a shape is drawn sits behind **`IEmphasis`**, with one class per level in `Models/Emphasis/`: `MajorEmphasis`, `NormalEmphasis` (the default) and `MinorEmphasis`, all derived from the `NodeEmphasis` base (the normal look). Each says what differs: it adjusts the colours (`Adjust`, used by `NodeStyle.For`), and gives the outline width, the shadow opacity, whether a halo ring is drawn, and the label's weight and colour. `Emphases.Of(node)` finds the strategy from the node's `emphasis` field; the canvas and the SVG export ask it directly (`Emphases.Of(n).StrokeWidth`, `.ShadowOpacity`, `.LabelWeight(n)`, `.BelowLabelColour`) and through `SvgShapes.HaloSvg`, so they always match. To add a level: write a class derived from `NodeEmphasis` and add it to `Emphases.All` — the panel buttons come from that list.
 
 ### Editor commands and shortcuts: Command pattern
 

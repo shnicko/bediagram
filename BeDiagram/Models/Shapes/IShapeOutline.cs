@@ -4,7 +4,7 @@ namespace BeDiagram.Models.Shapes;
 /// Strategy pattern: everything that depends on a shape's outline — the SVG path, where a straight connector meets
 /// it, where the link badge sits, how the label and icon are laid out inside it, and how Mermaid writes it.
 /// One class per outline (pill, rect, diamond, …); <see cref="ShapeOutlines"/> finds the one for a shape key, and
-/// <see cref="Geometry.OutlineOf(Node)"/> the one a node is drawn with. Canvas and SVG export both go through these,
+/// <see cref="ShapeOutlines.Of(Node)"/> the one a node is drawn with. Canvas and SVG export both go through these,
 /// so they always match. To add a shape: write a class (usually derived from <see cref="ShapeOutline"/>) and
 /// register it in <see cref="ShapeOutlines"/>.
 /// </summary>
