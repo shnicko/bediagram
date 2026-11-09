@@ -4,6 +4,7 @@ using System.Text;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
+using BeDiagram.Models.Kinds;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
 
@@ -109,7 +110,7 @@ public static class Exporters
         foreach (Edge e in d.Edges)
         {
             StringBuilder lines = e.EndsOnRow ? rowEdges : sb;
-            if (PanelGeometry.Ends(e, id => lookup.GetValueOrDefault(id)) is not { } ends) continue;
+            if (e.Ends(id => lookup.GetValueOrDefault(id)) is not { } ends) continue;
             (IBox a, IBox b) = ends;
             EdgeGeom geo = Geometry.EdgeGeometry(a, b, e);
             double lw = LineLook.Width(e.Weight);
@@ -146,7 +147,7 @@ public static class Exporters
             sb.Append($"<path d=\"{shape}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"{F(Geometry.ShapeStrokeOf(n))}\"/>\n");
             if (Geometry.OutlineOf(n).HasSideStripe)
                 sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
-            if (n.Kind.IsPanel) sb.Append(PanelSvg.Body(n, st)).Append('\n');
+            if (n.Kind.Body(n, st) is { } body) sb.Append(body).Append('\n');
             LabelLayout lay = Geometry.Layout(n);
             if (lay.HasIcon)
                 sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(n.Kind.IconStroke)}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(n.Kind.IconOf(n))}</g>\n");
@@ -241,7 +242,7 @@ public static class Exporters
         if (items.Count == 0) return $"{id}[{title}]\n";
         StringBuilder sb = new StringBuilder($"subgraph {id}[{title}]\n");
         int k = 0;
-        if (n.Type != NodeTypes.Ipo)
+        if (n.Kind is not IpoKind)
         {
             sb.Append("    direction TB\n");
             foreach (ListItem item in items)
@@ -256,9 +257,9 @@ public static class Exporters
             sb.Append(n.Stacked ? "    direction TB\n" : "    direction LR\n");
             foreach (string section in IpoSections.All)
             {
-                List<ListItem> rows = PanelGeometry.InSection(n, section);
+                List<ListItem> rows = n.RowsIn(section);
                 if (rows.Count == 0) continue;
-                string sectionTitle = PanelGeometry.SectionTitle(n, section).Replace("\"", "'").Replace("\n", " ").Trim();
+                string sectionTitle = n.SectionTitle(section).Replace("\"", "'").Replace("\n", " ").Trim();
                 sb.Append($"    subgraph {id}_{section}[\"{sectionTitle}\"]\n");
                 foreach (ListItem item in rows)
                 {

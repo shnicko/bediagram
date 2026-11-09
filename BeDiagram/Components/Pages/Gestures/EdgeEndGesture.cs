@@ -21,7 +21,7 @@ public class EdgeEndGesture : EdgeHandleGesture
         if (Ctx.EdgeEnds(edge) is not (IBox a, IBox b)) return true;
         IBox box = FromEnd ? a : b;
         // Nearest side middle to the pointer (left / right only on a row of a list or IPO box).
-        string side = PanelGeometry.SidesOf(box).MinBy(s =>
+        string side = box.ConnectSides.MinBy(s =>
         {
             (double px, double py) = Geometry.SidePoint(box, s);
             return (px - CurX) * (px - CurX) + (py - CurY) * (py - CurY);

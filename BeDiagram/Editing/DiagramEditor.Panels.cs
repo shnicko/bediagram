@@ -1,5 +1,7 @@
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Kinds;
+using BeDiagram.Models.Panels;
 
 namespace BeDiagram.Editing;
 
@@ -9,32 +11,27 @@ public partial class DiagramEditor
 {
     // ───────────── Lists and IPO boxes ─────────────
 
-    /// <summary>The boxes a connector runs between: a row where it ends on one (see <see cref="PanelGeometry.End"/>).</summary>
-    public (IBox A, IBox B)? Ends(Edge e) => PanelGeometry.Ends(e, id => FindBox(id));
+    /// <summary>The boxes a connector runs between: a row where it ends on one (see <see cref="Edge.Ends"/>).</summary>
+    public (IBox A, IBox B)? Ends(Edge e) => e.Ends(id => FindBox(id));
 
     /// <summary>Sizes a list / IPO node to fit its rows (height exactly, width at least the minimum) and grows the
     /// groups around it. Doesn't record undo: callers have already called <see cref="Change"/>.</summary>
     public void FitPanel(Node n)
     {
-        if (!n.Kind.IsPanel) return;
+        if (n.Kind is not PanelKind panel) return;
         n.Items ??= new List<ListItem>();
-        n.H = PanelGeometry.NeededHeight(n);
-        n.W = Math.Max(n.W, PanelGeometry.MinWidth(n));
+        IPanelLayout layout = panel.LayoutOf(n);
+        n.H = layout.NeededHeight(n);
+        n.W = Math.Max(n.W, layout.MinWidth(n));
         GrowAround(n);
     }
 
     /// <summary>Adds a row at the end of a list, or of an IPO section, and returns it.</summary>
     public ListItem AddItem(Node n, string? section = null)
     {
+        if (n.Kind is not PanelKind panel) throw new InvalidOperationException("Only lists and IPO boxes have rows.");
         Change();
-        n.Items ??= new List<ListItem>();
-        bool ipo = n.Type == NodeTypes.Ipo;
-        string? key = ipo ? IpoSections.Of(section) : null;
-        int count = ipo ? PanelGeometry.InSection(n, key!).Count : n.Items.Count;
-        ListItem item = new ListItem { Label = $"Item {count + 1}", Section = key };
-        // In an IPO box the new row goes after the last row of its section, keeping the file in reading order.
-        int at = ipo ? n.Items.FindLastIndex(i => IpoSections.IndexOf(i.Section) <= IpoSections.IndexOf(key)) + 1 : n.Items.Count;
-        n.Items.Insert(at, item);
+        ListItem item = panel.AddRow(n, section);
         FitPanel(n);
         return item;
     }
@@ -110,23 +107,16 @@ public partial class DiagramEditor
     }
 
     /// <summary>The rows a row is ordered among: the whole list, or its IPO section.</summary>
-    static List<ListItem> Peers(Node n, string itemId)
-    {
-        if (n.Items is null) return new List<ListItem>();
-        if (n.Type != NodeTypes.Ipo) return n.Items;
-        string section = IpoSections.Of(n.Items.FirstOrDefault(i => i.Id == itemId)?.Section);
-        return PanelGeometry.InSection(n, section);
-    }
+    static List<ListItem> Peers(Node n, string itemId) =>
+        n.Kind is PanelKind panel ? panel.Peers(n, itemId) : new List<ListItem>();
 
     /// <summary>After a type change: a new list / IPO node gets starter rows (or keeps the rows it had), and a node that
     /// stops being one drops its rows, with connectors on them moving to the node itself.</summary>
     void RetypeRows(Node n)
     {
-        if (n.Kind.IsPanel)
+        if (n.Kind is PanelKind panel)
         {
-            n.Items ??= n.Kind.NewItems() ?? new List<ListItem>();
-            foreach (ListItem i in n.Items) i.Section = n.Type == NodeTypes.Ipo ? IpoSections.Of(i.Section) : null;
-            if (n.Type == NodeTypes.Ipo) n.Items = n.Items.OrderBy(i => IpoSections.IndexOf(i.Section)).ToList();
+            panel.TidyRows(n);
             FitPanel(n);
             return;
         }

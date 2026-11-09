@@ -49,6 +49,13 @@ public class Edge
     [JsonIgnore]
     public bool EndsOnRow => FromItem is not null || ToItem is not null;
 
+    /// <summary>Both ends as boxes, looked up with <paramref name="find"/>: the row where an end names one
+    /// (<see cref="Kinds.INodeKind.EndAt"/>), otherwise the item itself. Null when either item is missing.</summary>
+    public (IBox A, IBox B)? Ends(Func<string, IBox?> find) =>
+        find(From) is { } a && find(To) is { } b ? (EndOf(a, FromItem), EndOf(b, ToItem)) : null;
+
+    static IBox EndOf(IBox box, string? itemId) => box is Node n ? n.Kind.EndAt(n, itemId) : box;
+
     public bool IsManual => FromSide is not null || ToSide is not null || Bend != 0;
 
     /// <summary>Back to fully automatic sides and bend.</summary>

@@ -56,10 +56,10 @@ public class ConnectorTidier
         // Where every connector runs now, so a new route can keep off the others (updated as routes are planned).
         Dictionary<string, (Edge Edge, EdgeRoute Route)> lines = new Dictionary<string, (Edge, EdgeRoute)>();
         foreach (Edge o in d.Edges)
-            if (PanelGeometry.Ends(o, find) is (IBox oa, IBox ob)) lines[o.Id] = (o, Geometry.Route(oa, ob, o));
+            if (o.Ends(find) is (IBox oa, IBox ob)) lines[o.Id] = (o, Geometry.Route(oa, ob, o));
         foreach (Edge e in edges.Where(e => e.Style == EdgeStyles.Elbow))
         {
-            if (PanelGeometry.Ends(e, find) is not (IBox a, IBox b) || e.From == e.To) continue;
+            if (e.Ends(find) is not (IBox a, IBox b) || e.From == e.To) continue;
             Context ctx = new Context
             {
                 A = a, B = b, Obstacles = ObstaclesFor(a, b), OwnText = OwnText(a, b),

@@ -1,3 +1,5 @@
+using BeDiagram.Models.Catalogue;
+
 namespace BeDiagram.Models.Layout;
 
 /// <summary>
@@ -18,4 +20,13 @@ public class ItemBox : IBox
     public double Y { get; set; }
     public double W { get; set; }
     public double H { get; set; }
+
+    /// <summary>A row only has ports on its left and right.</summary>
+    public IReadOnlyList<string> ConnectSides => Sides.LeftRight;
+
+    /// <summary>The side a connector leaves this row from: a pinned left / right is kept, anything else becomes the
+    /// side facing <paramref name="other"/>.</summary>
+    public string SideFacing(IBox other, string? side) =>
+        side is Sides.Left or Sides.Right ? side
+        : other.X + other.W / 2 < X + W / 2 ? Sides.Left : Sides.Right;
 }

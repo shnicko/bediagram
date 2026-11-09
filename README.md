@@ -163,11 +163,10 @@ BeDiagram/                   the web app project
   Models/Layout/               geometry results shared by canvas + export: EdgeRoute, EdgeGeom, LabelLayout, Rect, …
   Models/Shapes/               one class per shape outline (Strategy pattern, see below)
   Models/Kinds/                one class per kind of node: classic, circle, outcome, list, IPO (Strategy pattern, see below)
-  Models/PanelGeometry.cs      layout of list / IPO nodes: title band, sections, rows, and the row a connector ends on
+  Models/Panels/               layout of list / IPO nodes (Strategy pattern): list, IPO side by side, IPO stacked
   Models/ListItem.cs           one row of a list / IPO node
   Services/DiagramStore.cs     local folder save / open / list / delete
   Services/Exporters.cs        SVG and Mermaid export (SVG optionally of the current view)
-  Services/PanelSvg.cs         the inside of a list / IPO node as SVG (shared by canvas + export)
   Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
   Services/Export/             export strategies (see below)
   Editing/DiagramEditor.cs     the diagram being edited: selection, undo, and every editing action (no UI code)
@@ -233,6 +232,8 @@ Everything that depends on what *kind* of node a shape is sits behind **`INodeKi
 - The kind answers: is it a step, can it be round, is it a panel, does it have an outcome; which outline and icon it's drawn with; where the label goes; its colours before emphasis; its names; and what a new or retyped node starts with.
 - Code elsewhere asks the kind (`n.Kind.IsStep`, `n.Kind.LayoutLabel(n, label)`) rather than testing `n.Type == "outcome"`.
 
+The inside of a list or IPO box is a second strategy, **`IPanelLayout`** (`Models/Panels/`): `ListLayout`, `IpoColumnsLayout` (sections side by side) and `IpoStackedLayout` (one under another), all derived from `PanelLayout`, which holds the title band, how one row is drawn, the SVG markup and finding a row for a connector. The kind picks the layout (`PanelKind.LayoutOf`), so the canvas, export, connectors and resize all ask the same object.
+
 ### Nested groups: Composite pattern
 
 Groups can hold shapes, text boxes and other groups. In Composite terms, **`IGroupable`** is the component, `Node` and `TextBox` are leaves and **`Group`** is the composite. The file keeps flat lists with a parent id (`GroupId`) on each item, so **`GroupTree`** (`Models/`) works the hierarchy out from the diagram whenever it's asked: `Parent`, `Children`, `Descendants`, `Ancestors`, `IsInside`, `CommonParent` and `PaintOrder` (each top-level group followed by the groups inside it, so inner groups draw over their parents). Every walk keeps a visited set, so a hand-edited file with a parent loop can't hang the editor.
@@ -250,7 +251,7 @@ Everything that depends on a shape's outline sits behind **`IShapeOutline`**, wi
 | `DiamondOutline`, `ParallelogramOutline`, `HexagonOutline` | Decision, Data / IFC, Status |
 | `CircleOutline` | Circle, Rework outcome |
 | `SealOutline`, `OctagonOutline`, `TriangleOutline`, `RoundedSquareOutline` | Pass, Fail, Conditional, Hold outcomes |
-| `PanelOutline` | List, Input / process / output (the inside comes from `PanelGeometry` / `PanelSvg`) |
+| `PanelOutline` | List, Input / process / output (the inside comes from the panel layout, see below) |
 
 - `ShapeOutline` is the base class with plain-rectangle behaviour; each outline overrides only what differs.
 - `ShapeOutlines.Get(key)` finds an outline by the shape key used in `NodeTypes` / `Outcomes`. Unknown keys draw as a rectangle.

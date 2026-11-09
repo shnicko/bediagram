@@ -76,6 +76,21 @@ public class Node : IGroupable
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Link { get; set; }
 
+    /// <summary>The rows (<see cref="Items"/>), or none for a panel loaded without any or another shape. Not saved.</summary>
+    [JsonIgnore]
+    public IReadOnlyList<ListItem> Rows => Items ?? (IReadOnlyList<ListItem>)Array.Empty<ListItem>();
+
+    /// <summary>IPO nodes: the rows in one section (<see cref="IpoSections"/>), in order.</summary>
+    public List<ListItem> RowsIn(string section) => Rows.Where(i => IpoSections.Of(i.Section) == section).ToList();
+
+    /// <summary>IPO nodes: a section's title, the renamed one or the default.</summary>
+    public string SectionTitle(string section)
+    {
+        int i = IpoSections.IndexOf(section);
+        string? t = SectionTitles is { } titles && i < titles.Count ? titles[i] : null;
+        return string.IsNullOrWhiteSpace(t) ? IpoSections.DefaultTitle(section) : t;
+    }
+
     /// <summary>A copy with a new id and its own <see cref="Properties"/> and rows (rows keep their ids); every other field (look, link, step, group) is kept.</summary>
     public Node Copy()
     {

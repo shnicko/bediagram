@@ -92,6 +92,19 @@ public abstract class NodeKind : INodeKind
 
     public virtual string RetypeLabel(Node n) => NameOf(n);
 
+    public virtual (double W, double H) MinSize(Node n) => (80.0, 40.0);
+
+    public virtual Rect? LabelEditRect(Node n) => null;
+
+    public virtual string? Body(Node n, NodeStyle style) => null;
+
+    public virtual IBox EndAt(Node n, string? itemId) => n;
+
+    public virtual ItemBox? RowAt(Node n, double x, double y) => null;
+
+    public virtual IEnumerable<(double X, double Y, string ItemId)> RowPorts(Node n) =>
+        Enumerable.Empty<(double X, double Y, string ItemId)>();
+
     public virtual List<ListItem>? NewItems() => null;
 
     public virtual void Init(Node n, string? variant) { }
