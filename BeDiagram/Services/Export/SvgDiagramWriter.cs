@@ -1,14 +1,14 @@
-using System.Globalization;
 using System.Net;
 using System.Text;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Layout;
-using BeDiagram.Models.Styles;
 using BeDiagram.Models.Routing;
-using BeDiagram.Rendering;
+using BeDiagram.Models.Styles;
 using BeDiagram.Models.Text;
+using BeDiagram.Rendering;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Services.Export;
 
@@ -19,7 +19,6 @@ namespace BeDiagram.Services.Export;
 /// </summary>
 public class SvgDiagramWriter
 {
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
     static string E(string s) => WebUtility.HtmlEncode(s ?? "");
 
     /// <summary>

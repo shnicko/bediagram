@@ -1,4 +1,5 @@
 using System.Text;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Models.Shapes;
 

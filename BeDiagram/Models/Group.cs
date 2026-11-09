@@ -1,6 +1,6 @@
-using System.Globalization;
 using System.Text.Json.Serialization;
 using BeDiagram.Models.Styles;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Models;
 
@@ -43,7 +43,6 @@ public class Group : IGroupable
 
     // ───────────── Title geometry (top / bottom, band / plain text) ─────────────
 
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     /// <summary>A plain-text title at the bottom sits under the box, outside it.</summary>
     public bool TitleBelowBox() => HeaderPos == GroupLook.Bottom && HeaderStyle == GroupLook.Text;

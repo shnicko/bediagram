@@ -13,9 +13,4 @@ public static class Sides
     {
         Side.Top => (0, -1), Side.Right => (1, 0), Side.Bottom => (0, 1), _ => (-1, 0),
     };
-
-    public static Side Opposite(Side side) => side switch
-    {
-        Side.Top => Side.Bottom, Side.Right => Side.Left, Side.Bottom => Side.Top, _ => Side.Right,
-    };
 }

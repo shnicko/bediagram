@@ -1,4 +1,4 @@
-using System.Globalization;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Models.Shapes;
 
@@ -6,7 +6,6 @@ namespace BeDiagram.Models.Shapes;
 /// text boxes, so the canvas and every export draw the same paths.</summary>
 public static class Paths
 {
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     public static string RoundRect(double x, double y, double w, double h, double r)
     {

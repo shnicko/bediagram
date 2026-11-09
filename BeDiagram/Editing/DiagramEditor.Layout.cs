@@ -1,7 +1,7 @@
-using BeDiagram.Models.Serialization;
 using BeDiagram.Editing.Lanes;
 using BeDiagram.Editing.Routing;
 using BeDiagram.Models;
+using BeDiagram.Models.Serialization;
 
 namespace BeDiagram.Editing;
 
@@ -24,7 +24,7 @@ public partial class DiagramEditor
         Change();
         int placed = new LaneArranger(Diagram, layout).ArrangeAll();
         TidyPlan plan = new ConnectorTidier(Diagram, id => FindBox(id)).Plan(Diagram.Edges);
-        ConnectorTidier.Apply(plan);
+        plan.Apply();
         string tidied = plan.Routes.Count == 0 ? "" : $", {plan.Routes.Count} connector{(plan.Routes.Count == 1 ? "" : "s")} tidied";
         string stuck = plan.Crossing > plan.Cleared ? $" ({plan.Crossing - plan.Cleared} still touch a shape)" : "";
         view.ShowToast($"Laid out {placed} item{(placed == 1 ? "" : "s")} {layout.Direction} by step{tidied}{stuck}");
@@ -51,7 +51,7 @@ public partial class DiagramEditor
         else { edges = Diagram.Edges.ToList(); scope = "all connectors"; }
         if (edges.Count == 0) { view.ShowToast("No connectors to tidy"); return; }
         TidyPlan plan = new ConnectorTidier(Diagram, id => FindBox(id)).Plan(edges);
-        if (plan.Routes.Count > 0) { Change(); ConnectorTidier.Apply(plan); }
+        if (plan.Routes.Count > 0) { Change(); plan.Apply(); }
         int stuck = plan.Crossing - plan.Cleared;
         if (plan.Routes.Count == 0 && stuck == 0) view.ShowToast($"Nothing to tidy — {scope} already miss every shape");
         else if (stuck == 0) view.ShowToast($"Tidied {plan.Routes.Count} connector{(plan.Routes.Count == 1 ? "" : "s")}");

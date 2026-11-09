@@ -1,3 +1,5 @@
+using static BeDiagram.Models.SvgNumbers;
+
 namespace BeDiagram.Models.Shapes;
 
 /// <summary>Start / End: a stadium (pill) with semicircular ends.</summary>

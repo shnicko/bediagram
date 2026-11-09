@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
-using BeDiagram.Models.Catalogue;
 using BeDiagram.Components.Pages.Views;
 using BeDiagram.Models;
+using BeDiagram.Models.Catalogue;
 using BeDiagram.Rendering;
 
 namespace BeDiagram.Components.Pages;

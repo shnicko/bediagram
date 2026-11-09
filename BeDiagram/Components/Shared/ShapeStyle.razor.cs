@@ -1,7 +1,7 @@
+using Microsoft.AspNetCore.Components;
 using BeDiagram.Editing;
 using BeDiagram.Models;
 using BeDiagram.Models.Emphasis;
-using Microsoft.AspNetCore.Components;
 
 namespace BeDiagram.Components.Shared;
 

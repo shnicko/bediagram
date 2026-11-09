@@ -1,8 +1,8 @@
+using Microsoft.AspNetCore.Components;
 using BeDiagram.Editing;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Kinds;
-using Microsoft.AspNetCore.Components;
 
 namespace BeDiagram.Components.Shared;
 

@@ -1,19 +1,18 @@
-using BeDiagram.Models.Serialization;
-using System.Globalization;
-using BeDiagram.Models;
-using BeDiagram.Components.Pages.Gestures;
-using BeDiagram.Services;
-using BeDiagram.Services.Export;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Components.Pages.Views;
 using BeDiagram.Editing;
 using BeDiagram.Editing.Angles;
+using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Serialization;
 using BeDiagram.Models.Styles;
+using BeDiagram.Services;
+using BeDiagram.Services.Export;
 
 namespace BeDiagram.Components.Pages;
 
@@ -74,7 +73,6 @@ public partial class Designer
     IJSObjectReference? module;
     DotNetObjectReference<Designer>? selfRef;
 
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     // ───────────── Lifecycle ─────────────
 

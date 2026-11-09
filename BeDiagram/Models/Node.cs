@@ -1,8 +1,8 @@
-using BeDiagram.Models.Serialization;
 using System.Text.Json.Serialization;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Kinds;
+using BeDiagram.Models.Serialization;
 
 namespace BeDiagram.Models;
 

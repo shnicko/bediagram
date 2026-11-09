@@ -1,8 +1,8 @@
-using BeDiagram.Models.Serialization;
 using System.Globalization;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Routing;
+using BeDiagram.Models.Serialization;
 
 namespace BeDiagram.Editing;
 

@@ -13,4 +13,10 @@ public class TidyPlan
     public int Crossing { get; set; }
     /// <summary>Of those, how many get a route that misses every shape and text box.</summary>
     public int Cleared { get; set; }
+
+    /// <summary>Stores the planned routes the same way as hand-placed ones (sides + bend).</summary>
+    public void Apply()
+    {
+        foreach ((Edge e, Side from, Side to, double bend) in Routes) { e.FromSide = from; e.ToSide = to; e.Bend = bend; }
+    }
 }

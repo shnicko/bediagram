@@ -1,7 +1,7 @@
-using BeDiagram.Models;
-using BeDiagram.Services;
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Models;
 using BeDiagram.Rendering;
+using BeDiagram.Services;
 
 namespace BeDiagram.Components.Shared;
 

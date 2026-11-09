@@ -1,6 +1,7 @@
-using BeDiagram.Models;
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Components.Pages;
 

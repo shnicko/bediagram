@@ -1,13 +1,12 @@
-using System.Globalization;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Models.Panels;
 
 /// <summary>An IPO box with Input | Process | Output side by side, as equal columns with a divider between them.</summary>
 public class IpoColumnsLayout : IpoLayout
 {
-    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     /// <summary>As tall as the fullest section.</summary>
     public override double NeededHeight(Node n) =>

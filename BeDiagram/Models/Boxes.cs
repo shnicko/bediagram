@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
