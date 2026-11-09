@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Components.Pages.Commands;
 using BeDiagram.Editing;
 using BeDiagram.Services.Export;
@@ -5,10 +6,11 @@ using BeDiagram.Services.Export;
 namespace BeDiagram.Components.Pages;
 
 /// <summary>
-/// The Designer as the host of its child components (<see cref="IDesignerHost"/>): the bars, side panels and other parts
-/// reach the editor, the command buttons and the page's own actions through this.
+/// The Designer as the host of its child components (<see cref="IDesignerHost"/>): the bars, side panels and canvas
+/// layers reach the editor, the command buttons and the page's own actions through this, and the layers hand their
+/// pointer presses back (<see cref="ICanvasInput"/>).
 /// </summary>
-public partial class Designer : IDesignerHost
+public partial class Designer : IDesignerHost, ICanvasInput
 {
     DiagramEditor IDesignerHost.Editor => Editor;
     CommandButtons IDesignerHost.Buttons => Cmd;
@@ -35,4 +37,11 @@ public partial class Designer : IDesignerHost
     void IDesignerHost.SetOpenMenu(string? menu) => openMenu = menu;
     string? IDesignerHost.Toast => toast;
     void IDesignerHost.SetPaletteDrop(Action<double, double> drop) => paletteDrop = drop;
+
+    ICanvasInput IDesignerHost.Canvas => this;
+    void ICanvasInput.ItemDown(PointerEventArgs e, string id) => ItemDown(e, id);
+    void ICanvasInput.GroupBodyDown(PointerEventArgs e, string id) => GroupBodyDown(e, id);
+    void ICanvasInput.PortDown(PointerEventArgs e, string id, string? itemId) => PortDown(e, id, itemId);
+    void ICanvasInput.ResizeDown(PointerEventArgs e, string id) => ResizeDown(e, id);
+    void ICanvasInput.EdgeDown(PointerEventArgs e, string id) => EdgeDown(e, id);
 }

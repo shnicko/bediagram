@@ -1,5 +1,4 @@
 using BeDiagram.Models;
-using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Components.Pages;
 
@@ -42,9 +41,4 @@ public partial class Designer
     // ───────────── The page sheet on the canvas ─────────────
 
 
-    double PrintableW => Math.Max(0, D.Page.WidthPx - 2 * D.Page.MarginPx);
-
-    double PrintableH => Math.Max(0, D.Page.HeightPx - 2 * D.Page.MarginPx);
-
-    string PageCaptionStyle => $"font-size:{F(12 / Zoom)}px";
 }

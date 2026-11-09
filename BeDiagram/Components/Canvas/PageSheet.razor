@@ -1,0 +1,17 @@
+@inherits CanvasLayer
+
+@if (D.Page.Enabled)
+{
+    <g class="page">
+        <rect x="0" y="0" width="@F(D.Page.WidthPx)" height="@F(D.Page.HeightPx)" fill="#ffffff" filter="url(#page-shadow)" />
+        @if (PageGridFill is { } pageFill)
+        {
+            <rect x="0" y="0" width="@F(D.Page.WidthPx)" height="@F(D.Page.HeightPx)" fill="@pageFill" />
+        }
+        @if (D.Page.MarginPx > 0)
+        {
+            <rect class="page-margin" x="@F(D.Page.MarginPx)" y="@F(D.Page.MarginPx)" width="@F(PrintableW)" height="@F(PrintableH)" />
+        }
+        <g><text class="page-caption" x="0" y="-8" style="@PageCaptionStyle">@D.Page.Describe()</text></g>
+    </g>
+}

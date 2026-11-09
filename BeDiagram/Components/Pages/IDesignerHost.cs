@@ -64,6 +64,9 @@ public interface IDesignerHost
     /// <summary>Portrait or landscape; fits the view to the page.</summary>
     void SetLandscape(bool landscape);
 
+    /// <summary>Pointer presses on items in the canvas layers.</summary>
+    ICanvasInput Canvas { get; }
+
     /// <summary>Zoom of the canvas (1 = 100%).</summary>
     double Zoom { get; }
 

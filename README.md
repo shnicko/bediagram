@@ -189,6 +189,7 @@ BeDiagram/                   the web app project
   Components/Panels/           the side panel, one component per kind of selection (shape, text box, connector, group,
                                several items, nothing selected)
   Components/Bars/             toolbar and menus, shape palette, status bar
+  Components/Canvas/           the canvas layers: page sheet, groups, text boxes, connectors, shapes, connector labels
   Components/Dialogs/          Open, Save as, the unsaved-changes questions, keyboard shortcuts, step order
   Components/Pages/Gestures/   mouse gestures (State pattern, see below)
   Components/Pages/Commands/   editor commands and keyboard shortcuts (Command pattern, see below)
@@ -295,12 +296,15 @@ To add a command: write a class (usually derived from `EditorCommand`), add it t
 The editor page is split into child components (Blazor components with their own markup and code-behind), so no one
 file holds the whole UI: the toolbar and its menus, the shape palette and the status bar (`Components/Bars/`), the side
 panel (`ShapePanel`, `TextBoxPanel`, `ConnectorPanel`, `GroupPanel`, `SelectionPanel` or `DiagramPanel` in
-`Components/Panels/`, whichever fits the selection) and the dialogs (`Components/Dialogs/`). The canvas stays in the page.
+`Components/Panels/`, whichever fits the selection), the dialogs (`Components/Dialogs/`) and the canvas layers
+(`Components/Canvas/`: page sheet, groups, text boxes, connectors, shapes, connector labels, stacked in that order by the
+page). A layer hands a press on an item back to the page (`ICanvasInput`), which starts the drag; the page keeps the
+SVG itself, the drag in progress and its previews.
 
 | Role (GoF) | In BeDiagram |
 |---|---|
 | Mediator | **`IDesignerHost`**, implemented by the Designer in `Designer.Host.cs`: the editor, the command buttons, redraw, and what only the page can do (dialogs, following links, page size) |
-| Colleagues | The bars and panels, each derived from **`DesignerPart`** and given `Host="this"`. They don't know about each other, only the host |
+| Colleagues | The bars, panels and canvas layers, each derived from **`DesignerPart`** and given `Host="this"`. They don't know about each other, only the host |
 
 Blazor redraws only the component that handled an event, so a click in a panel would leave the canvas out of date.
 `DesignerPart` therefore redraws the whole page after every event a part handles, just as when the markup was all in

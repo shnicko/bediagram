@@ -1,0 +1,94 @@
+@inherits CanvasLayer
+
+@foreach (NodeView v in NodeViews())
+{
+    <g class="node @(v.Selected ? "selected" : "")"
+       @onpointerdown="e => Input.ItemDown(e, v.N.Id)" @onpointerdown:stopPropagation="true"
+       @ondblclick="() => Editor.BeginEdit(v.N.Id)" @ondblclick:stopPropagation="true">
+        @if (v.Selected)
+        {
+            <rect x="@F(v.N.X - 5)" y="@F(v.N.Y - 5)" width="@F(v.N.W + 10)" height="@F(v.N.H + 10 + v.Below)" rx="8" class="sel-outline" />
+        }
+        @if (HaloMarkup(v) is { } halo)
+        {
+            <g class="node-halo">@halo</g>
+        }
+        @if (Emphases.Of(v.N).ShadowOpacity > 0)
+        {
+            <path d="@SvgShapes.ShapePath(v.N)" class="node-shadow" transform="@SvgShapes.ShadowTransform" fill="@v.Style.Stroke" fill-opacity="@F(Emphases.Of(v.N).ShadowOpacity)" />
+        }
+        <path d="@SvgShapes.ShapePath(v.N)" fill="@v.Style.Fill" stroke="@v.Style.Stroke" stroke-width="@F(Emphases.Of(v.N).StrokeWidth)" />
+        @if (v.Outline.HasSideStripe)
+        {
+            <rect x="@F(v.N.X)" y="@F(v.N.Y)" width="6" height="@F(v.N.H)" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" fill-opacity="@(v.N.Filled ? "0.5" : "1")" />
+        }
+        @if (PanelBody(v) is { } body)
+        {
+            <g class="panel-body">@body</g>
+        }
+        @if (v.Layout.HasIcon)
+        {
+            <g class="node-icon" transform="@NodeIconTransform(v.Layout)"
+               fill="none" stroke="@v.Style.IconColor" stroke-width="@F(v.N.Kind.IconStroke)" stroke-linecap="round" stroke-linejoin="round">
+                @NodeIconMarkup(v.N)
+            </g>
+        }
+        @if (v.TextBack is { } back)
+        {
+            <rect class="label-bg" x="@F(back.X)" y="@F(back.Y)" width="@F(back.W)" height="@F(back.H)" rx="4" />
+        }
+        @if (Editor.EditingId == v.N.Id)
+        {
+            <foreignObject x="@F(NodeEditRect(v).X)" y="@F(NodeEditRect(v).Y)" width="@F(NodeEditRect(v).W)" height="@F(NodeEditRect(v).H)">
+                <textarea id="edit-box" class="inline-edit" @bind="v.N.Label" @bind:event="oninput" @bind:after="Editor.MarkDirty"
+                          @onblur="Editor.EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true"></textarea>
+            </foreignObject>
+        }
+        else
+        {
+            <g>
+                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? Emphases.Of(v.N).BelowLabelColour : v.Style.Text)" font-weight="@Emphases.Of(v.N).LabelWeight(v.N)">
+                    @foreach ((string text, string dy) in LabelLines(v.Layout))
+                    {
+                        <tspan x="@F(v.Layout.TextX)" dy="@dy">@text</tspan>
+                    }
+                </text>
+            </g>
+        }
+        @if (v.Layout.Desc.Count > 0)
+        {
+            <g>
+                <text class="node-desc" x="@F(v.Layout.DescX)" y="@F(v.Layout.DescY)">
+                    @foreach ((string text, string dy) in DescLines(v.Layout))
+                    {
+                        <tspan x="@F(v.Layout.DescX)" dy="@dy">@text</tspan>
+                    }
+                </text>
+            </g>
+        }
+        @if (HasProperties(v.N))
+        {
+            <circle cx="@F(v.N.X + v.N.W - 8)" cy="@F(v.N.Y + 8)" r="3.5" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" class="props-dot">
+                <title>Has properties</title>
+            </circle>
+        }
+        @if (SvgShapes.HasLink(v.N))
+        {
+            <LinkBadge Box="v.N" Colour="@v.Style.Stroke" Link="@(v.N.Link!)" OnFollow="Host.FollowLink" />
+        }
+        @if (SvgShapes.ShownStep(D, v.N) is int step)
+        {
+            <g class="step-badge">@StepBadgeMarkup(v, step)</g>
+        }
+        @foreach ((double px, double py) in Ports(v.N))
+        {
+            <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
+                    @onpointerdown="e => Input.PortDown(e, v.N.Id)" @onpointerdown:stopPropagation="true" />
+        }
+        @foreach ((double px, double py, string itemId) in v.N.Kind.RowPorts(v.N))
+        {
+            <circle class="port row-port" cx="@F(px)" cy="@F(py)" r="5"
+                    @onpointerdown="e => Input.PortDown(e, v.N.Id, itemId)" @onpointerdown:stopPropagation="true" />
+        }
+    </g>
+}
