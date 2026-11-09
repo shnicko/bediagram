@@ -1,0 +1,18 @@
+<div class="modal-bg" @onclick="OnCancel">
+    <div class="modal" @onclick:stopPropagation="true">
+        <h3>Save changes before leaving?</h3>
+        <p>"@DiagramName" has changes that haven't been saved. You're about to open "@Target".</p>
+        @if (!HasFile)
+        {
+            <p class="muted">This diagram has never been saved, so you won't be able to come back to it with Back. Cancel and use Save as… first to keep it.</p>
+        }
+        <div class="actions">
+            <button @onclick="OnCancel">Cancel</button>
+            <button class="danger" @onclick="() => OnConfirm.InvokeAsync(false)">Discard and open</button>
+            @if (HasFile)
+            {
+                <button class="primary" @onclick="() => OnConfirm.InvokeAsync(true)">Save and open</button>
+            }
+        </div>
+    </div>
+</div>

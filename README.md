@@ -181,13 +181,15 @@ BeDiagram/                   the web app project
   Models/GroupTree.cs          the group hierarchy (Composite pattern) worked out from the GroupId fields
   Models/StepOrder.cs          the step order: numbering, closing gaps, moving and parallel steps
   Models/Emphasis/             major / normal / minor looks (Strategy pattern, see below)
-  Components/Pages/Designer.razor(.cs)   the editor page: toolbar, palette, canvas, dialogs, files, export; shows the side
-                               panel for the selection; passes input to the editor.
+  Components/Pages/Designer.razor(.cs)   the editor page: the canvas, files, export and navigation, with the bars, side
+                               panel and dialogs as child components; passes input to the editor.
                                The code is in partial files by area: .Pointer, .Palette, .View, .Page, .Files,
                                .Navigation, .Render, .Commands, .CommandContext, .EditorContext, .EditorView, .Host
   Components/Pages/IDesignerHost.cs, DesignerPart.cs   how the page's child components reach it (Mediator, see below)
   Components/Panels/           the side panel, one component per kind of selection (shape, text box, connector, group,
                                several items, nothing selected)
+  Components/Bars/             toolbar and menus, shape palette, status bar
+  Components/Dialogs/          Open, Save as, the unsaved-changes questions, keyboard shortcuts, step order
   Components/Pages/Gestures/   mouse gestures (State pattern, see below)
   Components/Pages/Commands/   editor commands and keyboard shortcuts (Command pattern, see below)
   Components/Pages/Views/      view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
@@ -291,17 +293,19 @@ To add a command: write a class (usually derived from `EditorCommand`), add it t
 ### Page parts: Mediator
 
 The editor page is split into child components (Blazor components with their own markup and code-behind), so no one
-file holds the whole UI. So far the side panel is split: `ShapePanel`, `TextBoxPanel`, `ConnectorPanel`, `GroupPanel`,
-`SelectionPanel` and `DiagramPanel` in `Components/Panels/`, one of which the page shows for the current selection.
+file holds the whole UI: the toolbar and its menus, the shape palette and the status bar (`Components/Bars/`), the side
+panel (`ShapePanel`, `TextBoxPanel`, `ConnectorPanel`, `GroupPanel`, `SelectionPanel` or `DiagramPanel` in
+`Components/Panels/`, whichever fits the selection) and the dialogs (`Components/Dialogs/`). The canvas stays in the page.
 
 | Role (GoF) | In BeDiagram |
 |---|---|
 | Mediator | **`IDesignerHost`**, implemented by the Designer in `Designer.Host.cs`: the editor, the command buttons, redraw, and what only the page can do (dialogs, following links, page size) |
-| Colleagues | The parts, each derived from **`DesignerPart`** and given `Host="this"`. They don't know about each other, only the host |
+| Colleagues | The bars and panels, each derived from **`DesignerPart`** and given `Host="this"`. They don't know about each other, only the host |
 
 Blazor redraws only the component that handled an event, so a click in a panel would leave the canvas out of date.
 `DesignerPart` therefore redraws the whole page after every event a part handles, just as when the markup was all in
 `Designer.razor`. To give a part something new from the page, add it to `IDesignerHost` and `Designer.Host.cs`.
+Dialogs are plain components instead: values in as parameters, answers out as `EventCallback`s to page methods.
 
 ### Mouse gestures: State pattern
 

@@ -1,0 +1,80 @@
+@inherits DesignerPart
+
+<aside class="palette">
+    <div class="section">Shapes</div>
+    <div class="tiles three">
+        @foreach (PaletteShape p in PaletteShapes)
+        {
+            <div class="tile" draggable="true" data-palette="@p.Type.Name" data-tip="@PaletteShapeTip(p)" aria-label="@p.Type.Display"
+                 @ondragstart="() => StartPaletteDrag(p.Type.Key)"
+                 @onclick="() => Editor.QuickAdd(p.Type.Key)">
+                <svg width="48" height="30" viewBox="-2 -2 52 32">
+                    <path d="@PaletteShapePath(p.Type.Key)" fill="@p.Type.Fill" stroke="@p.Type.Stroke" stroke-width="1.5" />
+                    @if (PaletteInnerPath(p.Type.Key) is { } inner)
+                    {
+                        <path d="@inner" fill="none" stroke="@p.Type.Stroke" stroke-width="1" />
+                    }
+                </svg>
+                @if (p.HasKey)
+                {
+                    <kbd>@p.Number</kbd>
+                }
+            </div>
+        }
+    </div>
+    <div class="section">Circles</div>
+    <div class="tiles four">
+        @foreach (NodeTypeInfo t in RoundShapes)
+        {
+            <div class="tile" draggable="true" data-palette="@RoundItem(t).Key" data-tip="@RoundPaletteTip(t)" aria-label="@(t.Display) circle"
+                 @ondragstart="() => StartPaletteDrag(RoundItem(t))"
+                 @onclick="() => Editor.QuickAdd(RoundItem(t))">
+                @RoundSwatch(t.Key, 26)
+            </div>
+        }
+    </div>
+    <div class="section">Outcomes</div>
+    <div class="tiles five">
+        @foreach (OutcomeInfo o in Outcomes.All)
+        {
+            <div class="tile" draggable="true" data-palette="@OutcomeItem(o).Key" data-tip="@OutcomePaletteTip(o)" aria-label="@o.Display"
+                 @ondragstart="() => StartPaletteDrag(OutcomeItem(o))"
+                 @onclick="() => Editor.QuickAdd(OutcomeItem(o))">
+                @OutcomeSwatch(o.Key, 24)
+            </div>
+        }
+    </div>
+    <div class="section">Text &amp; groups</div>
+    <div class="tiles three">
+        <div class="tile" draggable="true" data-palette="text" data-tip="Text box: drag onto the canvas, click to add, or press T" aria-label="Text box"
+             @ondragstart="StartTextDrag"
+             @onclick="Editor.AddTextQuick">
+            <svg width="48" height="30" viewBox="-2 -2 52 32">
+                <rect x="4" y="2" width="40" height="24" rx="3" fill="#ffffff" stroke="#9aa3ad" stroke-width="1.2" stroke-dasharray="3 2" />
+                <path d="M12,9 H36 M24,9 V21" stroke="#55606e" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <kbd>T</kbd>
+        </div>
+        <div class="tile" draggable="true" data-palette="comment" data-tip="Comment: drag onto the canvas, click to add, or press C" aria-label="Comment"
+             @ondragstart="StartCommentDrag"
+             @onclick="Editor.AddCommentQuick">
+            <svg width="48" height="30" viewBox="-2 -2 52 32">
+                <rect x="4" y="0" width="40" height="28" rx="3" fill="#fff7c2" stroke="#d9c255" stroke-width="1.5" />
+                <path d="M10,9 H38 M10,15 H34 M10,21 H26" stroke="#b9a64a" stroke-width="1.5" />
+            </svg>
+            <kbd>C</kbd>
+        </div>
+        <div class="tile" draggable="true" data-palette="group" data-tip="Group: drag onto the canvas, or select items and press Ctrl+G" aria-label="Group"
+             @ondragstart="StartGroupDrag"
+             @onclick="Editor.AddGroupQuick">
+            <svg width="48" height="30" viewBox="-2 -2 52 32">
+                <rect x="1" y="1" width="46" height="26" rx="4" fill="#eef3fb" stroke="#3b6fb6" stroke-width="1.5" />
+                <path d="M1,9 H47" stroke="#3b6fb6" stroke-width="1.2" />
+                <rect x="8" y="14" width="12" height="8" rx="2" fill="#fff" stroke="#3b6fb6" />
+                <rect x="28" y="14" width="12" height="8" rx="2" fill="#fff" stroke="#3b6fb6" />
+            </svg>
+            <kbd>G</kbd>
+        </div>
+    </div>
+    <div class="section">Quick add <InfoTip>Hover a tile to see what it is. Select an item, then press a number to add the next step below it (joined to it when Auto-join is on).</InfoTip></div>
+</aside>

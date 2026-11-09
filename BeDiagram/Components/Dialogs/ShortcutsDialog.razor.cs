@@ -1,7 +1,7 @@
-using BeDiagram.Components.Pages.Commands;
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Components.Pages.Commands;
 
-namespace BeDiagram.Components.Shared;
+namespace BeDiagram.Components.Dialogs;
 
 /// <summary>Help → Keyboard shortcuts: every command's keys (from the registry) and the mouse gestures.</summary>
 public partial class ShortcutsDialog

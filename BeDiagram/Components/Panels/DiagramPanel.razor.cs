@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components;
 using BeDiagram.Components.Pages;
-using BeDiagram.Models;
 using BeDiagram.Services;
 
 namespace BeDiagram.Components.Panels;
@@ -9,8 +8,6 @@ namespace BeDiagram.Components.Panels;
 public partial class DiagramPanel : DesignerPart
 {
     void PageSizePicked(ChangeEventArgs e) => Host.SetPageSize(e.Value?.ToString());
-
-    bool PageIsLandscape => D.Page.Size == PageSetup.Custom ? D.Page.CustomW > D.Page.CustomH : D.Page.Landscape;
 
     int OffPageCount => Editor.OutsidePage().Count;
 

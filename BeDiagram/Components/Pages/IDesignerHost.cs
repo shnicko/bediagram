@@ -1,5 +1,6 @@
 using BeDiagram.Components.Pages.Commands;
 using BeDiagram.Editing;
+using BeDiagram.Services.Export;
 
 namespace BeDiagram.Components.Pages;
 
@@ -21,8 +22,24 @@ public interface IDesignerHost
     /// panel redraws the canvas too.</summary>
     void Redraw();
 
+    // ───────────── Dialogs and files ─────────────
+
     /// <summary>Opens the step order pop-up.</summary>
     void ShowStepOrder();
+
+    /// <summary>Opens the keyboard shortcuts pop-up.</summary>
+    void ShowShortcuts();
+
+    /// <summary>Starts a new diagram (asking first when there are unsaved changes).</summary>
+    void NewDiagram();
+
+    /// <summary>Shows the Open dialog.</summary>
+    void ShowOpen();
+
+    /// <summary>Exports next to the saved diagram; the current-view area uses what is on screen now.</summary>
+    Task Export(ExportChoice choice, ExportOptions options);
+
+    // ───────────── Linked diagrams ─────────────
 
     /// <summary>Opens the linked diagram (after asking about unsaved changes).</summary>
     void FollowLink(string? link);
@@ -30,9 +47,39 @@ public interface IDesignerHost
     /// <summary>The open diagram's own name, left out of the link pickers (null when it has never been saved).</summary>
     string? LinkExclude { get; }
 
+    /// <summary>Diagrams we drilled down from via links, outermost first (the breadcrumb).</summary>
+    IReadOnlyList<string> Trail { get; }
+
+    /// <summary>Back up one level of the breadcrumb.</summary>
+    void GoBack();
+
+    /// <summary>Back to <c>Trail[level]</c>.</summary>
+    void GoUpTo(int level);
+
+    // ───────────── Page and view ─────────────
+
     /// <summary>Paper size by key (<see cref="Models.PageSetup"/>), or open canvas; fits the view to it.</summary>
     void SetPageSize(string? size);
 
     /// <summary>Portrait or landscape; fits the view to the page.</summary>
     void SetLandscape(bool landscape);
+
+    /// <summary>Zoom of the canvas (1 = 100%).</summary>
+    double Zoom { get; }
+
+    /// <summary>The background grid (<see cref="Models.Styles.GridLook"/> key): a view setting, not saved in the file.</summary>
+    string Grid { get; }
+
+    void SetGrid(string grid);
+
+    /// <summary>The menu bar heading whose drop-down is open ("File", "Edit", …), or null.</summary>
+    string? OpenMenu { get; }
+
+    void SetOpenMenu(string? menu);
+
+    /// <summary>The message shown in the status bar for a few seconds, or null.</summary>
+    string? Toast { get; }
+
+    /// <summary>What a drop from the palette adds at the drop point (world x, y); set when a tile drag starts.</summary>
+    void SetPaletteDrop(Action<double, double> drop);
 }

@@ -18,6 +18,10 @@ public class PageSetup
     public bool Enabled => Size != None;
     public bool Landscape => Orientation == "landscape";
 
+    /// <summary>Wider than tall, for the Portrait / Landscape buttons: a custom size by its numbers, a paper size by its
+    /// orientation. A method, not a property, so it isn't saved in the file.</summary>
+    public bool IsLandscape() => Size == Custom ? CustomW > CustomH : Landscape;
+
     public const double PxPerMm = 96 / 25.4;
 
     /// <summary>Common sizes, portrait width × height in mm.</summary>

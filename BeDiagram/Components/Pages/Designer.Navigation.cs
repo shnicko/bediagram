@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Services;
 using BeDiagram.Services.Export;
 
@@ -79,9 +77,7 @@ public partial class Designer
     void DeleteFile(string name)
     {
         Store.Delete(name);
-        openFiles = Store.List();
         if (hasFile && D.Name == name) { hasFile = false; Editor.Dirty = true; }
-        confirmDelete = null;
         ShowToast($"Deleted {name}");
     }
 
@@ -101,44 +97,21 @@ public partial class Designer
         }
     }
 
-    async Task ConfirmSaveAs()
+    async Task ConfirmSaveAs(string name)
     {
-        D.Name = DiagramStore.SafeName(saveAsName);
+        D.Name = DiagramStore.SafeName(name);
         hasFile = true;
         CloseDialog();
         await Save();
     }
 
-    async Task SaveAsKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter") await ConfirmSaveAs();
-    }
-
-    /// <summary>One Export menu entry, worked out for the markup. StartsGroup draws a divider before a new format.</summary>
-    record ExportMenuItem(ExportChoice Choice, string Label, string Tip, bool StartsGroup);
-
-    /// <summary>The Export menu: every format × area combination the <see cref="ExportService"/> offers.</summary>
-    IReadOnlyList<ExportMenuItem> ExportMenuItems()
-    {
-        List<ExportMenuItem> items = new List<ExportMenuItem>();
-        IExportFormat? previous = null;
-        foreach (ExportChoice c in Exports.Choices())
-        {
-            items.Add(new ExportMenuItem(c, c.Label(D), c.Tip(D), previous is not null && previous != c.Format));
-            previous = c.Format;
-        }
-        return items;
-    }
-
-    IReadOnlyList<PngResolution> PngResolutions => PngExportFormat.Resolutions(D);
-
     /// <summary>Exports next to the saved diagram; the current-view area uses what is on screen now.</summary>
-    async Task Export(ExportChoice choice)
+    async Task Export(ExportChoice choice, ExportOptions options)
     {
         try
         {
             ScreenView screen = new ScreenView(PanX, PanY, Zoom, canvasW, canvasH);
-            (string path, string? note) = await Exports.ExportAsync(choice, D, screen, exportOptions);
+            (string path, string? note) = await Exports.ExportAsync(choice, D, screen, options);
             ShowToast(note is null ? $"Exported {Path.GetFileName(path)}" : $"Exported {Path.GetFileName(path)} ({note})");
         }
         catch (Exception ex)
@@ -146,11 +119,6 @@ public partial class Designer
             ShowToast($"{choice.Format.Name} export failed: {ex.Message}");
         }
     }
-
-    void SetPngResolution(ChangeEventArgs e) =>
-        exportOptions.PngResolution = int.TryParse(e.Value?.ToString(), out int i) ? i : 1;
-
-    void SetPngTransparent(ChangeEventArgs e) => exportOptions.PngTransparent = e.Value is true;
 
     void ShowToast(string message)
     {

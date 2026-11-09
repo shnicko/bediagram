@@ -33,8 +33,8 @@
 @if (D.Page.Enabled)
 {
     <div class="seg wide" style="margin-top:8px">
-        <button class="@(!PageIsLandscape ? "on" : "")" @onclick="() => Host.SetLandscape(false)">@IconSvg("rectangle-vertical", 16) Portrait</button>
-        <button class="@(PageIsLandscape ? "on" : "")" @onclick="() => Host.SetLandscape(true)">@IconSvg("rectangle-horizontal", 16) Landscape</button>
+        <button class="@(!D.Page.IsLandscape() ? "on" : "")" @onclick="() => Host.SetLandscape(false)">@IconSvg("rectangle-vertical", 16) Portrait</button>
+        <button class="@(D.Page.IsLandscape() ? "on" : "")" @onclick="() => Host.SetLandscape(true)">@IconSvg("rectangle-horizontal", 16) Landscape</button>
     </div>
     @if (D.Page.Size == PageSetup.Custom)
     {

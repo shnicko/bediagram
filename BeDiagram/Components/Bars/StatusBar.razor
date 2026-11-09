@@ -1,0 +1,14 @@
+@inherits DesignerPart
+
+<footer class="status">
+    <span>Saved to: @Store.Folder</span>
+    <span>@D.Page.Describe()</span>
+    @if (D.Page.Enabled && OffPageCount > 0)
+    {
+        <span class="status-warn">⚠ @OffPageCount item@(OffPageCount == 1 ? "" : "s") off the page</span>
+    }
+    @if (!string.IsNullOrEmpty(Host.Toast))
+    {
+        <span class="toast">@Host.Toast</span>
+    }
+</footer>

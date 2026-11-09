@@ -4,9 +4,6 @@ using Microsoft.JSInterop;
 using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Editing;
 using BeDiagram.Models;
-using BeDiagram.Models.Emphasis;
-using BeDiagram.Models.Layout;
-using BeDiagram.Models.Serialization;
 using BeDiagram.Models.Styles;
 using BeDiagram.Services;
 using BeDiagram.Services.Export;
@@ -51,15 +48,10 @@ public partial class Designer
 
     // UI
     Dialog dialog;
-    string saveAsName = "";
-    string? confirmDelete;
     string? toast;
     string iconFilter = "";
-    /// <summary>Saved diagrams listed in the Open dialog (read when it opens).</summary>
-    IReadOnlyList<(string Name, DateTime Modified)> openFiles = Array.Empty<(string Name, DateTime Modified)>();
     /// <summary>The menu bar heading whose drop-down is open ("File", "Edit", …), or null.</summary>
     string? openMenu;
-    readonly ExportOptions exportOptions = new();
     CancellationTokenSource? toastCts;
 
     ElementReference canvasEl;

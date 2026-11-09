@@ -1,11 +1,9 @@
-using Microsoft.AspNetCore.Components;
 using BeDiagram.Models;
-using BeDiagram.Models.Catalogue;
 using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Components.Pages;
 
-/// <summary>Paper size, orientation and margins, and the flow direction / lane lock menu toggles.</summary>
+/// <summary>Paper size and orientation (from the File menu and the Diagram panel), and the page sheet drawn on the canvas.</summary>
 public partial class Designer
 {
     // ───────────── Page (paper size) ─────────────
@@ -41,23 +39,8 @@ public partial class Designer
         Fit();
     }
 
-    // ───────────── Flow direction and lane lock (menu toggles) ─────────────
+    // ───────────── The page sheet on the canvas ─────────────
 
-    string FlowClass(FlowDirection flow) => D.Flow == flow ? "on" : "";
-
-    void SetLockLanes(ChangeEventArgs e) => Editor.SetLockLanes(e.Value is true);
-
-    string SnapClass => Editor.Snap ? "on" : "";
-
-    string SnapTip => Editor.Snap ? "Snap to grid is on (10 px) — click to turn off" : "Snap to grid is off — click to turn on";
-
-    void ToggleSnap() => Editor.Snap = !Editor.Snap;
-
-    bool PageIsLandscape => D.Page.Size == PageSetup.Custom ? D.Page.CustomW > D.Page.CustomH : D.Page.Landscape;
-
-        /// <summary>What above/below means for the selected label's text direction.</summary>
-
-    void SetPageSize(ChangeEventArgs e) => SetPageSize(e.Value?.ToString());
 
     double PrintableW => Math.Max(0, D.Page.WidthPx - 2 * D.Page.MarginPx);
 

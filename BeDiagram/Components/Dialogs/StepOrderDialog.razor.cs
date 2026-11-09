@@ -1,9 +1,9 @@
+using Microsoft.AspNetCore.Components;
 using BeDiagram.Editing;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
-using Microsoft.AspNetCore.Components;
 
-namespace BeDiagram.Components.Shared;
+namespace BeDiagram.Components.Dialogs;
 
 /// <summary>
 /// The step order pop-up: every step in order, as numbered slots. Drag a shape into the gap between two slots to make

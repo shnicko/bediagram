@@ -4,257 +4,9 @@
 <PageTitle>@(D.Name)@(Editor.Dirty ? " •" : "") — BeDiagram</PageTitle>
 
 <div class="app">
-    @* ───────────── Toolbar ───────────── *@
-    <header class="toolbar">
-        <div class="brand">◆ BeDiagram</div>
-        <nav class="menubar">
-            <DropMenu Title="File" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
-                <button @onclick="NewDiagram" title="New diagram">New</button>
-                <button @onclick="ShowOpen" title="Open a saved diagram">Open…</button>
-                <button @onclick="() => Run(Cmd.Save)" title="@Tip(Cmd.Save)">Save<span class="menu-key">@KeyText(Cmd.Save)</span></button>
-                <button @onclick="() => Run(Cmd.SaveAs)" title="@Tip(Cmd.SaveAs)">Save as…<span class="menu-key">@KeyText(Cmd.SaveAs)</span></button>
-                <hr class="menu-divider" />
-                <div class="menu-heading">Export <span class="muted-label">next to the saved diagram</span></div>
-                @foreach (ExportMenuItem item in ExportMenuItems())
-                {
-                    if (item.StartsGroup)
-                    {
-                        <hr class="menu-divider" />
-                    }
-                    <button @onclick="() => Export(item.Choice)" title="@item.Tip">@item.Label</button>
-                }
-                <div class="menu-settings" @onclick:stopPropagation="true">
-                    <span class="muted-label">PNG settings</span>
-                    <label title="Size of the PNG in pixels">
-                        Resolution
-                        <select value="@exportOptions.PngResolution" @onchange="SetPngResolution">
-                            @for (int i = 0; i < PngResolutions.Count; i++)
-                            {
-                                <option value="@i">@PngResolutions[i].Label</option>
-                            }
-                        </select>
-                    </label>
-                    <label title="No white background — for placing over slides or coloured pages">
-                        <input type="checkbox" checked="@exportOptions.PngTransparent" @onchange="SetPngTransparent" />
-                        Transparent background
-                    </label>
-                </div>
-                <hr class="menu-divider" />
-                <div class="menu-settings" @onclick:stopPropagation="true" title="Where the next step goes when you add one from the sidebar, a number key or + Next step">
-                    <span class="muted-label">Flow direction</span>
-                    <div class="seg">
-                        <button class="@FlowClass(FlowDirection.Right)" title="New steps go to the right" @onclick="() => Editor.SetFlow(FlowDirection.Right)">@IconSvg("arrow-right", 16) Left → right</button>
-                        <button class="@FlowClass(FlowDirection.Down)" title="New steps go below" @onclick="() => Editor.SetFlow(FlowDirection.Down)">@IconSvg("arrow-down", 16) Top → down</button>
-                    </div>
-                </div>
-                <hr class="menu-divider" />
-                <div class="menu-settings" @onclick:stopPropagation="true" title="Canvas size: open canvas or a fixed paper size">
-                    <span class="muted-label">Page</span>
-                    <select class="page-select" value="@D.Page.Size" @onchange="SetPageSize">
-                        <option value="@PageSetup.None">Open canvas</option>
-                        @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
-                        {
-                            <option value="@ps.Key">@ps.Name</option>
-                        }
-                        <option value="@PageSetup.Custom">Custom…</option>
-                    </select>
-                    @if (D.Page.Enabled)
-                    {
-                        <div class="seg">
-                            <button class="@(!PageIsLandscape ? "on" : "")" title="Portrait" @onclick="SetPortrait">@IconSvg("rectangle-vertical", 16) Portrait</button>
-                            <button class="@(PageIsLandscape ? "on" : "")" title="Landscape" @onclick="SetLandscape">@IconSvg("rectangle-horizontal", 16) Landscape</button>
-                        </div>
-                    }
-                </div>
-            </DropMenu>
-            <DropMenu Title="Edit" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
-                <button disabled="@(!CanRun(Cmd.Undo))" @onclick="() => Run(Cmd.Undo)">Undo<span class="menu-key">@KeyText(Cmd.Undo)</span></button>
-                <button disabled="@(!CanRun(Cmd.Redo))" @onclick="() => Run(Cmd.Redo)">Redo<span class="menu-key">@KeyText(Cmd.Redo)</span></button>
-                <hr class="menu-divider" />
-                <button @onclick="() => Run(Cmd.SelectAll)">Select all<span class="menu-key">@KeyText(Cmd.SelectAll)</span></button>
-                <button disabled="@(!CanRun(Cmd.Duplicate))" @onclick="() => Run(Cmd.Duplicate)">Duplicate<span class="menu-key">@KeyText(Cmd.Duplicate)</span></button>
-                <button disabled="@(!CanRun(Cmd.Delete))" @onclick="() => Run(Cmd.Delete)">Delete<span class="menu-key">@KeyText(Cmd.Delete)</span></button>
-                <hr class="menu-divider" />
-                <button disabled="@(!CanRun(Cmd.Join))" @onclick="() => Run(Cmd.Join)">Join in selection order<span class="menu-key">@KeyText(Cmd.Join)</span></button>
-                <button disabled="@(!CanRun(Cmd.Branch))" @onclick="() => Run(Cmd.Branch)">Branch pass / fail<span class="menu-key">@KeyText(Cmd.Branch)</span></button>
-                <button disabled="@(!CanRun(Cmd.Group))" @onclick="() => Run(Cmd.Group)">Group<span class="menu-key">@KeyText(Cmd.Group)</span></button>
-                <button disabled="@(!CanRun(Cmd.Ungroup))" @onclick="() => Run(Cmd.Ungroup)">Ungroup<span class="menu-key">@KeyText(Cmd.Ungroup)</span></button>
-                <hr class="menu-divider" />
-                <div class="menu-settings" @onclick:stopPropagation="true">
-                    <label title="New items join to the selected item automatically"><input type="checkbox" @bind="Editor.AutoConnect" /> Auto-join new items</label>
-                    <label title="Snap to a 10px grid"><input type="checkbox" @bind="Editor.Snap" /> Snap to grid</label>
-                    <span class="muted-label">Angle lock</span>
-                    <div class="seg" title="Angle lock when moving items and placing joined steps">
-                        @foreach (IAngleLock a in AngleLocks.All)
-                        {
-                            <button class="@(Editor.AngleLock == a ? "on" : "")" title="@a.Name" @onclick="() => SetAngleLock(a)">@a.Label</button>
-                        }
-                    </div>
-                </div>
-            </DropMenu>
-            <DropMenu Title="Arrange" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
-                <button title="Put the steps in order: drag to reorder, or set steps to run in parallel" @onclick="ShowStepOrder">Step order…</button>
-                <button title="@Cmd.TidyTip" disabled="@(!CanRun(Cmd.Tidy))" @onclick="() => Run(Cmd.Tidy)">Tidy connectors</button>
-                <hr class="menu-divider" />
-                <div class="menu-heading">Auto-layout</div>
-                <button title="@Cmd.LayoutTip(Cmd.LayoutAcross)" disabled="@(!CanRun(Cmd.LayoutAcross))" @onclick="() => Run(Cmd.LayoutAcross)">@IconSvg("arrow-right", 16) Left → right</button>
-                <button title="@Cmd.LayoutTip(Cmd.LayoutDown)" disabled="@(!CanRun(Cmd.LayoutDown))" @onclick="() => Run(Cmd.LayoutDown)">@IconSvg("workflow", 16) Top → down</button>
-                <div class="menu-heading">Swim lanes</div>
-                <button title="@Cmd.LanesTip(Cmd.LanesAcross)" disabled="@(!CanRun(Cmd.LanesAcross))" @onclick="() => Run(Cmd.LanesAcross)">@IconSvg("rows-3", 16) Left → right</button>
-                <button title="@Cmd.LanesTip(Cmd.LanesDown)" disabled="@(!CanRun(Cmd.LanesDown))" @onclick="() => Run(Cmd.LanesDown)">@IconSvg("columns-3", 16) Top → down</button>
-                <div class="menu-settings" @onclick:stopPropagation="true">
-                    <label title="Adding or moving shapes won't resize the lanes. Arrange, resizing a lane by hand and Fit to contents still do."><input type="checkbox" checked="@D.LockLanes" @onchange="SetLockLanes" /> Lock lane size</label>
-                </div>
-                <hr class="menu-divider" />
-                <div class="menu-settings" @onclick:stopPropagation="true" title="Line style for new connectors">
-                    <span class="muted-label">New connectors</span>
-                    <div class="seg">
-                        <button class="@(D.DefaultConnector == EdgeStyle.Elbow ? "on" : "")" title="Right-angled connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
-                        <button class="@(D.DefaultConnector == EdgeStyle.Straight ? "on" : "")" title="Straight connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyle.Straight)">@IconSvg("move-up-right", 16) Straight</button>
-                    </div>
-                </div>
-            </DropMenu>
-            <DropMenu Title="View" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
-                <div class="menu-settings" @onclick:stopPropagation="true">
-                    <label title="Show each shape's step number (the order is kept either way)"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
-                </div>
-                <hr class="menu-divider" />
-                <button @onclick="() => Run(Cmd.ZoomIn)">Zoom in<span class="menu-key">@KeyText(Cmd.ZoomIn)</span></button>
-                <button @onclick="() => Run(Cmd.ZoomOut)">Zoom out<span class="menu-key">@KeyText(Cmd.ZoomOut)</span></button>
-                <button @onclick="() => Run(Cmd.ResetZoom)">Zoom to 100%<span class="menu-key">@KeyText(Cmd.ResetZoom)</span></button>
-                <button @onclick="() => Run(Cmd.Fit)">Fit to window<span class="menu-key">@KeyText(Cmd.Fit)</span></button>
-                <button disabled="@(!CanRun(Cmd.FitSelection))" @onclick="() => Run(Cmd.FitSelection)">Zoom to selection<span class="menu-key">@KeyText(Cmd.FitSelection)</span></button>
-            </DropMenu>
-            <DropMenu Title="Help" OpenMenu="@openMenu" OpenMenuChanged="SetOpenMenu">
-                <button @onclick="ShowShortcuts">Keyboard shortcuts…</button>
-            </DropMenu>
-        </nav>
-        @if (trail.Count > 0)
-        {
-            <div class="group trail" title="You opened this diagram from a link — click a name to go back up">
-                <button class="back" @onclick="GoBack" title="Back to @trail[^1]">← Back</button>
-                @foreach (Crumb c in Crumbs)
-                {
-                    <button class="link crumb" @onclick="() => GoUpTo(c.Level)">@c.Name</button><span class="crumb-sep">›</span>
-                }
-                <span class="crumb-here">@D.Name</span>
-            </div>
-        }
-        <div class="group">
-            <button @onclick="() => Run(Cmd.Undo)" disabled="@(!CanRun(Cmd.Undo))" title="@Tip(Cmd.Undo)">↶</button>
-            <button @onclick="() => Run(Cmd.Redo)" disabled="@(!CanRun(Cmd.Redo))" title="@Tip(Cmd.Redo)">↷</button>
-        </div>
-        <div class="group" title="Background grid (screen only, not exported)">
-            <span class="muted-label">Grid</span>
-            <div class="seg">
-                @foreach ((string k, string name, string icon) in GridLook.Options)
-                {
-                    <button class="@(grid == k ? "on" : "")" title="@name" @onclick="() => SetGrid(k)">@IconSvg(icon, 16)</button>
-                }
-            </div>
-        </div>
-        <div class="group">
-            <button @onclick="() => Run(Cmd.ZoomOut)" title="@Tip(Cmd.ZoomOut)">−</button>
-            <span class="zoom">@((int)Math.Round(Zoom * 100))%</span>
-            <button @onclick="() => Run(Cmd.ZoomIn)" title="@Tip(Cmd.ZoomIn)">+</button>
-            <button @onclick="() => Run(Cmd.Fit)" title="@Tip(Cmd.Fit)">Fit</button>
-            <button @onclick="() => Run(Cmd.FitSelection)" disabled="@(!CanRun(Cmd.FitSelection))" title="@Tip(Cmd.FitSelection)">Selection</button>
-        </div>
-        <div class="group">
-            <div class="seg" title="Flow direction: where the next step goes when you add one from the sidebar, a number key or + Next step">
-                <button class="@FlowClass(FlowDirection.Right)" title="Flow left → right: new steps go to the right" @onclick="() => Editor.SetFlow(FlowDirection.Right)">@IconSvg("arrow-right", 16)</button>
-                <button class="@FlowClass(FlowDirection.Down)" title="Flow top → down: new steps go below" @onclick="() => Editor.SetFlow(FlowDirection.Down)">@IconSvg("arrow-down", 16)</button>
-            </div>
-            <button class="@SnapClass" title="@SnapTip" @onclick="ToggleSnap">@IconSvg("magnet", 16)</button>
-        </div>
-        <div class="title">
-            <span>@D.Name</span>@if (Editor.Dirty) {<span class="dirty" title="Unsaved changes">●</span>}
-        </div>
-    </header>
-    @if (openMenu is not null)
-    {
-        <div class="menu-backdrop" @onclick="CloseMenus"></div>
-    }
-
-    @* ───────────── Palette ───────────── *@
-    <aside class="palette">
-        <div class="section">Shapes</div>
-        <div class="tiles three">
-            @foreach (PaletteShape p in PaletteShapes)
-            {
-                <div class="tile" draggable="true" data-palette="@p.Type.Name" data-tip="@PaletteShapeTip(p)" aria-label="@p.Type.Display"
-                     @ondragstart="() => StartPaletteDrag(p.Type.Key)"
-                     @onclick="() => Editor.QuickAdd(p.Type.Key)">
-                    <svg width="48" height="30" viewBox="-2 -2 52 32">
-                        <path d="@PaletteShapePath(p.Type.Key)" fill="@p.Type.Fill" stroke="@p.Type.Stroke" stroke-width="1.5" />
-                        @if (PaletteInnerPath(p.Type.Key) is { } inner)
-                        {
-                            <path d="@inner" fill="none" stroke="@p.Type.Stroke" stroke-width="1" />
-                        }
-                    </svg>
-                    @if (p.HasKey)
-                    {
-                        <kbd>@p.Number</kbd>
-                    }
-                </div>
-            }
-        </div>
-        <div class="section">Circles</div>
-        <div class="tiles four">
-            @foreach (NodeTypeInfo t in RoundShapes)
-            {
-                <div class="tile" draggable="true" data-palette="@RoundItem(t).Key" data-tip="@RoundPaletteTip(t)" aria-label="@(t.Display) circle"
-                     @ondragstart="() => StartPaletteDrag(RoundItem(t))"
-                     @onclick="() => Editor.QuickAdd(RoundItem(t))">
-                    @RoundSwatch(t.Key, 26)
-                </div>
-            }
-        </div>
-        <div class="section">Outcomes</div>
-        <div class="tiles five">
-            @foreach (OutcomeInfo o in Outcomes.All)
-            {
-                <div class="tile" draggable="true" data-palette="@OutcomeItem(o).Key" data-tip="@OutcomePaletteTip(o)" aria-label="@o.Display"
-                     @ondragstart="() => StartPaletteDrag(OutcomeItem(o))"
-                     @onclick="() => Editor.QuickAdd(OutcomeItem(o))">
-                    @OutcomeSwatch(o.Key, 24)
-                </div>
-            }
-        </div>
-        <div class="section">Text &amp; groups</div>
-        <div class="tiles three">
-            <div class="tile" draggable="true" data-palette="text" data-tip="Text box: drag onto the canvas, click to add, or press T" aria-label="Text box"
-                 @ondragstart="StartTextDrag"
-                 @onclick="Editor.AddTextQuick">
-                <svg width="48" height="30" viewBox="-2 -2 52 32">
-                    <rect x="4" y="2" width="40" height="24" rx="3" fill="#ffffff" stroke="#9aa3ad" stroke-width="1.2" stroke-dasharray="3 2" />
-                    <path d="M12,9 H36 M24,9 V21" stroke="#55606e" stroke-width="2" stroke-linecap="round" />
-                </svg>
-                <kbd>T</kbd>
-            </div>
-            <div class="tile" draggable="true" data-palette="comment" data-tip="Comment: drag onto the canvas, click to add, or press C" aria-label="Comment"
-                 @ondragstart="StartCommentDrag"
-                 @onclick="Editor.AddCommentQuick">
-                <svg width="48" height="30" viewBox="-2 -2 52 32">
-                    <rect x="4" y="0" width="40" height="28" rx="3" fill="#fff7c2" stroke="#d9c255" stroke-width="1.5" />
-                    <path d="M10,9 H38 M10,15 H34 M10,21 H26" stroke="#b9a64a" stroke-width="1.5" />
-                </svg>
-                <kbd>C</kbd>
-            </div>
-            <div class="tile" draggable="true" data-palette="group" data-tip="Group: drag onto the canvas, or select items and press Ctrl+G" aria-label="Group"
-                 @ondragstart="StartGroupDrag"
-                 @onclick="Editor.AddGroupQuick">
-                <svg width="48" height="30" viewBox="-2 -2 52 32">
-                    <rect x="1" y="1" width="46" height="26" rx="4" fill="#eef3fb" stroke="#3b6fb6" stroke-width="1.5" />
-                    <path d="M1,9 H47" stroke="#3b6fb6" stroke-width="1.2" />
-                    <rect x="8" y="14" width="12" height="8" rx="2" fill="#fff" stroke="#3b6fb6" />
-                    <rect x="28" y="14" width="12" height="8" rx="2" fill="#fff" stroke="#3b6fb6" />
-                </svg>
-                <kbd>G</kbd>
-            </div>
-        </div>
-        <div class="section">Quick add <InfoTip>Hover a tile to see what it is. Select an item, then press a number to add the next step below it (joined to it when Auto-join is on).</InfoTip></div>
-    </aside>
+    @* ───────────── Toolbar and palette (Components/Bars) ───────────── *@
+    <Toolbar Host="this" />
+    <ShapePalette Host="this" />
 
     @* ───────────── Canvas ───────────── *@
     <main class="canvas" @ref="canvasEl"
@@ -633,7 +385,7 @@
         }
     </main>
 
-    @* ───────────── Properties panel ───────────── *@
+    @* ───────────── Side panel for the selection (Components/Panels) ───────────── *@
     <aside class="panel">
         @if (Editor.SelectedNode is { } sn)
         {
@@ -661,91 +413,21 @@
         }
     </aside>
 
-    <footer class="status">
-        <span>Saved to: @Store.Folder</span>
-        <span>@D.Page.Describe()</span>
-        @if (D.Page.Enabled && OffPageCount > 0)
-        {
-            <span class="status-warn">⚠ @OffPageCount item@(OffPageCount == 1 ? "" : "s") off the page</span>
-        }
-        @if (!string.IsNullOrEmpty(toast))
-        {
-            <span class="toast">@toast</span>
-        }
-    </footer>
+    <StatusBar Host="this" />
 </div>
 
-@* ───────────── Dialogs ───────────── *@
+@* ───────────── Dialogs (Components/Dialogs) ───────────── *@
 @if (dialog == Dialog.Open)
 {
-    <div class="modal-bg" @onclick="CloseDialog">
-        <div class="modal" @onclick:stopPropagation="true">
-            <h3>Open diagram</h3>
-            @if (Editor.Dirty) { <p class="warn">You have unsaved changes — opening another diagram will discard them.</p> }
-            @if (openFiles.Count == 0)
-            {
-                <p class="muted">No saved diagrams yet in @Store.Folder</p>
-            }
-            <ul class="files">
-                @foreach ((string name, DateTime modified) in openFiles)
-                {
-                    <li>
-                        <button class="link" @onclick="() => Open(name)">@name</button>
-                        <span class="muted">@modified.ToString("dd MMM yyyy HH:mm")</span>
-                        @if (confirmDelete == name)
-                        {
-                            <button class="danger small" @onclick="() => DeleteFile(name)">Confirm delete</button>
-                        }
-                        else
-                        {
-                            <button class="icon" title="Delete file" @onclick="() => AskDelete(name)">🗑</button>
-                        }
-                    </li>
-                }
-            </ul>
-            <div class="actions"><button @onclick="CloseDialog">Cancel</button></div>
-        </div>
-    </div>
+    <OpenDialog Dirty="@Editor.Dirty" OnOpen="Open" OnDelete="DeleteFile" OnClose="CloseDialog" />
 }
 else if (dialog == Dialog.SaveAs)
 {
-    <div class="modal-bg" @onclick="CloseDialog">
-        <div class="modal" @onclick:stopPropagation="true">
-            <h3>Save diagram as</h3>
-            <label>Name</label>
-            <input id="saveas-name" @bind="saveAsName" @bind:event="oninput" @onkeydown="SaveAsKey" />
-            @if (SaveAsWillOverwrite)
-            {
-                <p class="warn">A diagram with this name exists and will be overwritten.</p>
-            }
-            <p class="muted">@SaveAsPath</p>
-            <div class="actions">
-                <button @onclick="CloseDialog">Cancel</button>
-                <button class="primary" @onclick="ConfirmSaveAs">Save</button>
-            </div>
-        </div>
-    </div>
+    <SaveAsDialog Name="@D.Name" SavedName="@SavedName" OnSave="ConfirmSaveAs" OnCancel="CloseDialog" />
 }
 else if (dialog == Dialog.ConfirmLeave && pendingNav is { } nav)
 {
-    <div class="modal-bg" @onclick="CancelLeave">
-        <div class="modal" @onclick:stopPropagation="true">
-            <h3>Save changes before leaving?</h3>
-            <p>"@D.Name" has changes that haven't been saved. You're about to open "@nav.Target".</p>
-            @if (!hasFile)
-            {
-                <p class="muted">This diagram has never been saved, so you won't be able to come back to it with Back. Cancel and use Save as… first to keep it.</p>
-            }
-            <div class="actions">
-                <button @onclick="CancelLeave">Cancel</button>
-                <button class="danger" @onclick="() => ConfirmLeave(false)">Discard and open</button>
-                @if (hasFile)
-                {
-                    <button class="primary" @onclick="() => ConfirmLeave(true)">Save and open</button>
-                }
-            </div>
-        </div>
-    </div>
+    <ConfirmLeaveDialog DiagramName="@D.Name" Target="@nav.Target" HasFile="@hasFile" OnConfirm="ConfirmLeave" OnCancel="CancelLeave" />
 }
 else if (dialog == Dialog.Shortcuts)
 {
@@ -757,14 +439,5 @@ else if (dialog == Dialog.StepOrder)
 }
 else if (dialog == Dialog.ConfirmNew)
 {
-    <div class="modal-bg" @onclick="CloseDialog">
-        <div class="modal" @onclick:stopPropagation="true">
-            <h3>Discard unsaved changes?</h3>
-            <p>"@D.Name" has changes that haven't been saved.</p>
-            <div class="actions">
-                <button @onclick="CloseDialog">Cancel</button>
-                <button class="danger" @onclick="DiscardAndNew">Discard and start new</button>
-            </div>
-        </div>
-    </div>
+    <ConfirmNewDialog DiagramName="@D.Name" OnDiscard="DiscardAndNew" OnCancel="CloseDialog" />
 }
