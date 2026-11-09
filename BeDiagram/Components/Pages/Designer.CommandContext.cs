@@ -59,10 +59,10 @@ public partial class Designer : ICommandContext
 
     void ICommandContext.ToggleSelectedConnectorStyle()
     {
-        if (Editor.SelectedEdge is { } e) Editor.SetEdgeStyle(e, e.Style == EdgeStyles.Straight ? EdgeStyles.Elbow : EdgeStyles.Straight);
+        if (Editor.SelectedEdge is { } e) Editor.SetEdgeStyle(e, e.Style == EdgeStyle.Straight ? EdgeStyle.Elbow : EdgeStyle.Straight);
     }
 
-    void ICommandContext.AddShape(string type) => Editor.QuickAdd(type);
+    void ICommandContext.AddShape(NodeType type) => Editor.QuickAdd(type);
     void ICommandContext.AddText() => Editor.AddTextQuick();
     void ICommandContext.AddComment() => Editor.AddCommentQuick();
     void ICommandContext.AddGroup() => Editor.AddGroupQuick();

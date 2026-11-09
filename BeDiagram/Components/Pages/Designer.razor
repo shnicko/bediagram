@@ -43,8 +43,8 @@
                 <div class="menu-settings" @onclick:stopPropagation="true" title="Where the next step goes when you add one from the sidebar, a number key or + Next step">
                     <span class="muted-label">Flow direction</span>
                     <div class="seg">
-                        <button class="@FlowClass(FlowDirections.Right)" title="New steps go to the right" @onclick="() => Editor.SetFlow(FlowDirections.Right)">@IconSvg("arrow-right", 16) Left → right</button>
-                        <button class="@FlowClass(FlowDirections.Down)" title="New steps go below" @onclick="() => Editor.SetFlow(FlowDirections.Down)">@IconSvg("arrow-down", 16) Top → down</button>
+                        <button class="@FlowClass(FlowDirection.Right)" title="New steps go to the right" @onclick="() => Editor.SetFlow(FlowDirection.Right)">@IconSvg("arrow-right", 16) Left → right</button>
+                        <button class="@FlowClass(FlowDirection.Down)" title="New steps go below" @onclick="() => Editor.SetFlow(FlowDirection.Down)">@IconSvg("arrow-down", 16) Top → down</button>
                     </div>
                 </div>
                 <hr class="menu-divider" />
@@ -109,8 +109,8 @@
                 <div class="menu-settings" @onclick:stopPropagation="true" title="Line style for new connectors">
                     <span class="muted-label">New connectors</span>
                     <div class="seg">
-                        <button class="@(D.DefaultConnector == EdgeStyles.Elbow ? "on" : "")" title="Right-angled connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyles.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
-                        <button class="@(D.DefaultConnector == EdgeStyles.Straight ? "on" : "")" title="Straight connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyles.Straight)">@IconSvg("move-up-right", 16) Straight</button>
+                        <button class="@(D.DefaultConnector == EdgeStyle.Elbow ? "on" : "")" title="Right-angled connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
+                        <button class="@(D.DefaultConnector == EdgeStyle.Straight ? "on" : "")" title="Straight connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyle.Straight)">@IconSvg("move-up-right", 16) Straight</button>
                     </div>
                 </div>
             </DropMenu>
@@ -162,8 +162,8 @@
         </div>
         <div class="group">
             <div class="seg" title="Flow direction: where the next step goes when you add one from the sidebar, a number key or + Next step">
-                <button class="@FlowClass(FlowDirections.Right)" title="Flow left → right: new steps go to the right" @onclick="() => Editor.SetFlow(FlowDirections.Right)">@IconSvg("arrow-right", 16)</button>
-                <button class="@FlowClass(FlowDirections.Down)" title="Flow top → down: new steps go below" @onclick="() => Editor.SetFlow(FlowDirections.Down)">@IconSvg("arrow-down", 16)</button>
+                <button class="@FlowClass(FlowDirection.Right)" title="Flow left → right: new steps go to the right" @onclick="() => Editor.SetFlow(FlowDirection.Right)">@IconSvg("arrow-right", 16)</button>
+                <button class="@FlowClass(FlowDirection.Down)" title="Flow top → down: new steps go below" @onclick="() => Editor.SetFlow(FlowDirection.Down)">@IconSvg("arrow-down", 16)</button>
             </div>
             <button class="@SnapClass" title="@SnapTip" @onclick="ToggleSnap">@IconSvg("magnet", 16)</button>
         </div>
@@ -182,7 +182,7 @@
         <div class="tiles three">
             @foreach (PaletteShape p in PaletteShapes)
             {
-                <div class="tile" draggable="true" data-palette="@p.Type.Key" data-tip="@PaletteShapeTip(p)" aria-label="@p.Type.Display"
+                <div class="tile" draggable="true" data-palette="@p.Type.Name" data-tip="@PaletteShapeTip(p)" aria-label="@p.Type.Display"
                      @ondragstart="() => StartPaletteDrag(p.Type.Key)"
                      @onclick="() => Editor.QuickAdd(p.Type.Key)">
                     <svg width="48" height="30" viewBox="-2 -2 52 32">
@@ -203,9 +203,9 @@
         <div class="tiles four">
             @foreach (NodeTypeInfo t in RoundShapes)
             {
-                <div class="tile" draggable="true" data-palette="@RoundPaletteKey(t)" data-tip="@RoundPaletteTip(t)" aria-label="@(t.Display) circle"
-                     @ondragstart="() => StartPaletteDrag(RoundPaletteKey(t))"
-                     @onclick="() => Editor.QuickAdd(RoundPaletteKey(t))">
+                <div class="tile" draggable="true" data-palette="@RoundItem(t).Key" data-tip="@RoundPaletteTip(t)" aria-label="@(t.Display) circle"
+                     @ondragstart="() => StartPaletteDrag(RoundItem(t))"
+                     @onclick="() => Editor.QuickAdd(RoundItem(t))">
                     @RoundSwatch(t.Key, 26)
                 </div>
             }
@@ -214,9 +214,9 @@
         <div class="tiles five">
             @foreach (OutcomeInfo o in Outcomes.All)
             {
-                <div class="tile" draggable="true" data-palette="@OutcomePaletteKey(o)" data-tip="@OutcomePaletteTip(o)" aria-label="@o.Display"
-                     @ondragstart="() => StartPaletteDrag(OutcomePaletteKey(o))"
-                     @onclick="() => Editor.QuickAdd(OutcomePaletteKey(o))">
+                <div class="tile" draggable="true" data-palette="@OutcomeItem(o).Key" data-tip="@OutcomePaletteTip(o)" aria-label="@o.Display"
+                     @ondragstart="() => StartPaletteDrag(OutcomeItem(o))"
+                     @onclick="() => Editor.QuickAdd(OutcomeItem(o))">
                     @OutcomeSwatch(o.Key, 24)
                 </div>
             }
@@ -667,10 +667,10 @@
                 </label>
             }
             <label>Type</label>
-            <select value="@sn.Type" @onchange="e => Editor.ChangeType(sn, e.Value?.ToString())">
+            <select value="@NodeTypes.Get(sn.Type).Name" @onchange="e => TypePicked(sn, e)">
                 @foreach (NodeTypeInfo t in NodeTypes.All)
                 {
-                    <option value="@t.Key">@t.Display</option>
+                    <option value="@t.Name">@t.Display</option>
                 }
             </select>
             <div class="row">
@@ -792,10 +792,10 @@
         {
             <h3>Connector</h3>
             <p class="muted">@Editor.LabelOf(se.From) → @Editor.LabelOf(se.To)</p>
-            <label>Line <InfoTip>Drag a ● end on the canvas to move it to another side@(se.Style == EdgeStyles.Straight ? "" : "; drag the ■ on the middle segment to move the bend").</InfoTip></label>
+            <label>Line <InfoTip>Drag a ● end on the canvas to move it to another side@(se.Style == EdgeStyle.Straight ? "" : "; drag the ■ on the middle segment to move the bend").</InfoTip></label>
             <div class="seg wide">
-                <button class="@(se.Style == EdgeStyles.Elbow ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(se, EdgeStyles.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
-                <button class="@(se.Style == EdgeStyles.Straight ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(se, EdgeStyles.Straight)">@IconSvg("move-up-right", 16) Straight</button>
+                <button class="@(se.Style == EdgeStyle.Elbow ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(se, EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
+                <button class="@(se.Style == EdgeStyle.Straight ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(se, EdgeStyle.Straight)">@IconSvg("move-up-right", 16) Straight</button>
             </div>
 
             @if (se.IsManual)
@@ -846,14 +846,14 @@
 
             <label>Text direction</label>
             <div class="seg wide three">
-                <button class="@(se.LabelOrient == LabelOrients.Horizontal ? "on" : "")" title="Always level" @onclick="() => Editor.SetLabelOrient(se, LabelOrients.Horizontal)">Level</button>
-                <button class="@(se.LabelOrient == LabelOrients.Along ? "on" : "")" title="Runs along the line" @onclick="() => Editor.SetLabelOrient(se, LabelOrients.Along)">Along line</button>
-                <button class="@(se.LabelOrient == LabelOrients.Perpendicular ? "on" : "")" title="At 90° to the line" @onclick="() => Editor.SetLabelOrient(se, LabelOrients.Perpendicular)">90° to line</button>
+                <button class="@(se.LabelOrient == LabelOrient.Horizontal ? "on" : "")" title="Always level" @onclick="() => Editor.SetLabelOrient(se, LabelOrient.Horizontal)">Level</button>
+                <button class="@(se.LabelOrient == LabelOrient.Along ? "on" : "")" title="Runs along the line" @onclick="() => Editor.SetLabelOrient(se, LabelOrient.Along)">Along line</button>
+                <button class="@(se.LabelOrient == LabelOrient.Perpendicular ? "on" : "")" title="At 90° to the line" @onclick="() => Editor.SetLabelOrient(se, LabelOrient.Perpendicular)">90° to line</button>
             </div>
 
             <label>Label placement <InfoTip>@LabelPlaceHint(se)</InfoTip></label>
             <div class="seg wide three">
-                @foreach ((string k, string name) in LabelPlaces.All)
+                @foreach ((LabelPlace k, string name) in LabelPlaces.All)
                 {
                     <button class="@(se.LabelPlace == k ? "on" : "")" @onclick="() => Editor.SetLabelPlace(se, k)">@name</button>
                 }
@@ -921,8 +921,8 @@
             </div>
             <label>Connectors between selected items</label>
             <div class="seg wide">
-                <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyles.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
-                <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyles.Straight)">@IconSvg("move-up-right", 16) Straight</button>
+                <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
+                <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyle.Straight)">@IconSvg("move-up-right", 16) Straight</button>
             </div>
             @if (SelectedStepCount > 1)
             {

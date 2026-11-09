@@ -158,7 +158,8 @@ BeDiagram/                   the web app project
   Models/                      the diagram model: Diagram, Node, Edge, TextBox, Group, PageSetup, IBox, IGroupable
   Models/Geometry.cs           shape paths, elbow connectors, text wrap (shared by canvas + export)
   Models/Icons.cs              built-in icon set (Lucide, ISC licence — see LICENSE-lucide.txt)
-  Models/Catalogue/            type tables: NodeTypes, Outcomes, EdgeStyles, Sides, LabelPlaces, LabelOrients
+  Models/Catalogue/            the fixed value sets as enums (NodeType, OutcomeType, Side, EdgeStyle, …) and the type tables (NodeTypes, Outcomes, …)
+  Models/Serialization/        enums saved by name, so the file reads "decision", not 3
   Models/Styles/               looks and colours: Palette, Swatch, TextPalette, LineLook, TextLook, GroupLook, NodeStyle, TextStyle
   Models/Layout/               geometry results shared by canvas + export: EdgeRoute, EdgeGeom, LabelLayout, Rect, …
   Models/Shapes/               one class per shape outline (Strategy pattern, see below)
@@ -172,7 +173,7 @@ BeDiagram/                   the web app project
   Editing/DiagramEditor.Panels.cs   list / IPO rows: add, remove, reorder, sections, fit to rows
   Editing/IEditorView.cs       what the editor needs from the screen (toast, view centre, start text editing)
   Editing/Angles/              angle lock for moves and placed steps (Strategy pattern): IAngleLock, FreeAngle, StepAngle, AngleLocks
-  Models/NodeFactory.cs        new shapes from a palette key (defaults from NodeTypes, label / outcome / rows from the kind)
+  Models/NodeFactory.cs        new shapes from a PaletteItem (defaults from NodeTypes, label / outcome / rows from the kind)
   Models/GroupTree.cs          the group hierarchy (Composite pattern) worked out from the GroupId fields
   Models/StepOrder.cs          the step order: numbering, closing gaps, moving and parallel steps
   Models/Emphasis/             major / normal / minor looks (Strategy pattern, see below)
@@ -253,10 +254,10 @@ Everything that depends on a shape's outline sits behind **`IShapeOutline`**, wi
 | `PanelOutline` | List, Input / process / output (the inside comes from the panel layout, see below) |
 
 - `ShapeOutline` is the base class with plain-rectangle behaviour; each outline overrides only what differs.
-- `ShapeOutlines.Get(key)` finds an outline by the shape key used in `NodeTypes` / `Outcomes`. Unknown keys draw as a rectangle.
+- `ShapeOutlines` holds one shared instance of each outline; `NodeTypes` and `Outcomes` point at them directly (`ShapeOutlines.Diamond`), so there is no lookup by name.
 - `Geometry.OutlineOf(node)` gives the outline a node is drawn with. The canvas and the SVG export both go through it, so they always match.
 
-To add a shape: write a class (usually derived from `ShapeOutline`), add it to `ShapeOutlines`, and use its key in `NodeTypes` (or `Outcomes`). Nothing else changes.
+To add a shape: write a class (usually derived from `ShapeOutline`), add an instance to `ShapeOutlines`, and point a `NodeTypes` (or `Outcomes`) entry at it. Nothing else changes.
 
 ### Shape emphasis: Strategy pattern
 
@@ -297,7 +298,7 @@ The angle lock is a strategy too: `IAngleLock.Apply(dx, dy, snap)` turns a drag 
 
 To add a gesture: write a class (usually derived from `UndoableDragGesture`) and create it from a pointer-down handler. The other gestures don't change.
 
-To add a shape type: add an entry to `NodeTypes.All` with its kind (usually the shared classic kind) and, optionally, its icons and default property keys. A type that behaves differently gets its own `INodeKind` class.
+To add a shape type: add a member to the `NodeType` enum (its camelCase name is what the file saves) and an entry to `NodeTypes.All` with its kind (usually the shared classic kind) and, optionally, its icons and default property keys. A type that behaves differently gets its own `INodeKind` class.
 
 ## Known limits / next steps
 

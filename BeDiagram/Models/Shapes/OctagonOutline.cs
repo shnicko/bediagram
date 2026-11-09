@@ -3,7 +3,6 @@ namespace BeDiagram.Models.Shapes;
 /// <summary>Fail outcome: a regular octagon (stop sign) centred in the box, flat sides touching it.</summary>
 public class OctagonOutline : ShapeOutline
 {
-    public override string Key => "octagon";
 
     public override string Path(IBox b) => Geometry.PathD(Polygon(b)) + " Z";
 

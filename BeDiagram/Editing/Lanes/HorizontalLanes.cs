@@ -10,7 +10,7 @@ public class HorizontalLanes : ILaneLayout
 
     public string Key => KeyName;
     public string Direction => "left → right";
-    public string Flow => FlowDirections.Right;
+    public FlowDirection Flow => FlowDirection.Right;
     public string Name => "Lanes left → right";
 
     public (double Flow, double Cross) ToLane(double x, double y) => (x, y);

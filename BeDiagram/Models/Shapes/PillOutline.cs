@@ -3,7 +3,6 @@ namespace BeDiagram.Models.Shapes;
 /// <summary>Start / End: a stadium (pill) with semicircular ends.</summary>
 public class PillOutline : ShapeOutline
 {
-    public override string Key => "pill";
 
     public override string Path(IBox b)
     {

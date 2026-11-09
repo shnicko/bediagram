@@ -5,7 +5,6 @@ namespace BeDiagram.Models.Shapes;
 /// <summary>Pass outcome: a scalloped seal.</summary>
 public class SealOutline : ShapeOutline
 {
-    public override string Key => "seal";
 
     public override string Path(IBox b) => SealPath(b.X + b.W / 2, b.Y + b.H / 2, Math.Min(b.W, b.H) / 2);
 

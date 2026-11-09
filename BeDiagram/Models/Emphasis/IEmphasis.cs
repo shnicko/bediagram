@@ -11,8 +11,8 @@ namespace BeDiagram.Models.Emphasis;
 /// </summary>
 public interface IEmphasis
 {
-    /// <summary>Stored in the file as <c>"emphasis"</c> ("major" / "minor"); normal is left out.</summary>
-    string Key { get; }
+    /// <summary>The level this strategy draws (stored in the file as <c>"emphasis"</c>; normal is left out).</summary>
+    EmphasisLevel Level { get; }
 
     /// <summary>Button text in the panel.</summary>
     string Name { get; }

@@ -7,7 +7,7 @@ namespace BeDiagram.Models.Emphasis;
 /// <summary>Base emphasis with the normal look; <see cref="MajorEmphasis"/> and <see cref="MinorEmphasis"/> override what differs.</summary>
 public abstract class NodeEmphasis : IEmphasis
 {
-    public abstract string Key { get; }
+    public abstract EmphasisLevel Level { get; }
     public abstract string Name { get; }
     public abstract string Hint { get; }
     public virtual bool ForcesSolidFill => false;

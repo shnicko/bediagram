@@ -22,15 +22,19 @@ BeDiagram/
   Models/                data model, one type per file: Diagram, Node, Edge, TextBox (IsComment flag), Group, PageSetup,
                          IBox, IGroupable, LegacyComment
   Models/Geometry.cs     shape outlines, connector routing (elbow/straight), label + icon layout, bounds
-  Models/Catalogue/      type tables (BeDiagram.Models.Catalogue): NodeTypes, NodeTypeInfo, Outcomes, OutcomeInfo, EdgeStyles,
-                         Sides, LabelPlaces, LabelOrients
+  Models/Catalogue/      type tables (BeDiagram.Models.Catalogue): the enums NodeType, OutcomeType, Side, EdgeStyle,
+                         LabelOrient, LabelPlace, FlowDirection, IpoSection; the tables NodeTypes / NodeTypeInfo, Outcomes /
+                         OutcomeInfo, Sides, LabelPlaces, IpoSections
+  Models/Serialization/  enums saved by name (BeDiagram.Models.Serialization): EnumNames (camelCase name ↔ value),
+                         EnumNameConverter (unknown name → the enum's first member), OptionalEnumNameConverter (→ null)
+  Models/PaletteItem.cs  what a palette tile / number key / gesture adds: NodeType + optional OutcomeType + Round
   Models/Styles/         looks and colours (BeDiagram.Models.Styles): Palette, Swatch, TextPalette, LineLook, TextLook,
                          GroupLook, NodeStyle, TextStyle
   Models/Layout/         geometry results (BeDiagram.Models.Layout): EdgeRoute, EdgeGeom, LabelLayout, TextBoxLayout, TextLine,
                          EdgeLabelLayout, EdgeLabelLine, Rect
   Models/Shapes/         shape outlines (Strategy pattern, BeDiagram.Models.Shapes): IShapeOutline, ShapeOutline base,
                          one class per outline (Rect, Check, RoundedRect, Pill, Diamond, Parallelogram, Hexagon, Circle,
-                         Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (lookup by shape key)
+                         Seal, Octagon, Triangle, RoundedSquare), ShapeOutlines (one shared instance of each outline)
   Models/Panels/         list / IPO layouts (Strategy pattern, BeDiagram.Models.Panels): IPanelLayout, PanelLayout base
                          (title band, row layout, SVG body, row ends / ports), ListLayout, IpoLayout → IpoColumnsLayout /
                          IpoStackedLayout; ListItem = one row; Catalogue/IpoSections
@@ -39,9 +43,9 @@ BeDiagram/
                          reaches it as Node.Kind
   Models/GroupTree.cs    group hierarchy (Composite): parent / children / descendants / ancestors / paint order from GroupId
   Models/Emphasis/       major / normal / minor looks (Strategy pattern, BeDiagram.Models.Emphasis): IEmphasis, NodeEmphasis
-                         base, NormalEmphasis, MajorEmphasis, MinorEmphasis, Emphases (lookup by Node.Emphasis)
+                         base, NormalEmphasis, MajorEmphasis, MinorEmphasis, Emphases (lookup by Node.Emphasis, an EmphasisLevel)
   Models/StepOrder.cs    step order (Node.Step): numbering, gap-closing, move / parallel, flow order for unnumbered shapes
-  Models/NodeFactory.cs  new nodes from a palette key ("process", "outcome:pass", "round:decision"): size, icon and
+  Models/NodeFactory.cs  new nodes from a PaletteItem (a type, an outcome tile, a classic shape as a circle): size, icon and
                          default properties from NodeTypeInfo, label / outcome / rows from the kind
   Models/Icons.cs        generated Lucide icon markup (ISC) — picker categories + a few UI icons
   Editing/DiagramEditor.cs   the editor model, no UI (BeDiagram.Editing): open Diagram, Selection / SelectedEdgeId /
@@ -106,10 +110,19 @@ tools/regression/                side-by-side regression suites (master vs worki
 
 ## Design rules
 
+- **Fixed sets of values are enums, saved by name.** Node type, outcome, side, connector style, label place and
+  orientation, flow direction, IPO section and emphasis level are enums (`Models/Catalogue/`, `EmphasisLevel` in
+  `Models/Emphasis/`). Each carries `[JsonConverter(typeof(EnumNameConverter<T>))]`, so the file holds the camelCase
+  member name (`"decision"`, `"rework"`) exactly as when these were strings, and an unknown name reads as the enum's
+  first member (listed first on purpose). Optional ones (`Edge.FromSide`, `Node.Outcome`, `ListItem.Section`) put
+  `OptionalEnumNameConverter<T>` on the property instead: unknown → null. When an enum value must appear as text
+  (Mermaid ids, a toast, a dropdown's option values) use `EnumNames.Of(value)`, never `ToString()`. Outlines are referenced
+  as objects (`NodeTypeInfo.Outline`, `OutcomeInfo.Outline` → `ShapeOutlines.Diamond`), not by name. Free-form values
+  the user extends (palette colour keys, icon names, property keys) stay strings.
 - **Typed nodes.** Every shape has a `Type` (start, process, decision, check, action, data, status, end, circle, outcome, list, ipo)
   and free-form `Properties`. Outcome nodes carry `Outcome` (pass, fail, rework, conditional, hold — see `Outcomes`);
-  `n.Kind.ShapeOf(n)` / `Geometry.OutlineOf(n)` / `n.Kind.IconOf(n)` turn that into the drawn outline and glyph, so use
-  those rather than `NodeTypes.Get(..).Shape`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`,
+  `Geometry.OutlineOf(n)` (= `n.Kind.OutlineOf(n)`) / `n.Kind.IconOf(n)` turn that into the drawn outline and glyph, so use
+  those rather than `NodeTypes.Get(..).Outline`. Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`,
   `value` (`NodeTypeInfo.PropertyKeys`).
   This is what lets the audit tool read diagrams later — don't replace types with purely visual styling.
 - **Node kinds use the Strategy pattern.** What depends on the *kind* of node (classic shape, circle, outcome, list,
@@ -181,16 +194,16 @@ tools/regression/                side-by-side regression suites (master vs worki
 - **Export uses the strategy pattern** (owner's preference — he knows it well). A new format or area is a new class
   implementing `IExportFormat` / `IExportArea`, registered in `Program.cs`; don't add format-specific export methods to
   the Designer. PNG is rasterised from the SVG export in the browser, so like PDF it has no geometry of its own.
-- **Flow direction** (`Diagram.Flow`, `FlowDirections`) maps to an `ILaneLayout` via `LaneLayouts.ForFlow`, so quick-add
+- **Flow direction** (`Diagram.Flow`, a `FlowDirection`) maps to an `ILaneLayout` via `LaneLayouts.ForFlow`, so quick-add
   (`Editor.NextSpot`) places the next step in (flow, cross) coordinates like the lane arranger. New shapes open their
   label for editing (`AddNodeAt` → `BeginEdit`); quick-adds also pan to centre them (`IEditorView.CentreOn`).
   Quick branch (`Editor.QuickBranch`, `QuickBranchCommand`, key B) places Pass / Fail outcomes at 45° and their next
   steps in the same (flow, cross) coordinates; Pass is on the −cross side (above / left).
 - **Circle versions of the classic shapes.** `Node.Round` draws start / process / decision / check / action / data /
   status / end as a circle (`ClassicKind.CanBeRound`, size `NodeTypes.RoundSize`) without changing `Type`, so the meaning
-  stays data. `ClassicKind.ShapeOf` / `DrawnAsCircle` pick the circle outline, so everything else (label below, badges,
+  stays data. `ClassicKind.OutlineOf` / `DrawnAsCircle` pick the circle outline, so everything else (label below, badges,
   Mermaid `(( ))`, semibold label) follows from the outline. Circle icons per type: `NodeTypeInfo.RoundIcon`. Palette keys
-  `round:<type>` (`NodeFactory.RoundPrefix`, `SizeFor`); panel toggle `Editor.SetRound`; `ChangeType` keeps a circle a circle.
+  are `PaletteItem`s with `Round` set (`NodeFactory.SizeFor`); panel toggle `Editor.SetRound`; `ChangeType` keeps a circle a circle.
 - **Lists and IPO boxes ("panels").** `list` / `ipo` nodes keep their rows in `Node.Items` (`ListItem`: id, label,
   description, icon, IPO `Section`); IPO adds `SectionTitles` and `Stacked`. Rows have a fixed height and the node is
   always as tall as its rows (`Editor.FitPanel` after every row change, `ResizeGesture` won't go shorter via

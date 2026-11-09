@@ -3,7 +3,6 @@ namespace BeDiagram.Models.Shapes;
 /// <summary>Action: a rectangle with well-rounded corners.</summary>
 public class RoundedRectOutline : ShapeOutline
 {
-    public override string Key => "rect-rounded";
 
     public override string Path(IBox b) => Geometry.RoundRect(b.X, b.Y, b.W, b.H, 14);
 

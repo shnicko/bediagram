@@ -3,7 +3,6 @@ namespace BeDiagram.Models.Shapes;
 /// <summary>Data / IFC: a parallelogram slanting right.</summary>
 public class ParallelogramOutline : ShapeOutline
 {
-    public override string Key => "parallelogram";
 
     static double Slant(IBox b) => Math.Min(18, b.W / 6);
 

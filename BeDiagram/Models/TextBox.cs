@@ -62,7 +62,7 @@ public class TextBox : IGroupable
     /// <summary>Connector look for lines pinned to a comment: light, dashed, no arrows, straight.</summary>
     public static void ApplyPinLook(Edge e)
     {
-        e.Style = EdgeStyles.Straight; e.Weight = LineLook.Light; e.Pattern = LineLook.Dashed;
+        e.Style = EdgeStyle.Straight; e.Weight = LineLook.Light; e.Pattern = LineLook.Dashed;
         e.Color = "grey"; e.Arrows = LineLook.ArrowNone;
     }
 }

@@ -10,8 +10,6 @@ namespace BeDiagram.Models.Shapes;
 /// </summary>
 public interface IShapeOutline
 {
-    /// <summary>The shape key used in <see cref="Catalogue.NodeTypes"/> and <see cref="Catalogue.Outcomes"/>, e.g. "diamond".</summary>
-    string Key { get; }
 
     /// <summary>SVG path data for the outline drawn in the box.</summary>
     string Path(IBox b);

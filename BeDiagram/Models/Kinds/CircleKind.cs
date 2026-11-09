@@ -14,6 +14,6 @@ public class CircleKind : NodeKind
     public override void Adopt(Node n)
     {
         base.Adopt(n);
-        n.Icon ??= NodeTypes.Get(NodeTypes.Circle).Icon;
+        n.Icon ??= NodeTypes.Get(NodeType.Circle).Icon;
     }
 }

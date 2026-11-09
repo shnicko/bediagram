@@ -5,7 +5,7 @@ namespace BeDiagram.Models.Emphasis;
 /// <summary>A supporting step: white fill, a lighter thinner outline, lighter icon and muted text, no shadow.</summary>
 public class MinorEmphasis : NodeEmphasis
 {
-    public override string Key => Emphases.Minor;
+    public override EmphasisLevel Level => EmphasisLevel.Minor;
     public override string Name => "Minor";
     public override string Hint => "A supporting step: lighter outline and text, no shadow";
 

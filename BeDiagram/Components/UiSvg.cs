@@ -17,9 +17,9 @@ public static class UiSvg
         new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(name)}</svg>");
 
     /// <summary>Small solid outcome symbol for the palette and the panel (same geometry as the canvas).</summary>
-    public static MarkupString OutcomeSwatch(string outcome, int size)
+    public static MarkupString OutcomeSwatch(OutcomeType outcome, int size)
     {
-        Node n = new Node { Type = NodeTypes.Outcome, Outcome = outcome, Filled = true, W = 24, H = 24 };
+        Node n = new Node { Type = NodeType.Outcome, Outcome = outcome, Filled = true, W = 24, H = 24 };
         NodeStyle st = NodeStyle.For(n);
         LabelLayout lay = Geometry.Layout(n, "");
         return new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"-1 -1 26 26\"><path d=\"{Geometry.ShapePath(n)}\" fill=\"{st.Fill}\"/>"
@@ -27,7 +27,7 @@ public static class UiSvg
     }
 
     /// <summary>A shape drawn as a circle with its type's icon, for the palette (same colours as the canvas).</summary>
-    public static MarkupString RoundSwatch(string type, int size)
+    public static MarkupString RoundSwatch(NodeType type, int size)
     {
         NodeTypeInfo t = NodeTypes.Get(type);
         string icon = t.RoundIcon;

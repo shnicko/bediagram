@@ -23,16 +23,16 @@ public class IpoKind : PanelKind
     /// <summary>One row per section to start with.</summary>
     public override List<ListItem> NewItems() => new List<ListItem>
     {
-        new() { Label = "Inputs", Section = IpoSections.Input },
-        new() { Label = "Work done", Section = IpoSections.Process },
-        new() { Label = "Results", Section = IpoSections.Output },
+        new() { Label = "Inputs", Section = IpoSection.Input },
+        new() { Label = "Work done", Section = IpoSection.Process },
+        new() { Label = "Results", Section = IpoSection.Output },
     };
 
     /// <summary>A new row "Item N" after the last row of its section, keeping the file in reading order.</summary>
-    public override ListItem AddRow(Node n, string? section)
+    public override ListItem AddRow(Node n, IpoSection? section)
     {
         n.Items ??= new List<ListItem>();
-        string key = IpoSections.Of(section);
+        IpoSection key = IpoSections.Of(section);
         ListItem item = new ListItem { Label = $"Item {n.RowsIn(key).Count + 1}", Section = key };
         int at = n.Items.FindLastIndex(i => IpoSections.IndexOf(i.Section) <= IpoSections.IndexOf(key)) + 1;
         n.Items.Insert(at, item);
@@ -42,7 +42,7 @@ public class IpoKind : PanelKind
     public override List<ListItem> Peers(Node n, string itemId)
     {
         if (n.Items is null) return new List<ListItem>();
-        string section = IpoSections.Of(n.Items.FirstOrDefault(i => i.Id == itemId)?.Section);
+        IpoSection section = IpoSections.Of(n.Items.FirstOrDefault(i => i.Id == itemId)?.Section);
         return n.RowsIn(section);
     }
 

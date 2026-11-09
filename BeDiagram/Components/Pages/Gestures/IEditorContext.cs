@@ -47,7 +47,7 @@ public interface IEditorContext
     /// Adds a shape centred on a world point (records undo), joined from the selection when asked.
     /// With <paramref name="lockAngle"/>, a joined shape is placed on an allowed angle from its source.
     /// </summary>
-    void AddNodeAt(string type, double cx, double cy, bool join, bool lockAngle);
+    void AddNodeAt(PaletteItem item, double cx, double cy, bool join, bool lockAngle);
 
     /// <summary>Moves the view by screen px.</summary>
     void PanBy(double dx, double dy);

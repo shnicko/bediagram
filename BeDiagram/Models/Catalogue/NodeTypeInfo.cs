@@ -1,13 +1,18 @@
 using BeDiagram.Models.Kinds;
+using BeDiagram.Models.Serialization;
+using BeDiagram.Models.Shapes;
 
 namespace BeDiagram.Models.Catalogue;
 
 /// <summary>
-/// One node type: its key, display name, outline, colours and size, plus what a new node of the type starts with.
+/// One node type: its key, display name, outline (the shared <see cref="ShapeOutlines"/> instance), colours and size, plus what a new node of the type starts with.
 /// How the type behaves is its <see cref="Kind"/> (Strategy pattern, see <see cref="INodeKind"/>).
 /// </summary>
-public record NodeTypeInfo(string Key, string Display, string Shape, string Fill, string Stroke, double W, double H)
+public record NodeTypeInfo(NodeType Key, string Display, IShapeOutline Outline, string Fill, string Stroke, double W, double H)
 {
+    /// <summary>The type's saved name ("decision"), also its palette key.</summary>
+    public string Name => EnumNames.Of(Key);
+
     /// <summary>How nodes of this type behave: classic shape, circle, outcome, list or IPO box.</summary>
     public required INodeKind Kind { get; init; }
 

@@ -18,10 +18,10 @@
     <input class="panel-item-desc" value="@(Item.Description ?? "")" placeholder="Description (optional)" @onfocus="Editor.Checkpoint" @oninput="DescTyped" />
     @if (Ipo)
     {
-        <select class="panel-item-section" value="@IpoSections.Of(Item.Section)" title="Section" @onchange="SectionPicked">
-            @foreach (string s in IpoSections.All)
+        <select class="panel-item-section" value="@SectionName(IpoSections.Of(Item.Section))" title="Section" @onchange="SectionPicked">
+            @foreach (IpoSection s in IpoSections.All)
             {
-                <option value="@s">@Node.SectionTitle(s)</option>
+                <option value="@SectionName(s)">@Node.SectionTitle(s)</option>
             }
         </select>
     }
