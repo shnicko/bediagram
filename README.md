@@ -166,7 +166,6 @@ BeDiagram/                   the web app project
   Models/Panels/               layout of list / IPO nodes (Strategy pattern): list, IPO side by side, IPO stacked
   Models/ListItem.cs           one row of a list / IPO node
   Services/DiagramStore.cs     local folder save / open / list / delete
-  Services/Exporters.cs        SVG and Mermaid export (SVG optionally of the current view)
   Services/PdfExporter.cs      vector PDF made from the exported SVG (no third-party libraries)
   Services/Export/             export strategies (see below)
   Editing/DiagramEditor.cs     the diagram being edited: selection, undo, and every editing action (no UI code)
@@ -198,7 +197,7 @@ powershell -ExecutionPolicy Bypass -File tools\Check-OneTypePerFile.ps1
 
 Export is split into two families of strategies, put together by one context class:
 
-- **`IExportFormat`** — *what kind of file*: `SvgExportFormat`, `PngExportFormat`, `PdfExportFormat`, `MermaidExportFormat`. Each turns a diagram (plus an optional view window) into bytes.
+- **`IExportFormat`** — *what kind of file*: `SvgExportFormat`, `PngExportFormat`, `PdfExportFormat`, `MermaidExportFormat`. Each turns a diagram (plus an optional view window) into bytes. SVG, PNG and PDF all start from the same SVG, written by **`SvgDiagramWriter`** (registered once and given to those three formats); the Mermaid writer lives in `MermaidExportFormat` itself.
 - **`IExportArea`** — *which part of the drawing*: `WholeDrawingArea` (page or extents) and `CurrentViewArea` (what's on screen, saved with a `.view` suffix).
 - **`ExportService`** — the context. It gets every registered format and area from dependency injection, lists the combinations for the Export menu (`Choices()`), and runs one (`ExportAsync`: area → view window, format → bytes, then save next to the diagram).
 

@@ -58,11 +58,13 @@ BeDiagram/
   Editing/Angles/            angle lock (Strategy pattern, BeDiagram.Editing.Angles): IAngleLock, LockedOffset, FreeAngle,
                              StepAngle (90 / 45 / 30), AngleLocks. Editor.LockOffset (moves) / LockPoint (placed steps)
   Services/DiagramStore.cs   save/open/list/delete *.diagram.json in the storage folder
-  Services/Exporters.cs      SVG export (page-sized in mm when a page is set, or an ExportView window) and Mermaid export
   Services/ExportView.cs     the window onto the drawing that a current-view export uses
-  Services/PdfExporter.cs    PDF = Exporters.ToSvg output converted to PDF operators (own SVG-subset reader, core fonts)
+  Services/PdfExporter.cs    PDF = SvgDiagramWriter output converted to PDF operators (own SVG-subset reader, core fonts)
   Services/Export/           export strategies: IExportFormat (Svg/Png/Pdf/Mermaid), IExportArea (WholeDrawing/CurrentView),
-                             ExportService (context: lists menu choices, renders + saves), IPngRasterizer (BrowserPngRasterizer)
+                             ExportService (context: lists menu choices, renders + saves), ExportChoice (menu entry: Label /
+                             Tip), IPngRasterizer (BrowserPngRasterizer), SvgDiagramWriter (the SVG renderer behind SVG / PNG /
+                             PDF, page-sized in mm when a page is set, or an ExportView window; injected); the Mermaid writer
+                             lives in MermaidExportFormat
   Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs) — markup only
   Components/Pages/Designer.razor.cs   the page: view state (pan/zoom), pointer handlers → gestures, palette drop, page size,
                                        files, linked-diagram navigation, export, render helpers (view records the markup reads)
@@ -118,7 +120,7 @@ tools/regression/                side-by-side regression suites (master vs worki
   (`NewItems`, `Init`, `Adopt`). Don't test `n.Type == NodeTypes.Outcome` (or `Ipo`, `Circle`) elsewhere. A new per-kind
   behaviour is a new `INodeKind` member with its usual answer in `NodeKind`. Per-type *data* (icons, default
   properties, size) stays on `NodeTypeInfo` in `NodeTypes.All`.
-- **One geometry, two renderers.** The canvas (Designer.razor) and the SVG export (Exporters.cs) must draw the
+- **One geometry, two renderers.** The canvas (Designer.razor) and the SVG export (SvgDiagramWriter) must draw the
   same thing. Put shape/connector/label maths in `Geometry.cs` and call it from both. Any new visual feature
   needs both renderers updated, and the Mermaid export updated where Mermaid can express it.
 - **Shape outlines use the Strategy pattern.** Anything that differs per outline belongs in that outline's class in
@@ -228,7 +230,7 @@ tools/regression/                side-by-side regression suites (master vs worki
   feature adds a shape or a shortcut, extend `make-shapes-diagram.py` / `keyboard.js`.
 - **How much regression to run** (agreed with Nick 2026-11-05 — he tests every merge himself and reports problems):
   - **Full run** (all four suites) for refactors (no behaviour change allowed), and for any change to shared code:
-    `Geometry`, the exporters (`Exporters`, `PdfExporter`, `Services/Export/`), `DiagramEditor` beyond a new method or
+    `Geometry`, the exporters (`PdfExporter`, `Services/Export/`), `DiagramEditor` beyond a new method or
     two, the canvas markup in `Designer.razor`, or `CommandRegistry` / `designer.js` keys.
   - **Small features and fixes** that touch only a few classes: a hands-on Playwright test of the change itself, plus
     only the suites that cover the area touched, e.g. `SUITES="panel" tools/regression/run.sh` —

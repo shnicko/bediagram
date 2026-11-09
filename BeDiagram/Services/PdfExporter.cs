@@ -7,7 +7,7 @@ using System.Xml.Linq;
 namespace BeDiagram.Services;
 
 /// <summary>
-/// Turns the SVG produced by <see cref="Exporters.ToSvg"/> into a vector PDF, with no third-party libraries.
+/// Turns the SVG produced by <see cref="Export.SvgDiagramWriter"/> into a vector PDF, with no third-party libraries.
 /// It understands the SVG subset BeDiagram writes (and the Lucide icons): g/rect/path/circle/ellipse/line/
 /// polyline/polygon/text/tspan, transforms, markers, rectangular clip paths, opacity, dashes and the
 /// standard PDF fonts (Helvetica / Times / Courier). Rendering from the SVG keeps one geometry for all exports.
