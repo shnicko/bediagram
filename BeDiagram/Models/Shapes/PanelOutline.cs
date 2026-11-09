@@ -5,7 +5,6 @@ public class PanelOutline : ShapeOutline
 {
     public const double Radius = 12;
 
-    public override string Key => "panel";
 
     public override string Path(IBox b) => Geometry.RoundRect(b.X, b.Y, b.W, b.H, Radius);
 

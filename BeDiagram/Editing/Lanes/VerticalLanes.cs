@@ -10,7 +10,7 @@ public class VerticalLanes : ILaneLayout
 
     public string Key => KeyName;
     public string Direction => "top → down";
-    public string Flow => FlowDirections.Down;
+    public FlowDirection Flow => FlowDirection.Down;
     public string Name => "Lanes top → down";
 
     public (double Flow, double Cross) ToLane(double x, double y) => (y, x);

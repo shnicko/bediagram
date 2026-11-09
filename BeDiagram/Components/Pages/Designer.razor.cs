@@ -1,3 +1,4 @@
+using BeDiagram.Models.Serialization;
 using System.Globalization;
 using BeDiagram.Models;
 using BeDiagram.Components.Pages.Gestures;
@@ -48,7 +49,8 @@ public partial class Designer
 
     // Gesture state (State pattern — see Gestures/IGesture.cs): the drag in progress, null when the pointer is idle.
     IGesture? gesture;
-    string? paletteDrag;
+    /// <summary>What a drop from the palette adds at the drop point (world x, y): set when a tile drag starts.</summary>
+    Action<double, double>? paletteDrop;
     bool skipRender;
 
     // UI
@@ -125,24 +127,10 @@ public partial class Designer
 
     void OnDrop(DragEventArgs e)
     {
-        if (paletteDrag is null) return;
+        if (paletteDrop is null) return;
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
-        switch (paletteDrag)
-        {
-            case "comment":
-                Editor.AddTextAt(x - 100, y - 55, (Editor.HitTest(x, y) as Node)?.Id, comment: true);
-                break;
-            case "text":
-                Editor.AddTextAt(x - 100, y - 30, null, comment: false);
-                break;
-            case "group":
-                Editor.AddGroupAt(x, y);
-                break;
-            default:
-                Editor.AddNodeAt(paletteDrag, x, y, join: Editor.AutoConnect, lockAngle: true);
-                break;
-        }
-        paletteDrag = null;
+        paletteDrop(x, y);
+        paletteDrop = null;
     }
 
     // ───────────── Pointer handling ─────────────
@@ -240,7 +228,7 @@ public partial class Designer
     void BgDoubleClick(MouseEventArgs e)
     {
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
-        Editor.AddNodeAt(NodeTypes.Process, x, y, join: false);
+        Editor.AddNodeAt(NodeType.Process, x, y, join: false);
     }
 
     /// <summary>Hands the move to the current gesture; skips the render when nothing changed.</summary>
@@ -276,7 +264,7 @@ public partial class Designer
     // ───────────── Panel helpers ─────────────
 
     /// <summary>Small inline sample of a line look for the panel buttons.</summary>
-    static string LabelPlaceHint(Edge e) => e.LabelOrient == LabelOrients.Along
+    static string LabelPlaceHint(Edge e) => e.LabelOrient == LabelOrient.Along
         ? "Inline sits on the line; above and below set the text beside it, as the text reads."
         : "Inline sits on the line; above and below set the text beside it. On up-down lines above = left, below = right.";
 
@@ -315,7 +303,7 @@ public partial class Designer
 
     // ───────────── Flow direction and lane lock (menu toggles) ─────────────
 
-    string FlowClass(string flow) => D.Flow == flow ? "on" : "";
+    string FlowClass(FlowDirection flow) => D.Flow == flow ? "on" : "";
 
     void SetLockLanes(ChangeEventArgs e) => Editor.SetLockLanes(e.Value is true);
 
@@ -637,12 +625,15 @@ public partial class Designer
         .Select((t, i) => new PaletteShape(t, i + 1))
         .ToList();
 
-    static string OutcomePaletteKey(OutcomeInfo o) => $"{NodeTypes.Outcome}:{o.Key}";
+    static PaletteItem OutcomeItem(OutcomeInfo o) => new(NodeType.Outcome, o.Key);
 
     /// <summary>The classic shapes, each offered again as a circle with its type's icon (<see cref="Node.Round"/>).</summary>
     static readonly List<NodeTypeInfo> RoundShapes = NodeTypes.All.Where(t => t.Kind.CanBeRound).ToList();
 
-    static string RoundPaletteKey(NodeTypeInfo t) => NodeFactory.RoundPrefix + t.Key;
+    static PaletteItem RoundItem(NodeTypeInfo t) => new(t.Key, Round: true);
+
+    /// <summary>The Type dropdown: options carry the saved type names ("decision").</summary>
+    void TypePicked(Node n, ChangeEventArgs e) => Editor.ChangeType(n, EnumNames.Parse<NodeType>(e.Value?.ToString()));
 
     static string RoundPaletteTip(NodeTypeInfo t) => $"{t.Display} as a circle: drag onto the canvas or click to add";
 
@@ -654,16 +645,16 @@ public partial class Designer
         : $"{p.Type.Display}: drag onto the canvas or click to add";
 
     /// <summary>Extra lines inside a palette tile (the title band and rows of a list / IPO box), or null.</summary>
-    static string? PaletteInnerPath(string type) => NodeTypes.Get(type).Kind.PaletteInnerPath;
+    static string? PaletteInnerPath(NodeType type) => NodeTypes.Get(type).Kind.PaletteInnerPath;
 
     /// <summary>The inside of a list / IPO node (title band, sections, rows) — same markup as the export — or null.</summary>
     static MarkupString? PanelBody(NodeView v) => v.N.Kind.Body(v.N, v.Style) is { } body ? (MarkupString)body : null;
 
-    static string PaletteShapePath(string type) => Geometry.ShapePath(new Node { Type = type, W = 48, H = 28 });
+    static string PaletteShapePath(NodeType type) => Geometry.ShapePath(new Node { Type = type, W = 48, H = 28 });
 
-    void StartTextDrag() => paletteDrag = "text";
-    void StartCommentDrag() => paletteDrag = "comment";
-    void StartGroupDrag() => paletteDrag = "group";
+    void StartTextDrag() => paletteDrop = (x, y) => Editor.AddTextAt(x - 100, y - 30, null, comment: false);
+    void StartCommentDrag() => paletteDrop = (x, y) => Editor.AddTextAt(x - 100, y - 55, (Editor.HitTest(x, y) as Node)?.Id, comment: true);
+    void StartGroupDrag() => paletteDrop = (x, y) => Editor.AddGroupAt(x, y);
 
     void SetPageSize(ChangeEventArgs e) => SetPageSize(e.Value?.ToString());
     void SetPortrait() => SetOrientation("portrait");
@@ -844,8 +835,8 @@ public partial class Designer
         if (gesture is EdgeEndGesture eg)
         {
             IBox box = eg.FromEnd ? ha : hb;
-            string? current = eg.FromEnd ? hr.FromSide : hr.ToSide;
-            foreach (string side in box.ConnectSides)
+            Side? current = eg.FromEnd ? hr.FromSide : hr.ToSide;
+            foreach (Side side in box.ConnectSides)
             {
                 (double sx, double sy) = Geometry.SidePoint(box, side);
                 sides.Add(new SideTarget(sx, sy, side == current));
@@ -854,7 +845,7 @@ public partial class Designer
         (double bx, double by) = hr.BendHandle;
         (double p0x, double p0y) = hr.Points[0];
         (double p1x, double p1y) = hr.Points[^1];
-        return new EdgeHandleView(he.Id, sides, hr.BendIndex >= 0 && he.Style != EdgeStyles.Straight, bx, by, hr.BendIsVertical, p0x, p0y, p1x, p1y);
+        return new EdgeHandleView(he.Id, sides, hr.BendIndex >= 0 && he.Style != EdgeStyle.Straight, bx, by, hr.BendIsVertical, p0x, p0y, p1x, p1y);
     }
 
     /// <summary>Icon picker contents, filtered by the search box (empty categories dropped).</summary>
@@ -882,7 +873,8 @@ public partial class Designer
 
     void SetOpenMenu(string? menu) => openMenu = menu;
     void CloseMenus() => openMenu = null;
-    void StartPaletteDrag(string key) => paletteDrag = key;
+    void StartPaletteDrag(PaletteItem item) =>
+        paletteDrop = (x, y) => Editor.AddNodeAt(item, x, y, join: Editor.AutoConnect, lockAngle: true);
     void DragOver() { }
     void AskDelete(string name) => confirmDelete = name;
     void DiscardAndNew() { Reset(); CloseDialog(); }

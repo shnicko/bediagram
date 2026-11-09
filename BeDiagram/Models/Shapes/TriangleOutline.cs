@@ -3,7 +3,6 @@ namespace BeDiagram.Models.Shapes;
 /// <summary>Conditional outcome: a warning triangle. Its glyph sits lower, at the visual centre.</summary>
 public class TriangleOutline : ShapeOutline
 {
-    public override string Key => "triangle";
 
     public override string Path(IBox b) => Geometry.PathD(Polygon(b)) + " Z";
 

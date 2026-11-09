@@ -52,7 +52,7 @@ public class ConnectGesture : DragGesture
         {
             // Dropped on empty space: create a new step there, joined to the source (selected when the drag began).
             int before = Ctx.Diagram.Edges.Count;
-            Ctx.AddNodeAt(NodeTypes.Process, CurX, CurY, join: true, lockAngle: true);
+            Ctx.AddNodeAt(NodeType.Process, CurX, CurY, join: true, lockAngle: true);
             // Started from a row: the new joining connector leaves from that row.
             if (FromItem is not null && Ctx.Diagram.Edges.Count > before && Ctx.Diagram.Edges[^1] is { } joined && joined.From == FromId)
                 joined.FromItem = FromItem;

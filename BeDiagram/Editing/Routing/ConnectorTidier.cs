@@ -57,7 +57,7 @@ public class ConnectorTidier
         Dictionary<string, (Edge Edge, EdgeRoute Route)> lines = new Dictionary<string, (Edge, EdgeRoute)>();
         foreach (Edge o in d.Edges)
             if (o.Ends(find) is (IBox oa, IBox ob)) lines[o.Id] = (o, Geometry.Route(oa, ob, o));
-        foreach (Edge e in edges.Where(e => e.Style == EdgeStyles.Elbow))
+        foreach (Edge e in edges.Where(e => e.Style == EdgeStyle.Elbow))
         {
             if (e.Ends(find) is not (IBox a, IBox b) || e.From == e.To) continue;
             Context ctx = new Context
@@ -78,7 +78,7 @@ public class ConnectorTidier
                 continue;
             }
             plan.Routes.Add((e, pick.From, pick.To, pick.Bend));
-            lines[e.Id] = (e, Geometry.Route(a, b, EdgeStyles.Elbow, pick.From, pick.To, pick.Bend));
+            lines[e.Id] = (e, Geometry.Route(a, b, EdgeStyle.Elbow, pick.From, pick.To, pick.Bend));
             if (pick.Score.Hits == 0) plan.Cleared++;
         }
         return plan;
@@ -87,7 +87,7 @@ public class ConnectorTidier
     /// <summary>Stores the planned routes the same way as hand-placed ones (sides + bend).</summary>
     public static void Apply(TidyPlan plan)
     {
-        foreach ((Edge e, string from, string to, double bend) in plan.Routes) { e.FromSide = from; e.ToSide = to; e.Bend = bend; }
+        foreach ((Edge e, Side from, Side to, double bend) in plan.Routes) { e.FromSide = from; e.ToSide = to; e.Bend = bend; }
     }
 
     /// <summary>What a connector's candidate routes are scored against.</summary>
@@ -107,16 +107,16 @@ public class ConnectorTidier
     static bool SharesEnd(Edge x, Edge y) => x.From == y.From || x.From == y.To || x.To == y.From || x.To == y.To;
 
     /// <summary>The cheapest route over every side pair and middle-segment position.</summary>
-    (string From, string To, double Bend, Score Score)? Best(Context ctx)
+    (Side From, Side To, double Bend, Score Score)? Best(Context ctx)
     {
-        (string From, string To, double Bend, Score Score)? best = null;
-        foreach (string s1 in Sides.All)
-            foreach (string s2 in Sides.All)
+        (Side From, Side To, double Bend, Score Score)? best = null;
+        foreach (Side s1 in Sides.All)
+            foreach (Side s2 in Sides.All)
             {
-                EdgeRoute plain = Geometry.Route(ctx.A, ctx.B, EdgeStyles.Elbow, s1, s2, 0);
+                EdgeRoute plain = Geometry.Route(ctx.A, ctx.B, EdgeStyle.Elbow, s1, s2, 0);
                 foreach (double bend in BendsToTry(plain, ctx.Obstacles))
                 {
-                    EdgeRoute r = bend == 0 ? plain : Geometry.Route(ctx.A, ctx.B, EdgeStyles.Elbow, s1, s2, bend);
+                    EdgeRoute r = bend == 0 ? plain : Geometry.Route(ctx.A, ctx.B, EdgeStyle.Elbow, s1, s2, bend);
                     Score score = ScoreOf(r, bend, ctx);
                     if (best is null || score.Cost < best.Value.Score.Cost) best = (s1, s2, bend, score);
                 }

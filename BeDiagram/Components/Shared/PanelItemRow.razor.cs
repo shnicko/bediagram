@@ -1,6 +1,8 @@
+using BeDiagram.Models.Serialization;
 using BeDiagram.Editing;
 using BeDiagram.Models;
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Components.Shared;
 
@@ -47,7 +49,10 @@ public partial class PanelItemRow
 
     Task Remove() { Editor.RemoveItem(Node, Item.Id); return OnChanged.InvokeAsync(); }
 
-    Task SectionPicked(ChangeEventArgs e) { Editor.SetItemSection(Node, Item.Id, e.Value?.ToString()); return OnChanged.InvokeAsync(); }
+    Task SectionPicked(ChangeEventArgs e) { Editor.SetItemSection(Node, Item.Id, EnumNames.Parse<IpoSection>(e.Value?.ToString())); return OnChanged.InvokeAsync(); }
+
+    /// <summary>Option values carry the saved section names ("output").</summary>
+    static string SectionName(IpoSection s) => EnumNames.Of(s);
 
     Task ToggleIcon() => OnToggleIcon.InvokeAsync(Item.Id);
 

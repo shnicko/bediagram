@@ -3,7 +3,6 @@ namespace BeDiagram.Models.Shapes;
 /// <summary>Hold outcome: a rounded square centred in the box.</summary>
 public class RoundedSquareOutline : ShapeOutline
 {
-    public override string Key => "square-rounded";
 
     public override string Path(IBox b)
     {

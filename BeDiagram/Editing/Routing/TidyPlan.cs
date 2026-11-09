@@ -1,4 +1,5 @@
 using BeDiagram.Models;
+using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Editing.Routing;
 
@@ -6,7 +7,7 @@ namespace BeDiagram.Editing.Routing;
 public class TidyPlan
 {
     /// <summary>Connectors to re-route: new from / to sides and middle-segment offset.</summary>
-    public List<(Edge Edge, string From, string To, double Bend)> Routes { get; } = new List<(Edge Edge, string From, string To, double Bend)>();
+    public List<(Edge Edge, Side From, Side To, double Bend)> Routes { get; } = new List<(Edge Edge, Side From, Side To, double Bend)>();
     /// <summary>Connectors that needed tidying: through a shape or text, through their own ends' text, or on a side
     /// another connector uses the other way.</summary>
     public int Crossing { get; set; }

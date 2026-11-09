@@ -16,7 +16,7 @@ public class OutcomeKind : NodeKind
     public override bool HasOutcome => true;
     public override double IconStroke => 2.75;
 
-    public override string ShapeOf(Node n) => Outcomes.Get(n.Outcome).Shape;
+    public override IShapeOutline OutlineOf(Node n) => Outcomes.Get(n.Outcome).Outline;
 
     public override string? IconOf(Node n) => Outcomes.Get(n.Outcome).Glyph;
 
@@ -39,7 +39,7 @@ public class OutcomeKind : NodeKind
     {
         Swatch os = Palette.Get(Outcomes.Get(n.Outcome).Color);
         if (n.Color is null && filled)
-            return new NodeStyle(os.Solid, os.Solid, "#ffffff", n.Outcome == Outcomes.Conditional ? "#1f2933" : "#ffffff");
+            return new NodeStyle(os.Solid, os.Solid, "#ffffff", n.Outcome == OutcomeType.Conditional ? "#1f2933" : "#ffffff");
         return Painted(n, filled, os.Light, os.Stroke);
     }
 
@@ -47,17 +47,17 @@ public class OutcomeKind : NodeKind
 
     public override string PanelTitle(Node n) => $"Outcome · {NameOf(n)}";
 
-    /// <summary>A new outcome is the palette variant (pass when there's none), drawn solid.</summary>
-    public override void Init(Node n, string? variant)
+    /// <summary>A new outcome is the tile's outcome (pass when there's none), drawn solid.</summary>
+    public override void Init(Node n, OutcomeType? outcome)
     {
-        n.Outcome = Outcomes.Get(variant).Key;
+        n.Outcome = outcome ?? OutcomeType.Pass;
         n.Filled = true;
     }
 
     /// <summary>A shape retyped to an outcome keeps the outcome it had, or becomes a pass, drawn solid.</summary>
     public override void Adopt(Node n)
     {
-        n.Outcome ??= Outcomes.Pass;
+        n.Outcome ??= OutcomeType.Pass;
         n.Filled = true;
     }
 }

@@ -3,7 +3,6 @@ namespace BeDiagram.Models.Shapes;
 /// <summary>Status: a flat hexagon. An icon goes above the text.</summary>
 public class HexagonOutline : ShapeOutline
 {
-    public override string Key => "hexagon";
 
     static double Cut(IBox b) => Math.Min(20, b.W / 5);
 

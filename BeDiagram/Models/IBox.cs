@@ -11,5 +11,5 @@ public interface IBox
     double H { get; set; }
 
     /// <summary>The sides a connector end can be pinned to: all four, or left / right only on a row (<see cref="Layout.ItemBox"/>).</summary>
-    IReadOnlyList<string> ConnectSides => Sides.All;
+    IReadOnlyList<Side> ConnectSides => Sides.All;
 }

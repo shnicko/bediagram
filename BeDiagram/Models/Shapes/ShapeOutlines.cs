@@ -1,20 +1,24 @@
 namespace BeDiagram.Models.Shapes;
 
-/// <summary>The registered outlines, by shape key. Unknown keys draw as a plain rectangle.</summary>
+/// <summary>
+/// One shared instance of each outline (they hold no state). Node types and outcomes point at these directly
+/// (<see cref="Catalogue.NodeTypeInfo.Outline"/>, <see cref="Catalogue.OutcomeInfo.Outline"/>), so there is no
+/// lookup by name.
+/// </summary>
 public static class ShapeOutlines
 {
-    /// <summary>Used for unknown keys, and for text boxes and groups when a connector is clipped to them.</summary>
+    /// <summary>Also used for text boxes and groups when a connector is clipped to them.</summary>
     public static readonly IShapeOutline Rect = new RectOutline();
-
-    static readonly Dictionary<string, IShapeOutline> ByKey = new IShapeOutline[]
-    {
-        Rect, new CheckOutline(), new RoundedRectOutline(), new PillOutline(), new DiamondOutline(),
-        new ParallelogramOutline(), new HexagonOutline(), new CircleOutline(),
-        new SealOutline(), new OctagonOutline(), new TriangleOutline(), new RoundedSquareOutline(), new PanelOutline(),
-    }.ToDictionary(o => o.Key);
-
-    public static IShapeOutline Get(string? key) =>
-        key is not null && ByKey.TryGetValue(key, out IShapeOutline? outline) ? outline : Rect;
-
-    public static IReadOnlyCollection<IShapeOutline> All => ByKey.Values;
+    public static readonly IShapeOutline Check = new CheckOutline();
+    public static readonly IShapeOutline RoundedRect = new RoundedRectOutline();
+    public static readonly IShapeOutline Pill = new PillOutline();
+    public static readonly IShapeOutline Diamond = new DiamondOutline();
+    public static readonly IShapeOutline Parallelogram = new ParallelogramOutline();
+    public static readonly IShapeOutline Hexagon = new HexagonOutline();
+    public static readonly IShapeOutline Circle = new CircleOutline();
+    public static readonly IShapeOutline Seal = new SealOutline();
+    public static readonly IShapeOutline Octagon = new OctagonOutline();
+    public static readonly IShapeOutline Triangle = new TriangleOutline();
+    public static readonly IShapeOutline RoundedSquare = new RoundedSquareOutline();
+    public static readonly IShapeOutline Panel = new PanelOutline();
 }

@@ -12,6 +12,6 @@
 <div class="seg wide">
     @foreach (IEmphasis em in Emphases.All)
     {
-        <button class="@On(n => Emphases.Of(n) == em)" title="@em.Hint" @onclick="() => SetEmphasis(em.Key)">@em.Name</button>
+        <button class="@On(n => Emphases.Of(n) == em)" title="@em.Hint" @onclick="() => SetEmphasis(em.Level)">@em.Name</button>
     }
 </div>

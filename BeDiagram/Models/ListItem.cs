@@ -1,3 +1,4 @@
+using BeDiagram.Models.Serialization;
 using System.Text.Json.Serialization;
 using BeDiagram.Models.Catalogue;
 
@@ -26,9 +27,10 @@ public class ListItem
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Icon { get; set; }
 
-    /// <summary>IPO boxes only: "input", "process" or "output" (see <see cref="IpoSections"/>). Null in a list.</summary>
+    /// <summary>IPO boxes only: input, process or output (see <see cref="IpoSections"/>). Null in a list.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Section { get; set; }
+    [JsonConverter(typeof(OptionalEnumNameConverter<IpoSection>))]
+    public IpoSection? Section { get; set; }
 
     /// <summary>A copy with the same id (rows are found by node id + row id, so a copied node keeps its row links).</summary>
     public ListItem Copy() => (ListItem)MemberwiseClone();

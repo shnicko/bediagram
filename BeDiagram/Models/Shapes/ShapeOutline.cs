@@ -11,7 +11,6 @@ public abstract class ShapeOutline : IShapeOutline
     /// <summary>cos 45° — puts badges on the curve of round outlines.</summary>
     protected const double D45 = 0.7071;
 
-    public abstract string Key { get; }
     public abstract string Path(IBox b);
 
     /// <summary>Corner points used for connector clipping. Default: the box itself.</summary>

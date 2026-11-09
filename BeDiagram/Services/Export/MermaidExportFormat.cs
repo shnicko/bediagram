@@ -1,3 +1,4 @@
+using BeDiagram.Models.Serialization;
 using System.Globalization;
 using System.Text;
 using BeDiagram.Models;
@@ -77,12 +78,12 @@ public class MermaidExportFormat : IExportFormat
         else
         {
             sb.Append(n.Stacked ? "    direction TB\n" : "    direction LR\n");
-            foreach (string section in IpoSections.All)
+            foreach (IpoSection section in IpoSections.All)
             {
                 List<ListItem> rows = n.RowsIn(section);
                 if (rows.Count == 0) continue;
                 string sectionTitle = n.SectionTitle(section).Replace("\"", "'").Replace("\n", " ").Trim();
-                sb.Append($"    subgraph {id}_{section}[\"{sectionTitle}\"]\n");
+                sb.Append($"    subgraph {id}_{EnumNames.Of(section)}[\"{sectionTitle}\"]\n");
                 foreach (ListItem item in rows)
                 {
                     string rid = $"{id}_{++k}";
@@ -134,7 +135,7 @@ public class MermaidExportFormat : IExportFormat
             string shape = Geometry.OutlineOf(n).Mermaid(label);
             sb.Append($"    {id}{shape}\n");
             // Mermaid has no halo: a major step keeps its solid fill and gets a heavy outline; a minor one goes light.
-            if (n.Emphasis is not null)
+            if (n.Emphasis != EmphasisLevel.Normal)
             {
                 NodeStyle est = NodeStyle.For(n);
                 IEmphasis em = Emphases.Of(n);

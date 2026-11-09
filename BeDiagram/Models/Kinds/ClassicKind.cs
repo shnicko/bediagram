@@ -1,4 +1,5 @@
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Shapes;
 
 namespace BeDiagram.Models.Kinds;
 
@@ -8,7 +9,7 @@ public class ClassicKind : NodeKind
 {
     public override bool CanBeRound => true;
 
-    public override string ShapeOf(Node n) => n.Round ? NodeTypes.Get(NodeTypes.Circle).Shape : base.ShapeOf(n);
+    public override IShapeOutline OutlineOf(Node n) => n.Round ? ShapeOutlines.Circle : base.OutlineOf(n);
 
     public override bool DrawnAsCircle(Node n) => n.Round;
 }

@@ -1,5 +1,7 @@
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
+using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Models.Kinds;
 
@@ -8,7 +10,7 @@ namespace BeDiagram.Models.Kinds;
 /// outcome, a list or an input–process–output box. That covers whether it's a step, which outline and icon it's drawn
 /// with, where its label goes, its colours, and what a new or retyped node of that kind starts with.
 /// Each <see cref="Catalogue.NodeTypeInfo"/> holds its kind, and a node reaches it through <see cref="Node.Kind"/>.
-/// Ask the kind rather than testing <c>n.Type == NodeTypes.Outcome</c> elsewhere. A new per-kind behaviour is a new
+/// Ask the kind rather than testing <c>n.Type == NodeType.Outcome</c> elsewhere. A new per-kind behaviour is a new
 /// member here, with its usual answer in <see cref="NodeKind"/>.
 /// </summary>
 /// <remarks>
@@ -35,8 +37,8 @@ public interface INodeKind
     /// <summary>Icon stroke width in 24-unit icon space.</summary>
     double IconStroke { get; }
 
-    /// <summary>The outline key the node is drawn with (see <see cref="Shapes.ShapeOutlines"/>).</summary>
-    string ShapeOf(Node n);
+    /// <summary>The outline the node is drawn with (one of the shared <see cref="ShapeOutlines"/>).</summary>
+    IShapeOutline OutlineOf(Node n);
 
     /// <summary>Drawn as a circle with an icon (a Circle, or a classic shape with <see cref="Node.Round"/>):
     /// such labels are semibold.</summary>
@@ -88,9 +90,9 @@ public interface INodeKind
     /// <summary>The rows a new list / IPO node starts with; null for kinds without rows.</summary>
     List<ListItem>? NewItems();
 
-    /// <summary>Finishes a new node (<see cref="NodeFactory.Create"/>): <paramref name="variant"/> is the part of the
-    /// palette key after the type (an outcome name), or null.</summary>
-    void Init(Node n, string? variant);
+    /// <summary>Finishes a new node (<see cref="NodeFactory.Create"/>): <paramref name="outcome"/> is the outcome tile
+    /// it came from, or null.</summary>
+    void Init(Node n, OutcomeType? outcome);
 
     /// <summary>A node whose type has just changed to this kind: set or clear what the kind needs (outcome, icon).</summary>
     void Adopt(Node n);

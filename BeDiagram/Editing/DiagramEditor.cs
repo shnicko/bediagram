@@ -1,3 +1,4 @@
+using BeDiagram.Models.Serialization;
 using System.Globalization;
 using System.Text.Json;
 using BeDiagram.Editing.Angles;
@@ -536,7 +537,7 @@ public partial class DiagramEditor
     /// <param name="centre">Pan the view so the new shape is in the middle (quick-add: sidebar click, number keys,
     /// "+ Next step"). Shapes placed with the pointer are already where the user is looking.</param>
     /// <remarks>The new shape's label is opened for editing straight away, all text selected, so typing replaces it.</remarks>
-    public void AddNodeAt(string type, double cx, double cy, bool join, string? groupId = null, bool lockAngle = false, bool centre = false)
+    public void AddNodeAt(PaletteItem item, double cx, double cy, bool join, string? groupId = null, bool lockAngle = false, bool centre = false)
     {
         Change();
         IBox? src = join ? JoinSource() : null;
@@ -544,9 +545,9 @@ public partial class DiagramEditor
         if (lockAngle && src is not null)
         {
             (double lx, double ly) = LockPoint(src.X + src.W / 2, src.Y + src.H / 2, cx, cy);
-            n = CreateNode(type, lx, ly, exact: true);
+            n = CreateNode(item, lx, ly, exact: true);
         }
-        else n = CreateNode(type, cx, cy);
+        else n = CreateNode(item, cx, cy);
         if (src is not null) AddEdge(src.Id, n.Id);
         if (groupId is not null && FindGroup(groupId) is { } g) { n.GroupId = g.Id; GrowGroup(g); }
         else UpdateMembership(new[] { n });
@@ -557,16 +558,16 @@ public partial class DiagramEditor
 
     /// <summary>Palette click or number key: place the next step after the selection in the flow direction
     /// (<see cref="Diagram.Flow"/>), joined to it when Auto-join is on.</summary>
-    public void QuickAdd(string type) => QuickAdd(type, join: AutoConnect);
+    public void QuickAdd(PaletteItem item) => QuickAdd(item, join: AutoConnect);
 
     /// <summary>The panel's "+ Next step" button: always joined to the selection (that's what the button is for).</summary>
-    public void AddNextStep() => QuickAdd(NodeTypes.Process, join: true);
+    public void AddNextStep() => QuickAdd(NodeType.Process, join: true);
 
-    public void QuickAdd(string type, bool join)
+    public void QuickAdd(PaletteItem item, bool join)
     {
         IBox? src = JoinSource();
-        (double tw, double th) = NodeFactory.SizeFor(type);
-        NodeTypeInfo t = NodeTypes.Get(NodeFactory.ParsePaletteKey(type).Type) with { W = tw, H = th };
+        (double tw, double th) = NodeFactory.SizeFor(item);
+        NodeTypeInfo t = NodeTypes.Get(item.Type) with { W = tw, H = th };
         double cx, cy;
         if (src is not null)
         {
@@ -587,7 +588,7 @@ public partial class DiagramEditor
             while (Diagram.Nodes.Any(o => Geometry.Contains(o, cx, cy))) cy += 100;
         }
         // A step added from a shape inside a group stays in that group.
-        AddNodeAt(type, cx, cy, join: join && src is not null, groupId: (src as IGroupable)?.GroupId, centre: true);
+        AddNodeAt(item, cx, cy, join: join && src is not null, groupId: (src as IGroupable)?.GroupId, centre: true);
     }
 
     /// <summary>The flow direction as a lane layout, so placement can work in (flow, cross) coordinates.</summary>
@@ -624,8 +625,8 @@ public partial class DiagramEditor
         if (BranchSource is not { } src) { view.ShowToast("Select one shape to branch from"); return; }
         Change();
         ILaneLayout flow = FlowLayout;
-        string passKey = NodeTypes.Outcome + ":" + Outcomes.Pass, failKey = NodeTypes.Outcome + ":" + Outcomes.Fail;
-        NodeTypeInfo outcomeType = NodeTypes.Get(NodeTypes.Outcome), stepType = NodeTypes.Get(NodeTypes.Process);
+        PaletteItem passItem = new(NodeType.Outcome, OutcomeType.Pass), failItem = new(NodeType.Outcome, OutcomeType.Fail);
+        NodeTypeInfo outcomeType = NodeTypes.Get(NodeType.Outcome), stepType = NodeTypes.Get(NodeType.Process);
 
         // Pass / Fail: the same distance along the flow and across it, so they sit on the 45° lines.
         (double srcFlow, double srcCross) = flow.ToLane(src.X + src.W / 2, src.Y + src.H / 2);
@@ -633,19 +634,19 @@ public partial class DiagramEditor
         (double outcomeHalf, double _) = flow.ToLane(outcomeType.W / 2, outcomeType.H / 2);
         double offset = srcFar - srcFlow + NextStepGap + outcomeHalf;
 
-        Node pass = AddBranchNode(passKey, flow, srcFlow + offset, srcCross - offset, src);
-        Node fail = AddBranchNode(failKey, flow, srcFlow + offset, srcCross + offset, src);
+        Node pass = AddBranchNode(passItem, flow, srcFlow + offset, srcCross - offset, src);
+        Node fail = AddBranchNode(failItem, flow, srcFlow + offset, srcCross + offset, src);
         // Leave the source on the side facing each branch and come into the outcome from the flow side, so the line
         // turns once and stays clear of the outcome's label.
-        string outOfFlow = SideToward(flow.FromLane(1, 0));
-        string intoFlow = SideToward(flow.FromLane(-1, 0));
+        Side outOfFlow = SideToward(flow.FromLane(1, 0));
+        Side intoFlow = SideToward(flow.FromLane(-1, 0));
         AddBranchEdge(src, pass, outOfFlow, intoFlow);
         AddBranchEdge(src, fail, outOfFlow, intoFlow);
 
         // The next steps: straight on along the flow from each outcome (90° to it).
         (double stepHalf, double _) = flow.ToLane(stepType.W / 2, stepType.H / 2);
-        Node passNext = AddBranchNode(NodeTypes.Process, flow, NextAlong(flow, pass) + stepHalf, srcCross - offset, src);
-        Node failNext = AddBranchNode(NodeTypes.Process, flow, NextAlong(flow, fail) + stepHalf, srcCross + offset, src);
+        Node passNext = AddBranchNode(NodeType.Process, flow, NextAlong(flow, pass) + stepHalf, srcCross - offset, src);
+        Node failNext = AddBranchNode(NodeType.Process, flow, NextAlong(flow, fail) + stepHalf, srcCross + offset, src);
         AddEdge(pass.Id, passNext.Id);
         AddEdge(fail.Id, failNext.Id);
         Steps.MakeParallel(new[] { passNext, failNext });
@@ -658,7 +659,7 @@ public partial class DiagramEditor
     }
 
     /// <summary>Joins two quick-branch nodes with the connector pinned to the given sides.</summary>
-    void AddBranchEdge(Node from, Node to, string fromSide, string toSide)
+    void AddBranchEdge(Node from, Node to, Side fromSide, Side toSide)
     {
         if (!AddEdge(from.Id, to.Id)) return;
         Edge e = Diagram.Edges[^1];
@@ -667,13 +668,13 @@ public partial class DiagramEditor
     }
 
     /// <summary>The side of a shape that faces the unit direction (dx, dy), e.g. (0, -1) → top.</summary>
-    static string SideToward((double X, double Y) dir) => Sides.All.First(side => Sides.Dir(side) == dir);
+    static Side SideToward((double X, double Y) dir) => Sides.All.First(side => Sides.Dir(side) == dir);
 
     /// <summary>A new node for a quick branch, centred on (flow, cross), in the same group as <paramref name="src"/>.</summary>
-    Node AddBranchNode(string key, ILaneLayout flow, double along, double across, Node src)
+    Node AddBranchNode(PaletteItem item, ILaneLayout flow, double along, double across, Node src)
     {
         (double cx, double cy) = flow.FromLane(along, across);
-        Node n = CreateNode(key, cx, cy);
+        Node n = CreateNode(item, cx, cy);
         n.GroupId = src.GroupId;
         return n;
     }
@@ -687,7 +688,7 @@ public partial class DiagramEditor
     }
 
     /// <summary>File menu: which way new steps go (<see cref="FlowDirections"/>). One undo step.</summary>
-    public void SetFlow(string flow)
+    public void SetFlow(FlowDirection flow)
     {
         if (Diagram.Flow == flow) return;
         Change();
@@ -801,9 +802,9 @@ public partial class DiagramEditor
     }
 
     /// <param name="exact">Centre already worked out (e.g. by <see cref="LockPoint"/>): don't snap it again.</param>
-    Node CreateNode(string key, double cx, double cy, bool exact = false)
+    Node CreateNode(PaletteItem item, double cx, double cy, bool exact = false)
     {
-        Node n = exact ? NodeFactory.Create(key, cx, cy) : NodeFactory.Create(key, SnapV(cx), SnapV(cy));
+        Node n = exact ? NodeFactory.Create(item, cx, cy) : NodeFactory.Create(item, SnapV(cx), SnapV(cy));
         // A new step goes on the end of the flow; reorder it in the panel.
         if (n.Kind.IsStep) n.Step = Steps.Next;
         Diagram.Nodes.Add(n);
@@ -975,16 +976,16 @@ public partial class DiagramEditor
 
     // ───────────── Connector style & labels ─────────────
 
-    public void SetDefaultConnector(string style)
+    public void SetDefaultConnector(EdgeStyle style)
     {
         Diagram.DefaultConnector = style;
         Dirty = true;
-        view.ShowToast($"New connectors will be {style}" + (SelectedEdge is null ? "" : " — use the panel to change the selected one"));
+        view.ShowToast($"New connectors will be {EnumNames.Of(style)}" + (SelectedEdge is null ? "" : " — use the panel to change the selected one"));
     }
 
-    public void SetEdgeStyle(Edge e, string style) { if (e.Style == style) return; Change(); e.Style = style; }
+    public void SetEdgeStyle(Edge e, EdgeStyle style) { if (e.Style == style) return; Change(); e.Style = style; }
 
-    public void SetLabelPlace(Edge e, string place) { if (e.LabelPlace == place) return; Change(); e.LabelPlace = place; }
+    public void SetLabelPlace(Edge e, LabelPlace place) { if (e.LabelPlace == place) return; Change(); e.LabelPlace = place; }
 
     /// <summary>Panel label box: keeps the text to two lines (e.g. after a paste).</summary>
     public void EdgeLabelTyped()
@@ -993,7 +994,7 @@ public partial class DiagramEditor
         MarkDirty();
     }
 
-    public void SetLabelOrient(Edge e, string orient) { if (e.LabelOrient == orient) return; Change(); e.LabelOrient = orient; }
+    public void SetLabelOrient(Edge e, LabelOrient orient) { if (e.LabelOrient == orient) return; Change(); e.LabelOrient = orient; }
 
     public void SetLabelPos(Edge e, double pos) { Change(); e.LabelPos = pos; }
 
@@ -1025,14 +1026,14 @@ public partial class DiagramEditor
         view.ShowToast("New connectors will use this look");
     }
 
-    public void SetStyleBetweenSelected(string style)
+    public void SetStyleBetweenSelected(EdgeStyle style)
     {
         HashSet<string> ids = WithMembers(Selection).Select(b => b.Id).ToHashSet();
         List<Edge> edges = Diagram.Edges.Where(e => ids.Contains(e.From) && ids.Contains(e.To)).ToList();
         if (edges.Count == 0) { view.ShowToast("No connectors between the selected items"); return; }
         Change();
         foreach (Edge e in edges) e.Style = style;
-        view.ShowToast($"{edges.Count} connector{(edges.Count == 1 ? "" : "s")} set to {style}");
+        view.ShowToast($"{edges.Count} connector{(edges.Count == 1 ? "" : "s")} set to {EnumNames.Of(style)}");
     }
 
     public void ReverseEdge(Edge e)
@@ -1047,12 +1048,12 @@ public partial class DiagramEditor
 
     // ───────────── Shapes and groups ─────────────
 
-    public void ChangeType(Node n, string? type)
+    public void ChangeType(Node n, NodeType? type)
     {
         if (type is null || type == n.Type) return;
         Change();
         NodeTypeInfo oldT = NodeTypes.Get(n.Type);
-        NodeTypeInfo t = NodeTypes.Get(type);
+        NodeTypeInfo t = NodeTypes.Get(type.Value);
         // A label still showing the old type's (or outcome's) name follows the new type.
         bool namedForType = n.Label == n.Kind.NameOf(n);
         double cx = n.X + n.W / 2; double cy = n.Y + n.H / 2;
@@ -1082,7 +1083,7 @@ public partial class DiagramEditor
 
     public void SetClearTextBack(Node n, bool clear) { Change(); n.ClearTextBack = clear; }
 
-    public void SetOutcome(Node n, string outcome)
+    public void SetOutcome(Node n, OutcomeType outcome)
     {
         if (n.Outcome == outcome) return;
         Change();
@@ -1115,12 +1116,12 @@ public partial class DiagramEditor
 
     /// <summary>Major / normal / minor look (see <see cref="Emphases"/>).</summary>
     /// <summary>Sets the emphasis of every shape that doesn't have it yet, in one undo step.</summary>
-    public void SetEmphasis(IReadOnlyList<Node> nodes, string key)
+    public void SetEmphasis(IReadOnlyList<Node> nodes, EmphasisLevel level)
     {
-        List<Node> todo = nodes.Where(n => Emphases.Get(key) != Emphases.Of(n)).ToList();
+        List<Node> todo = nodes.Where(n => n.Emphasis != level).ToList();
         if (todo.Count == 0) return;
         Change();
-        foreach (Node n in todo) n.Emphasis = key;
+        foreach (Node n in todo) n.Emphasis = level;
     }
 
     // ───────────── Restyling one item or many ─────────────

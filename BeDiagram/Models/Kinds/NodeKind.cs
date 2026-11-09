@@ -18,7 +18,7 @@ public abstract class NodeKind : INodeKind
     public virtual string? PaletteInnerPath => null;
     public virtual double IconStroke => 2;
 
-    public virtual string ShapeOf(Node n) => NodeTypes.Get(n.Type).Shape;
+    public virtual IShapeOutline OutlineOf(Node n) => NodeTypes.Get(n.Type).Outline;
 
     public virtual bool DrawnAsCircle(Node n) => false;
 
@@ -107,7 +107,7 @@ public abstract class NodeKind : INodeKind
 
     public virtual List<ListItem>? NewItems() => null;
 
-    public virtual void Init(Node n, string? variant) { }
+    public virtual void Init(Node n, OutcomeType? outcome) { }
 
     public virtual void Adopt(Node n) => n.Outcome = null;
 }

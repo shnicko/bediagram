@@ -14,7 +14,7 @@ public class Diagram : IJsonOnDeserialized
     public string Name { get; set; } = "Untitled";
     public DateTime Modified { get; set; } = DateTime.UtcNow;
     /// <summary>Style given to new connectors in this diagram.</summary>
-    public string DefaultConnector { get; set; } = EdgeStyles.Elbow;
+    public EdgeStyle DefaultConnector { get; set; } = EdgeStyle.Elbow;
     /// <summary>Look (weight, pattern, colour, arrows, label direction) given to new connectors.</summary>
     public Edge DefaultLook { get; set; } = new();
     /// <summary>Optional fixed page (paper size). Size "none" = open canvas.</summary>
@@ -23,9 +23,9 @@ public class Diagram : IJsonOnDeserialized
     /// (<see cref="Node.Step"/>); this only decides whether it is shown. False is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool ShowSteps { get; set; }
-    /// <summary>Which way the flow runs: <see cref="FlowDirections.Down"/> (top → down) or <see cref="FlowDirections.Right"/>
+    /// <summary>Which way the flow runs: <see cref="FlowDirection.Down"/> (top → down) or <see cref="FlowDirection.Right"/>
     /// (left → right). Decides where the next step goes when one is added from the sidebar or a number key.</summary>
-    public string Flow { get; set; } = FlowDirections.Down;
+    public FlowDirection Flow { get; set; } = FlowDirection.Down;
     /// <summary>Swim lanes (top-level groups) keep their size: adding or moving items doesn't grow them. Arranging
     /// lanes, resizing a lane by hand and "Fit to contents" still change the size. False is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

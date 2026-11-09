@@ -3,7 +3,7 @@
     <label class="check" title="Off: Input | Process | Output side by side. On: one section under another (narrower, for slides and portrait pages)">
         <input type="checkbox" checked="@Node.Stacked" @onchange="StackedChanged" /> Stack sections top to bottom
     </label>
-    @foreach (string section in IpoSections.All)
+    @foreach (IpoSection section in IpoSections.All)
     {
         <div class="panel-section">
             <input class="section-title" value="@SectionValue(section)" placeholder="@IpoSections.DefaultTitle(section)" title="Section title (blank = @IpoSections.DefaultTitle(section))"

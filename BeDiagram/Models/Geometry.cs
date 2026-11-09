@@ -14,7 +14,7 @@ public static class Geometry
     static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     /// <summary>The outline strategy a node is drawn with (see <see cref="IShapeOutline"/>).</summary>
-    public static IShapeOutline OutlineOf(Node n) => ShapeOutlines.Get(n.Kind.ShapeOf(n));
+    public static IShapeOutline OutlineOf(Node n) => n.Kind.OutlineOf(n);
 
     /// <summary>The outline of any box: a node's own outline, a plain rectangle for text boxes and groups.</summary>
     public static IShapeOutline OutlineOf(IBox b) => b is Node n ? OutlineOf(n) : ShapeOutlines.Rect;
@@ -307,7 +307,7 @@ public static class Geometry
     }
 
     /// <summary>Full connector geometry: path plus where (and at what angle) its label sits.</summary>
-    public static EdgeGeom EdgeGeometry(IBox a, IBox b, string style, string labelOrient = LabelOrients.Horizontal, double labelPos = 0.5)
+    public static EdgeGeom EdgeGeometry(IBox a, IBox b, EdgeStyle style, LabelOrient labelOrient = LabelOrient.Horizontal, double labelPos = 0.5)
     {
         List<(double X, double Y)> pts = Route(a, b, style);
         (double x, double y, double seg) = PointAt(pts, labelPos);
@@ -323,27 +323,27 @@ public static class Geometry
     }
 
     public static EdgeRoute Route(IBox a, IBox b, Edge e) =>
-        Route(a, b, e.Style, Sides.IsValid(e.FromSide) ? e.FromSide : null, Sides.IsValid(e.ToSide) ? e.ToSide : null, e.Bend);
+        Route(a, b, e.Style, e.FromSide, e.ToSide, e.Bend);
 
-    public static List<(double X, double Y)> Route(IBox a, IBox b, string style) => Route(a, b, style, null, null, 0).Points;
+    public static List<(double X, double Y)> Route(IBox a, IBox b, EdgeStyle style) => Route(a, b, style, null, null, 0).Points;
 
-    public static EdgeRoute Route(IBox a, IBox b, string style, string? fromSide, string? toSide, double bend)
+    public static EdgeRoute Route(IBox a, IBox b, EdgeStyle style, Side? fromSide, Side? toSide, double bend)
     {
         // A row of a list / IPO node only has ports on its left and right.
         if (a is ItemBox ra) fromSide = ra.SideFacing(b, fromSide);
         if (b is ItemBox rb) toSide = rb.SideFacing(a, toSide);
-        if (style == EdgeStyles.Straight) return StraightRoute(a, b, fromSide, toSide);
+        if (style == EdgeStyle.Straight) return StraightRoute(a, b, fromSide, toSide);
         if (fromSide is null && toSide is null)
         {
-            (string s1, string s2) = AutoSides(a, b);
+            (Side s1, Side s2) = AutoSides(a, b);
             return ElbowRoute(a, b, s1, s2, bend, legacy: true);
         }
-        if (fromSide is not null && toSide is not null) return ElbowRoute(a, b, fromSide, toSide, bend, legacy: false);
+        if (fromSide is { } pinFrom && toSide is { } pinTo) return ElbowRoute(a, b, pinFrom, pinTo, bend, legacy: false);
 
         // One end pinned: pick the other end's side that gives the shortest, simplest route.
         EdgeRoute? best = null;
         double bestScore = double.MaxValue;
-        foreach (string s in Sides.All)
+        foreach (Side s in Sides.All)
         {
             EdgeRoute r = ElbowRoute(a, b, fromSide ?? s, toSide ?? s, bend, legacy: false);
             double score = Length(r.Points) + 25 * r.Points.Count;
@@ -353,20 +353,20 @@ public static class Geometry
     }
 
     /// <summary>Middle of a side of the shape's box — the same spots as the ● ports.</summary>
-    public static (double X, double Y) SidePoint(IBox b, string side) => side switch
+    public static (double X, double Y) SidePoint(IBox b, Side side) => side switch
     {
-        Sides.Top => (b.X + b.W / 2, b.Y),
-        Sides.Right => (b.X + b.W, b.Y + b.H / 2),
-        Sides.Bottom => (b.X + b.W / 2, b.Y + b.H),
+        Side.Top => (b.X + b.W / 2, b.Y),
+        Side.Right => (b.X + b.W, b.Y + b.H / 2),
+        Side.Bottom => (b.X + b.W / 2, b.Y + b.H),
         _ => (b.X, b.Y + b.H / 2),
     };
 
     /// <summary>Straight line between the shapes' outlines, aimed centre to centre; pinned ends start at a side middle.</summary>
-    static EdgeRoute StraightRoute(IBox a, IBox b, string? fromSide, string? toSide)
+    static EdgeRoute StraightRoute(IBox a, IBox b, Side? fromSide, Side? toSide)
     {
         (double X, double Y) ca = (a.X + a.W / 2, a.Y + a.H / 2), cb = (b.X + b.W / 2, b.Y + b.H / 2);
-        (double X, double Y)? p1 = fromSide is null ? null : SidePoint(ConnectBox(a), fromSide);
-        (double X, double Y)? p2 = toSide is null ? null : SidePoint(ConnectBox(b), toSide);
+        (double X, double Y)? p1 = fromSide is { } fs ? SidePoint(ConnectBox(a), fs) : null;
+        (double X, double Y)? p2 = toSide is { } ts ? SidePoint(ConnectBox(b), ts) : null;
         (double X, double Y) aimA = p2 ?? cb;
         (double X, double Y) aimB = p1 ?? ca;
         (double X, double Y) start = p1 ?? ConnectBoundary(a, aimA.X, aimA.Y);
@@ -375,14 +375,14 @@ public static class Geometry
     }
 
     /// <summary>The sides the automatic elbow uses: vertical flow if the target is clearly above/below, otherwise horizontal.</summary>
-    public static (string From, string To) AutoSides(IBox a, IBox b)
+    public static (Side From, Side To) AutoSides(IBox a, IBox b)
     {
         double dx = (b.X + b.W / 2) - (a.X + a.W / 2), dy = (b.Y + b.H / 2) - (a.Y + a.H / 2);
         bool vertical = Math.Abs(dy) - (a.H + b.H) / 2 > Math.Abs(dx) - (a.W + b.W) / 2 - 20
                         && Math.Abs(dy) > (a.H + b.H) / 2;
         return vertical
-            ? (dy > 0 ? (Sides.Bottom, Sides.Top) : (Sides.Top, Sides.Bottom))
-            : (dx > 0 ? (Sides.Right, Sides.Left) : (Sides.Left, Sides.Right));
+            ? (dy > 0 ? (Side.Bottom, Side.Top) : (Side.Top, Side.Bottom))
+            : (dx > 0 ? (Side.Right, Side.Left) : (Side.Left, Side.Right));
     }
 
     const double Stub = 20;
@@ -393,7 +393,7 @@ public static class Geometry
     /// detour when the target is behind a side. <paramref name="legacy"/> keeps the original automatic
     /// behaviour (always a Z between facing sides, even when the shapes overlap).
     /// </summary>
-    static EdgeRoute ElbowRoute(IBox a, IBox b, string s1, string s2, double bend, bool legacy)
+    static EdgeRoute ElbowRoute(IBox a, IBox b, Side s1, Side s2, double bend, bool legacy)
     {
         a = ConnectBox(a);
         b = ConnectBox(b);
@@ -567,12 +567,12 @@ public static class Geometry
     }
 
     /// <summary>Label rotation for an orientation, kept readable (never upside down).</summary>
-    public static double LabelAngle(string orient, double segmentAngle)
+    public static double LabelAngle(LabelOrient orient, double segmentAngle)
     {
         double a = orient switch
         {
-            LabelOrients.Along => segmentAngle,
-            LabelOrients.Perpendicular => segmentAngle + 90,
+            LabelOrient.Along => segmentAngle,
+            LabelOrient.Perpendicular => segmentAngle + 90,
             _ => 0,
         };
         while (a > 90) a -= 180;
@@ -622,7 +622,7 @@ public static class Geometry
         double textW = lines.Max(l => l.Length * 7.0);
         double d = (geo.LabelAngle - geo.SegAngle) * Math.PI / 180;
         bool along = Math.Abs(Math.Cos(d)) >= 0.5;
-        string place = e.LabelPlace is LabelPlaces.Above or LabelPlaces.Below ? e.LabelPlace : LabelPlaces.Inline;
+        LabelPlace place = e.LabelPlace;
         // Baselines: a 12px line's visual middle is ~4px above its baseline; cap height ~9, descent ~3.
         const double Ascent = 9, Descent = 3, Mid = 4;
         List<EdgeLabelLine> result = new List<EdgeLabelLine>();
@@ -631,18 +631,18 @@ public static class Geometry
         double x = 0;
         double[] ys;
 
-        if (along && place == LabelPlaces.Inline && n == 2)
+        if (along && place == LabelPlace.Inline && n == 2)
             ys = new[] { -EdgeLabelGap - Descent, EdgeLabelGap + Ascent };
-        else if (along && place == LabelPlaces.Above)
+        else if (along && place == LabelPlace.Above)
             ys = Enumerable.Range(0, n).Select(i => -EdgeLabelGap - Descent - (n - 1 - i) * lh).ToArray();
-        else if (along && place == LabelPlaces.Below)
+        else if (along && place == LabelPlace.Below)
             ys = Enumerable.Range(0, n).Select(i => EdgeLabelGap + Ascent + i * lh).ToArray();
         else
         {
             // Centred on the point (inline single line, or text across the line).
             ys = Enumerable.Range(0, n).Select(i => Mid + (i - (n - 1) / 2.0) * lh).ToArray();
-            if (!along && place == LabelPlaces.Above) { anchor = "end"; x = -EdgeLabelGap - 2; }
-            else if (!along && place == LabelPlaces.Below) { anchor = "start"; x = EdgeLabelGap + 2; }
+            if (!along && place == LabelPlace.Above) { anchor = "end"; x = -EdgeLabelGap - 2; }
+            else if (!along && place == LabelPlace.Below) { anchor = "start"; x = EdgeLabelGap + 2; }
             else
             {
                 double bw = textW + 12, bh = n * lh + 5;

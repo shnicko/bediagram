@@ -25,13 +25,13 @@ public partial class PanelItems
 
     bool IsIpo => Node.Kind is IpoKind;
 
-    string SectionValue(string section)
+    string SectionValue(IpoSection section)
     {
         string t = Node.SectionTitle(section);
         return t == IpoSections.DefaultTitle(section) ? "" : t;
     }
 
-    Task SectionTyped(string section, ChangeEventArgs e)
+    Task SectionTyped(IpoSection section, ChangeEventArgs e)
     {
         Editor.SetSectionTitle(Node, section, e.Value?.ToString());
         return OnChanged.InvokeAsync();
@@ -43,7 +43,7 @@ public partial class PanelItems
         return OnChanged.InvokeAsync();
     }
 
-    Task Add(string? section)
+    Task Add(IpoSection? section)
     {
         Editor.AddItem(Node, section);
         iconFor = null;

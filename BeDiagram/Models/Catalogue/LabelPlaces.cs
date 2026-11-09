@@ -1,9 +1,8 @@
 namespace BeDiagram.Models.Catalogue;
 
+/// <summary>The connector label places, in panel order, with their button text.</summary>
 public static class LabelPlaces
 {
-    public const string Inline = "inline";
-    public const string Above = "above";
-    public const string Below = "below";
-    public static readonly (string Key, string Name)[] All = { (Inline, "Inline"), (Above, "Above"), (Below, "Below") };
+    public static readonly (LabelPlace Place, string Name)[] All =
+        { (LabelPlace.Inline, "Inline"), (LabelPlace.Above, "Above"), (LabelPlace.Below, "Below") };
 }

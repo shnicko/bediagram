@@ -21,7 +21,7 @@ public partial class ShapeStyle
 
     Task Set(Action<Node> change) { Editor.Restyle(Nodes, change); return OnChanged.InvokeAsync(); }
 
-    Task SetEmphasis(string key) { Editor.SetEmphasis(Nodes, key); return OnChanged.InvokeAsync(); }
+    Task SetEmphasis(EmphasisLevel level) { Editor.SetEmphasis(Nodes, level); return OnChanged.InvokeAsync(); }
 
     string On(Func<Node, bool> test) => Nodes.Count > 0 && Nodes.All(test) ? "on" : "";
 

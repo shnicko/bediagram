@@ -53,7 +53,7 @@ public interface ICommandContext
     void ArrangeLanes(ILaneLayout layout);
 
     /// <summary>Adds a shape of <paramref name="type"/> (see <see cref="NodeTypes"/>) below the selection.</summary>
-    void AddShape(string type);
+    void AddShape(NodeType type);
     void AddText();
     void AddComment();
     void AddGroup();

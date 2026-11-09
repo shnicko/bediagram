@@ -1,6 +1,7 @@
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Panels;
 using BeDiagram.Models.Styles;
+using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Models.Kinds;
 
@@ -35,14 +36,14 @@ public abstract class PanelKind : NodeKind
     public abstract override List<ListItem> NewItems();
 
     /// <summary>A new panel gets its starter rows, and is exactly as tall as they need (rows have a fixed height).</summary>
-    public override void Init(Node n, string? variant)
+    public override void Init(Node n, OutcomeType? outcome)
     {
         n.Items = NewItems();
         n.H = LayoutOf(n).NeededHeight(n);
     }
 
     /// <summary>Adds a new row (to the end of the list, or of IPO section <paramref name="section"/>) and returns it.</summary>
-    public abstract ListItem AddRow(Node n, string? section);
+    public abstract ListItem AddRow(Node n, IpoSection? section);
 
     /// <summary>The rows a row is ordered among: the whole list, or its IPO section.</summary>
     public abstract List<ListItem> Peers(Node n, string itemId);

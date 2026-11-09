@@ -3,7 +3,6 @@ namespace BeDiagram.Models.Shapes;
 /// <summary>Circle (and the Rework outcome). With an icon: icon in the middle, label underneath.</summary>
 public class CircleOutline : ShapeOutline
 {
-    public override string Key => "circle";
 
     public override string Path(IBox b)
     {

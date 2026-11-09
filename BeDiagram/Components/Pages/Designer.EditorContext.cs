@@ -23,8 +23,8 @@ public partial class Designer : IEditorContext
     void IEditorContext.GrowAround(IGroupable item) => Editor.GrowAround(item);
     bool IEditorContext.AddEdge(string from, string to, string? fromItem, string? toItem) => Editor.AddEdge(from, to, fromItem: fromItem, toItem: toItem);
     (IBox A, IBox B)? IEditorContext.EdgeEnds(Edge e) => Editor.Ends(e);
-    void IEditorContext.AddNodeAt(string type, double cx, double cy, bool join, bool lockAngle) =>
-        Editor.AddNodeAt(type, cx, cy, join, lockAngle: lockAngle);
+    void IEditorContext.AddNodeAt(PaletteItem item, double cx, double cy, bool join, bool lockAngle) =>
+        Editor.AddNodeAt(item, cx, cy, join, lockAngle: lockAngle);
     void IEditorContext.PanBy(double dx, double dy) { PanX += dx; PanY += dy; }
     string IEditorContext.Snapshot() => Editor.Snapshot();
     void IEditorContext.PushUndo(string snapshot) => Editor.PushUndo(snapshot);

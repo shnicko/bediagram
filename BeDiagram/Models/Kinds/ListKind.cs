@@ -1,4 +1,5 @@
 using BeDiagram.Models.Panels;
+using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Models.Kinds;
 
@@ -16,7 +17,7 @@ public class ListKind : PanelKind
         new List<ListItem> { new() { Label = "Item 1" }, new() { Label = "Item 2" }, new() { Label = "Item 3" } };
 
     /// <summary>A new row "Item N" at the end.</summary>
-    public override ListItem AddRow(Node n, string? section)
+    public override ListItem AddRow(Node n, IpoSection? section)
     {
         n.Items ??= new List<ListItem>();
         ListItem item = new ListItem { Label = $"Item {n.Items.Count + 1}" };

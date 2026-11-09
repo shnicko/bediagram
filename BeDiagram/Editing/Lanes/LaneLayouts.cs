@@ -1,3 +1,5 @@
+using BeDiagram.Models.Catalogue;
+
 namespace BeDiagram.Editing.Lanes;
 
 /// <summary>The lane layouts, by key (like <c>AngleLocks</c> and <c>Emphases</c>).</summary>
@@ -10,7 +12,7 @@ public static class LaneLayouts
 
     public static ILaneLayout Get(string key) => All.FirstOrDefault(l => l.Key == key) ?? Horizontal;
 
-    /// <summary>The layout whose flow runs the way <paramref name="flow"/> says (a <c>FlowDirections</c> key); top → down
-    /// when unknown. Quick-add uses it to work in (flow, cross) coordinates.</summary>
-    public static ILaneLayout ForFlow(string? flow) => All.FirstOrDefault(l => l.Flow == flow) ?? Vertical;
+    /// <summary>The layout whose flow runs the way <paramref name="flow"/> says. Quick-add uses it to work in
+    /// (flow, cross) coordinates.</summary>
+    public static ILaneLayout ForFlow(FlowDirection flow) => All.First(l => l.Flow == flow);
 }
