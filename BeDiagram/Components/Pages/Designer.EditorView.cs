@@ -19,6 +19,6 @@ public partial class Designer : IEditorView
     void IEditorView.EditStarted()
     {
         CancelGesture();
-        _ = module?.InvokeVoidAsync("focus", "edit-box");
+        FocusAfterRender("edit-box");
     }
 }

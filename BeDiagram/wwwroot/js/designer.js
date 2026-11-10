@@ -78,11 +78,10 @@ export function dispose() {
     dotnet = null;
 }
 
+// Called after the render that adds the input (Designer.FocusAfterRender), so it's already in the page.
 export function focus(id) {
-    setTimeout(() => {
-        const el = document.getElementById(id);
-        if (el) { el.focus(); if (el.select) el.select(); }
-    }, 30);
+    const el = document.getElementById(id);
+    if (el) { el.focus(); if (el.select) el.select(); }
 }
 
 export function download(fileName, mime, text) {

@@ -53,6 +53,9 @@ public partial class Designer
     string? openMenu;
     CancellationTokenSource? toastCts;
 
+    /// <summary>The input to focus once the render that creates it has gone out (see <see cref="FocusAfterRender"/>).</summary>
+    string? focusId;
+
     ElementReference canvasEl;
     IJSObjectReference? module;
     DotNetObjectReference<Designer>? selfRef;
@@ -68,7 +71,20 @@ public partial class Designer
             selfRef = DotNetObjectReference.Create(this);
             await module.InvokeVoidAsync("init", selfRef, canvasEl);
         }
+        if (focusId is { } id && module is not null)
+        {
+            focusId = null;
+            await module.InvokeVoidAsync("focus", id);
+        }
     }
+
+    /// <summary>
+    /// Focuses an input (an inline label editor, the Save as name) as soon as it exists. The request waits for this
+    /// page's next render: the browser receives the render first and the focus call after it, so the input is always
+    /// there. Asking straight away raced the render and could miss on a busy machine, sending the next keys to the
+    /// shortcuts instead of the box.
+    /// </summary>
+    void FocusAfterRender(string id) => focusId = id;
 
     protected override bool ShouldRender()
     {
