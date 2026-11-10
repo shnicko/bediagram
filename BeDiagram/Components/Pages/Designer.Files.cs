@@ -27,7 +27,7 @@ public partial class Designer
     void ShowSaveAs()
     {
         dialog = Dialog.SaveAs;
-        _ = module?.InvokeVoidAsync("focus", "saveas-name");
+        FocusAfterRender("saveas-name");
     }
 
     /// <summary>Opens the step order pop-up (Components/Dialogs/StepOrderDialog).</summary>
