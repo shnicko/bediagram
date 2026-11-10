@@ -304,10 +304,16 @@ tools/regression/                side-by-side regression suites (master vs worki
   - `tools/regression/prepare-net8.sh <BeDiagram folder> <dest>` does the .NET 8 copy above in one step.
 - **Regression suites:** `tools/regression/run.sh [base-ref]` builds master (or `base-ref`) and the working copy, runs
   the gesture / keyboard / all-shapes / panel suites on both, and prints `ALL THE SAME` or the steps that differ
-  (~25 min; run it in the background). Refactors must come out ALL THE SAME. Features should differ only where
+  (full set ~15 min; run it in the background and poll, as long runs can be cut off when the workspace restarts).
+  It picks the suites from the changed files (`pick-suites.py`, which prints why; anything not in its table gets the
+  full set); `FULL=1` forces all, `SUITES=` / `PANELS=` choose. Commit harness changes before a picked run, or the
+  harness files themselves make it a full run. Waits follow Blazor's WebSocket messages (`blazor.js`), never fixed
+  pauses: new suite code does `await z.act(() => page.click(…))`. A `check:` line after a suite means a wait gave up or
+  a label box never got focus — look before trusting the result. Refactors must come out ALL THE SAME. Features should differ only where
   they change things. A toast that vanishes one step apart is timing, not behaviour (rerun to confirm). When a
   feature adds a shape or a shortcut, extend `make-shapes-diagram.py` / `keyboard.js`.
-- **How much regression to run** (agreed with Nick 2026-11-05 — he tests every merge himself and reports problems):
+- **How much regression to run** (agreed with Nick 2026-11-05 — he tests every merge himself and reports problems;
+  since 2026-11-10 `run.sh` applies this itself from the changed files):
   - **Full run** (all four suites) for refactors (no behaviour change allowed), and for any change to shared code:
     `Models/Routing`, `Models/Text`, `Boxes`, `Rendering`, the exporters (`Services/Export/`, including `Pdf/`), `DiagramEditor` beyond a new method or
     two, the canvas markup in `Designer.razor` or `Components/Canvas`, or `CommandRegistry` / `designer.js` keys.

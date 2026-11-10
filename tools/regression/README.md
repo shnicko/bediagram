@@ -25,25 +25,69 @@ refactor should come out **ALL THE SAME**, while a new feature will (correctly) 
 Scripts find a shape by its outline path with `.node > path:not(.node-shadow)` (each shape's first direct path that isn't its shadow), so the extra shadow / halo paths drawn since the presentation look don't shift which shape is clicked.
 
 `compare.py` does the comparing. It explains its rules at the top: random ids are ignored, PDFs ignore their timestamp,
-and PNGs are compared pixel by pixel.
+PNGs are compared pixel by pixel, and Blazor's component markers (`<!--!-->`) are dropped.
+
+## Waiting for the app (`blazor.js`)
+
+After each click or key the scripts must wait until the app has finished before recording anything. They used to sleep
+a fixed time (150–1,500 ms) and copy the whole canvas back and forth to see if it had stopped changing. That was slow,
+and still a guess on a busy machine.
+
+Now they wait for the app itself. Blazor Server runs the app on the server and talks to the page over one WebSocket.
+`blazor.js` listens to that conversation:
+
+| Message | Means |
+|---|---|
+| `BeginInvokeDotNetFromJS` (with a call number) | the browser sent an event, e.g. a click |
+| `JS.EndInvokeDotNet` (same number) | the server's handler has finished, including awaited work such as saving a file |
+| `JS.RenderBatch` / `OnRenderCompleted` | the server sent a screen update / the browser has drawn it |
+| `JS.BeginInvokeJS` / `EndInvokeJSFromDotNet` | the server asked the browser to do something (focus a box, draw a PNG) / it's done |
+
+A wait ends when every call is answered, every update drawn, every browser job done, and nothing has moved for 40 ms.
+That usually takes 70–200 ms. A script writes `await z.act(() => page.click(…))` to do one thing and wait for it. If
+a wait ever gives up (15 s), or a new label box never gets focus, the suite says so and `run.sh` prints it as `check:`.
+
+## Which suites run (`pick-suites.py`)
+
+`run.sh` looks at the files you changed (compared with the base, including files not committed yet) and runs only the
+suites that can see them. It prints why:
+
+```
+== Changed files (compared with master) and the suites they need
+   BeDiagram/Components/Panels/ConnectorPanel.razor: panel (panels: connector)
+== Suites: panel   (panels: connector)
+```
+
+The table is in `pick-suites.py`. Each part of the page is its own component, so a change to the connector panel only
+needs the connector selections of the panel suite (88 steps, not 876). Anything the table doesn't name — models,
+editor, exports, canvas layers, gestures, `designer.js`, the command registry — gets the full set, so a gap in the table
+costs time, never coverage. Changes the suites can't see (docs) run nothing. Try it without running anything:
+
+```
+python3 tools/regression/pick-suites.py . master BeDiagram/Components/Panels/ShapePanel.razor
+```
 
 ## Running them
 
 From the repo root:
 
 ```
-tools/regression/run.sh            # compare your working copy with master
+tools/regression/run.sh            # compare your working copy with master (suites picked from what changed)
 tools/regression/run.sh my-branch  # or with any other branch / commit
-SUITES="keyboard" tools/regression/run.sh   # only some suites: gestures, keyboard, all-shapes, panel
+FULL=1 tools/regression/run.sh     # every suite, whatever changed
+SUITES="keyboard" tools/regression/run.sh   # these suites: gestures, keyboard, all-shapes, panel
+SUITES=panel PANELS="shape multi" tools/regression/run.sh   # some panels: shape text connector group multi diagram
 ```
 
-It takes about 25 minutes (the panel suite is the slow one) and ends with a short report:
+The full set takes about 15 minutes on Claude's 2-core workspace: building both copies about 4, gestures under 1,
+keyboard about 1, all-shapes under 1, and the panel suite about 13 (it was about 75 minutes before the waits changed).
+Each suite's own output is kept as `<side>-<suite>.log` in the work folder. It ends with a short report:
 
 ```
 gestures             26 files  SAME
 keyboard             94 steps  SAME
 all-shapes           17 files  SAME
-panel               830 steps  SAME
+panel               876 steps  SAME
 ALL THE SAME
 ```
 
@@ -56,9 +100,9 @@ Running it on your own PC (Windows) needs Git Bash or WSL, Node + `npx playwrigh
 `pip install pillow`, and the .NET 8 SDK. That's possible, but not needed: asking Claude to "run the regression
 suites" is the intended use.
 
-**One known false alarm:** status-bar messages (toasts) disappear after 3.5 seconds, so occasionally one vanishes a
-step earlier on one build than the other. If the *only* difference is a toast, and it lands on a different step when
-you run again, it's timing, not a change.
+**Toasts:** status-bar messages disappear after 3.5 seconds, which is now several steps, so one can linger a step or
+two longer on one build. `compare.py` reports that as timing (`ignored … toast that expired a step apart`), not a
+difference.
 
 ## When to update them
 
