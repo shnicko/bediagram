@@ -1,0 +1,86 @@
+@inherits DesignerPart
+
+<h3>Connector</h3>
+<p class="muted">@Editor.LabelOf(Edge.From) → @Editor.LabelOf(Edge.To)</p>
+<label>Line <InfoTip>Drag a ● end on the canvas to move it to another side@(Edge.Style == EdgeStyle.Straight ? "" : "; drag the ■ on the middle segment to move the bend").</InfoTip></label>
+<div class="seg wide">
+    <button class="@(Edge.Style == EdgeStyle.Elbow ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(Edge, EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
+    <button class="@(Edge.Style == EdgeStyle.Straight ? "on" : "")" @onclick="() => Editor.SetEdgeStyle(Edge, EdgeStyle.Straight)">@IconSvg("move-up-right", 16) Straight</button>
+</div>
+
+@if (Edge.IsManual)
+{
+    <div class="chips">
+        <button class="chip" title="Let the connector pick its sides and bend again" @onclick="() => Editor.ResetRoute(Edge)">Reset route to auto</button>
+    </div>
+}
+
+<label>Weight</label>
+<div class="seg wide stacked">
+    @foreach ((string k, string name) in LineLook.Weights)
+    {
+        <button class="@(Edge.Weight == k ? "on" : "")" title="@name" @onclick="() => Editor.SetEdgeLook(Edge, x => x.Weight = k)">@LinePreview(k, LineLook.Solid, LineLook.ArrowNone) @name</button>
+    }
+</div>
+<label>Line type</label>
+<div class="seg wide patterns">
+    @foreach ((string k, string name) in LineLook.Patterns)
+    {
+        <button class="@(Edge.Pattern == k ? "on" : "")" title="@name" @onclick="() => Editor.SetEdgeLook(Edge, x => x.Pattern = k)">@LinePreview(Edge.Weight, k, LineLook.ArrowNone)</button>
+    }
+</div>
+<label>Colour</label>
+<div class="swatches">
+    <button class="swatch line @(Edge.Color is null ? "on" : "")" title="Default grey" @onclick="() => Editor.SetEdgeLook(Edge, x => x.Color = null)"><span style="background:@LineLook.DefaultColor"></span></button>
+    @foreach ((string k, Swatch swc) in Palette.All)
+    {
+        <button class="swatch line @(Edge.Color == k ? "on" : "")" title="@k" @onclick="() => Editor.SetEdgeLook(Edge, x => x.Color = k)"><span style="background:@swc.Stroke"></span></button>
+    }
+</div>
+<label>Arrowheads</label>
+<div class="seg wide stacked">
+    @foreach ((string k, string name) in LineLook.ArrowModes)
+    {
+        <button class="@(Edge.Arrows == k ? "on" : "")" title="@name" @onclick="() => Editor.SetEdgeLook(Edge, x => x.Arrows = k)">@LinePreview(LineLook.Regular, LineLook.Solid, k) @name</button>
+    }
+</div>
+
+<label>Label <InfoTip>Or double-click the line. Up to two lines: Shift+Enter starts the second.</InfoTip></label>
+<textarea id="prop-edge" class="two-line" rows="2" @bind="Edge.Label" @bind:event="oninput" @bind:after="Editor.EdgeLabelTyped" @onfocus="Editor.Checkpoint" placeholder="Type a label… (2 lines max)"></textarea>
+<div class="chips">
+    @foreach (string lab in EdgeLabelChips)
+    {
+        <button class="chip" @onclick="() => Editor.SetEdgeLabel(Edge, lab)">@(lab == "" ? "Clear" : lab)</button>
+    }
+</div>
+
+<label>Text direction</label>
+<div class="seg wide three">
+    <button class="@(Edge.LabelOrient == LabelOrient.Horizontal ? "on" : "")" title="Always level" @onclick="() => Editor.SetLabelOrient(Edge, LabelOrient.Horizontal)">Level</button>
+    <button class="@(Edge.LabelOrient == LabelOrient.Along ? "on" : "")" title="Runs along the line" @onclick="() => Editor.SetLabelOrient(Edge, LabelOrient.Along)">Along line</button>
+    <button class="@(Edge.LabelOrient == LabelOrient.Perpendicular ? "on" : "")" title="At 90° to the line" @onclick="() => Editor.SetLabelOrient(Edge, LabelOrient.Perpendicular)">90° to line</button>
+</div>
+
+<label>Label placement <InfoTip>@LabelPlaceHint(Edge)</InfoTip></label>
+<div class="seg wide three">
+    @foreach ((LabelPlace k, string name) in LabelPlaces.All)
+    {
+        <button class="@(Edge.LabelPlace == k ? "on" : "")" @onclick="() => Editor.SetLabelPlace(Edge, k)">@name</button>
+    }
+</div>
+
+<label>Label position <span class="muted">@((int)Math.Round(Edge.LabelPos * 100))% along</span></label>
+<input type="range" min="0.05" max="0.95" step="0.05" value="@F(Edge.LabelPos)"
+       @onpointerdown="Editor.Checkpoint" @oninput="e => Editor.DragLabelPos(Edge, e.Value)" />
+<div class="chips">
+    <button class="chip" @onclick="() => Editor.SetLabelPos(Edge, 0.15)">Near start</button>
+    <button class="chip" @onclick="() => Editor.SetLabelPos(Edge, 0.5)">Middle</button>
+    <button class="chip" @onclick="() => Editor.SetLabelPos(Edge, 0.85)">Near end</button>
+</div>
+
+<div class="actions">
+    <button @onclick="() => Editor.ReverseEdge(Edge)">Reverse</button>
+    <button @onclick="() => Editor.MakeDefaultLook(Edge)" title="New connectors will look like this one">Use as default</button>
+    <button @onclick="() => Editor.ApplyEdgeLookToAll(Edge)" title="Copy this connector's look to every connector">Apply to all</button>
+    <button class="danger" @onclick="() => Run(Cmd.Delete)">Delete</button>
+</div>

@@ -1,0 +1,33 @@
+@inherits DesignerPart
+
+<h3>@(Box.IsComment ? "Comment" : "Text box")</h3>
+<label>Text <InfoTip>Or double-click the box on the canvas. Enter starts a new line.</InfoTip></label>
+<textarea rows="5" @bind="Box.Text" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" @onblur="() => Editor.GrowToText(Box)"></textarea>
+<label class="check" title="Comments are annotations: sticky-note look and dashed pin lines">
+    <input type="checkbox" checked="@Box.IsComment" @onchange="e => Editor.SetComment(Box, e.Value is true)" /> Comment
+</label>
+@if (Box.IsComment)
+{
+    <div class="chips"><button class="chip" @onclick="() => Editor.ResetCommentStyle(Box)">Reset to comment style</button></div>
+}
+
+<TextBoxStyle Editor="Editor" Boxes="[Box]" OnChanged="Redraw" />
+<div class="row">
+    <div><label>Width</label><input type="number" step="10" @bind="Box.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
+    <div><label>Height</label><input type="number" step="10" @bind="Box.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
+</div>
+<div class="actions"><button @onclick="() => Editor.FitTextHeight(Box)">Fit height to text</button></div>
+
+@if (Editor.FindGroup(Box.GroupId) is { } tg)
+{
+    <p class="muted">In group “@tg.Title” · <button class="link" @onclick="() => Editor.RemoveFromGroup(Box)">remove from group</button></p>
+}
+<p class="muted">Connecting <InfoTip>Connect it like a shape: drag from a ● port, or select it with another item and press J.@(Box.IsComment ? " Lines to a comment are dashed pins — restyle them like any connector." : "")</InfoTip></p>
+<div class="actions">
+    @if (!Box.IsComment)
+    {
+        <button @onclick="Editor.AddNextStep">+ Next step</button>
+        <button @onclick="() => Run(Cmd.AddComment)">+ Comment</button>
+    }
+    <button class="danger" @onclick="() => Run(Cmd.Delete)">Delete</button>
+</div>

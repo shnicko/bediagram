@@ -2,11 +2,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using BeDiagram.Components.Pages.Gestures;
-using BeDiagram.Components.Pages.Views;
 using BeDiagram.Editing;
-using BeDiagram.Editing.Angles;
 using BeDiagram.Models;
-using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Serialization;
@@ -60,10 +57,6 @@ public partial class Designer
     string iconFilter = "";
     /// <summary>Saved diagrams listed in the Open dialog (read when it opens).</summary>
     IReadOnlyList<(string Name, DateTime Modified)> openFiles = Array.Empty<(string Name, DateTime Modified)>();
-    List<Node> SelectedNodes => D.Nodes.Where(n => Editor.Selection.Contains(n.Id)).ToList();
-    List<TextBox> SelectedTextBoxes => D.TextBoxes.Where(t => Editor.Selection.Contains(t.Id)).ToList();
-    List<Group> SelectedGroups => D.Groups.Where(g => Editor.Selection.Contains(g.Id)).ToList();
-
     /// <summary>The menu bar heading whose drop-down is open ("File", "Edit", …), or null.</summary>
     string? openMenu;
     readonly ExportOptions exportOptions = new();
@@ -120,13 +113,6 @@ public partial class Designer
         ((clientX - canvasLeft - PanX) / Zoom, (clientY - canvasTop - PanY) / Zoom);
 
     (double X, double Y) ViewCentre() => ((canvasW / 2 - PanX) / Zoom, (canvasH / 2 - PanY) / Zoom);
-
-    // ───────────── Panel helpers ─────────────
-
-    /// <summary>Small inline sample of a line look for the panel buttons.</summary>
-    static string LabelPlaceHint(Edge e) => e.LabelOrient == LabelOrient.Along
-        ? "Inline sits on the line; above and below set the text beside it, as the text reads."
-        : "Inline sits on the line; above and below set the text beside it. On up-down lines above = left, below = right.";
 
     // ───────────── Inline text editing (the editor tracks what is being edited) ─────────────
 

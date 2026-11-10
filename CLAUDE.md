@@ -86,8 +86,15 @@ BeDiagram/
                              PdfWriter (SVG → file; injected into PdfExportFormat), PdfRenderer (SVG elements → content
                              stream), PdfStyle, SvgPath / SvgPathTokens (path data → operators), PdfMatrix (transforms),
                              PdfFonts (core fonts + metrics), Win1252Encoding; SvgValues / PdfSyntax (pure parse / format helpers)
-  Components/Pages/Designer.razor      the whole editor UI (toolbar, palette, SVG canvas, panel, dialogs) — markup only
-  Components/Pages/Designer.razor.cs   the page: fields, lifecycle, canvas coordinates, panel helpers. The rest is in partial
+  Components/Pages/Designer.razor      the editor page (toolbar, palette, SVG canvas, dialogs) — markup only; the side
+                                       panel is a child component per selection (Components/Panels)
+  Components/Pages/IDesignerHost.cs    what the page's child components may ask of it (Mediator): Editor, Buttons, Redraw,
+                                       dialogs, links, page size. The Designer implements it in Designer.Host.cs
+  Components/Pages/DesignerPart.cs     base class of those child components: Host, Editor / D / Cmd / Run / CanRun / Tip, and
+                                       every event it handles redraws the whole page
+  Components/Panels/                   the side panel (BeDiagram.Components.Panels): ShapePanel, TextBoxPanel, ConnectorPanel,
+                                       GroupPanel, SelectionPanel (several items), DiagramPanel (nothing selected)
+  Components/Pages/Designer.razor.cs   the page: fields, lifecycle, canvas coordinates. The rest is in partial
                                        files by area: Designer.Pointer (pointer handlers → gestures), .Palette (tiles, drag
                                        and drop), .View (pan / zoom), .Page (paper size, flow / lane-lock toggles), .Files,
                                        .Navigation (linked diagrams), .Render (view records and values the markup reads)
@@ -97,8 +104,9 @@ BeDiagram/
                                        Move, Resize, Connect, Marquee, Pan, EdgeEnd, Bend
   Components/Pages/Views/              view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
   Components/Pages/Commands/           editor commands (Command pattern): IEditorCommand, EditorCommand base, KeyGesture,
-                                       ICommandContext (receiver), CommandRegistry (invoker), one class per action
-  Components/Pages/Designer.Commands.cs        OnKey (keyboard → CommandRegistry) and Run / CanRun / Tip for buttons
+                                       ICommandContext (receiver), CommandRegistry (invoker), one class per action,
+                                       CommandButtons (Run / CanRun / Tip and the commands with buttons: Cmd.Save, Cmd.Delete, …)
+  Components/Pages/Designer.Commands.cs        OnKey (keyboard → CommandRegistry) and the page's CommandButtons (Cmd)
   Components/Pages/Designer.CommandContext.cs  Designer's ICommandContext implementation
   Components/Shared/*.razor(.cs)       small child components: PanelItems / PanelItemRow (list / IPO rows in the panel), AlignBar, LinkPicker, LinkBadge (SVG, rendered inside the canvas),
                                        StepOrderDialog (the step order pop-up; drives Editor.MoveStepBefore / JoinStep)
@@ -176,6 +184,13 @@ tools/regression/                side-by-side regression suites (master vs worki
   something from the screen, add it to `IEditorView` (implemented in `Designer.EditorView.cs`). New node defaults
   are data on `NodeTypeInfo` (icon, round icon, property keys, size) or behaviour on the kind (`NewLabel`, `Init`);
   `NodeFactory` puts them together.
+- **The page is split into child components (Mediator).** A part of the page (a side panel, and later the toolbar, palette,
+  canvas layers and dialogs) is a component that inherits `DesignerPart` and takes `Host="this"`. It reaches the
+  editor as `Editor` / `D`, runs commands as `Run(Cmd.Delete)` (`CanRun`, `Tip`), and asks the page for anything else
+  through `IDesignerHost` (add a member there and in `Designer.Host.cs` when a part needs more). Parts don't talk to each
+  other. Blazor only re-renders the component that handled an event, so `DesignerPart` redraws the whole page after every
+  event it handles: handlers don't call `StateHasChanged`, and a child's `OnChanged` is `Redraw`. Parts keep no state
+  the page needs to outlive them (the icon search is bound back to the page with `@bind-IconFilter`).
 - **Undo.** Every model change goes through `Editor.Change()` (snapshot + dirty) or, for drags, a snapshot taken at
   gesture start and pushed on pointer-up (`UndoableDragGesture` does this). Panel inputs call `Editor.Checkpoint` on focus.
 - **Gestures use the State pattern.** A drag is an `IGesture` object held in `gesture` (null when idle). New drags are
@@ -185,8 +200,8 @@ tools/regression/                side-by-side regression suites (master vs worki
   `LiveConnector()`).
 - **Editor actions use the Command pattern.** Every keyboard shortcut is an `IEditorCommand` in
   `Components/Pages/Commands/`, registered in `CommandRegistry.CreateDefault()`. Don't add `switch` cases on keys
-  in the Designer. Toolbar and panel buttons for the same action run the command (`Run(XxxCmd)`, `CanRun` for
-  disabled, `Tip` for the tooltip). Commands reach the editor only through `ICommandContext`. A new shortcut key
+  in the Designer. Toolbar and panel buttons for the same action run the command (`Run(Cmd.Xxx)`, `CanRun` for
+  disabled, `Tip` for the tooltip; `CommandButtons` lists the commands that have buttons). Commands reach the editor only through `ICommandContext`. A new shortcut key
   must also be added to the key list in `designer.js`. Commands don't do their own undo: the editor actions they
   call already use `Editor.Change()`.
 - **Text boxes** replace the old comments: one `TextBox` class, `IsComment` flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in `TextLayout.Layout(TextBox)`, drawn with SVG text in both renderers.
