@@ -1,0 +1,33 @@
+@inherits CanvasLayer
+
+@foreach (EdgeLabelView v in EdgeLabelViews())
+{
+    @if (v.Editing)
+    {
+        <foreignObject x="@F(v.Geo.LabelX - 85)" y="@F(v.Geo.LabelY - 22)" width="170" height="44">
+            <textarea id="edit-box" class="inline-edit edge-input two-line" rows="2" @bind="v.E.Label" @bind:event="oninput" @bind:after="Editor.MarkDirty"
+                      @onblur="Editor.EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true"></textarea>
+        </foreignObject>
+    }
+    else
+    {
+        <g class="edge-label-wrap" transform="@EdgeLabelTransform(v.Geo)"
+           @onpointerdown="ev => Input.EdgeDown(ev, v.E.Id)" @onpointerdown:stopPropagation="true"
+           @ondblclick="() => Editor.BeginEdit(v.E.Id)" @ondblclick:stopPropagation="true">
+            @if (v.Layout.Box is not null)
+            {
+                <rect x="@F(v.Layout.Box.X)" y="@F(v.Layout.Box.Y)" width="@F(v.Layout.Box.W)" height="@F(v.Layout.Box.H)" rx="4" class="edge-label-bg @(v.Selected ? "sel" : "")" />
+            }
+            else
+            {
+                <rect x="@F(v.Layout.Hit.X)" y="@F(v.Layout.Hit.Y)" width="@F(v.Layout.Hit.W)" height="@F(v.Layout.Hit.H)" rx="3" class="edge-label-hit @(v.Selected ? "sel" : "")" />
+            }
+            <text class="edge-label @(v.Layout.Halo ? "halo" : "")" text-anchor="@v.Layout.Anchor">
+                @foreach (EdgeLabelLine line in v.Layout.Lines)
+                {
+                    <tspan x="@F(line.X)" y="@F(line.Y)">@line.Text</tspan>
+                }
+            </text>
+        </g>
+    }
+}

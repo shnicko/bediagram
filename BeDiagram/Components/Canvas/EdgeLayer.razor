@@ -1,0 +1,18 @@
+@inherits CanvasLayer
+
+@foreach (EdgeView v in Views())
+{
+    <g class="edge @(v.Selected ? "selected" : "")"
+       @onpointerdown="ev => Input.EdgeDown(ev, v.E.Id)" @onpointerdown:stopPropagation="true"
+       @ondblclick="() => Editor.BeginEdit(v.E.Id)" @ondblclick:stopPropagation="true">
+        <path d="@v.Geo.D" class="edge-hit" />
+        @if (v.Selected)
+        {
+            <path d="@v.Geo.D" class="edge-halo" stroke-width="@F(v.Width + 7)" />
+        }
+        <path d="@v.Geo.D" class="edge-line" stroke="@v.Colour" stroke-width="@F(v.Width)"
+              stroke-dasharray="@LineLook.Dash(v.E.Pattern, v.Width)" stroke-linecap="@LineLook.Cap(v.E.Pattern)"
+              marker-end="@(v.E.Arrows == LineLook.ArrowNone ? null : v.Marker)"
+              marker-start="@(v.E.Arrows == LineLook.ArrowBoth ? v.Marker : null)" />
+    </g>
+}

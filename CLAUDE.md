@@ -86,7 +86,8 @@ BeDiagram/
                              PdfWriter (SVG → file; injected into PdfExportFormat), PdfRenderer (SVG elements → content
                              stream), PdfStyle, SvgPath / SvgPathTokens (path data → operators), PdfMatrix (transforms),
                              PdfFonts (core fonts + metrics), Win1252Encoding; SvgValues / PdfSyntax (pure parse / format helpers)
-  Components/Pages/Designer.razor      the editor page — markup only: the SVG canvas, plus the child components around it
+  Components/Pages/Designer.razor      the editor page — markup only: the SVG canvas (defs, background, the layers in
+                                       order, gesture previews and connector handles) and the child components around it
                                        (Components/Bars, Components/Panels, Components/Dialogs)
   Components/Pages/IDesignerHost.cs    what the page's child components may ask of it (Mediator): Editor, Buttons, Redraw,
                                        dialogs, files, export, links / breadcrumb, page size, zoom, grid, open menu, toast,
@@ -98,13 +99,20 @@ BeDiagram/
   Components/Bars/                     the bars round the canvas (BeDiagram.Components.Bars): Toolbar with FileMenu / EditMenu /
                                        ArrangeMenu / ViewMenu (each a DropMenu), ShapePalette (tiles; a drag tells the page what
                                        to add on drop), StatusBar
+  Components/Canvas/                   the canvas layers (BeDiagram.Components.Canvas), drawn by the page in this order:
+                                       PageSheet, GroupLayer, TextBoxLayer, EdgeLayer, NodeLayer, EdgeLayer RowLayer=true,
+                                       EdgeLabelLayer. Each derives from CanvasLayer (Ports, EditKey), builds its own view records
+                                       and hands pointer presses to the page through ICanvasInput (Host.Canvas)
+  Components/Pages/ICanvasInput.cs     pointer presses on items (ItemDown, GroupBodyDown, PortDown, ResizeDown, EdgeDown): the
+                                       page starts the gesture. Moves and releases stay on the page's SVG
   Components/Dialogs/                  pop-ups (BeDiagram.Components.Dialogs): OpenDialog, SaveAsDialog, ConfirmNewDialog,
                                        ConfirmLeaveDialog, ShortcutsDialog, StepOrderDialog. Plain components: parameters
                                        in, EventCallbacks out to the page (no Host), each keeping its own field state
   Components/Pages/Designer.razor.cs   the page: fields, lifecycle, canvas coordinates. The rest is in partial
                                        files by area: Designer.Pointer (pointer handlers → gestures), .Palette (tiles, drag
-                                       and drop), .View (pan / zoom), .Page (paper size, flow / lane-lock toggles), .Files,
-                                       .Navigation (linked diagrams), .Render (view records and values the markup reads)
+                                       and drop), .View (pan / zoom), .Page (paper size, orientation, the sheet), .Files,
+                                       .Navigation (linked diagrams), .Render (canvas background, markers, gesture previews),
+                                       .Host (IDesignerHost / ICanvasInput)
   Components/Pages/Designer.EditorView.cs      Designer's IEditorView implementation (what the editor needs from the screen)
   Components/Pages/Designer.EditorContext.cs   Designer's IEditorContext implementation (what gestures may use)
   Components/Pages/Gestures/           mouse gestures (State pattern): IGesture, DragGesture / UndoableDragGesture bases,
@@ -172,7 +180,7 @@ tools/regression/                side-by-side regression suites (master vs worki
   (`NewItems`, `Init`, `Adopt`). Don't test `n.Type == NodeTypes.Outcome` (or `Ipo`, `Circle`) elsewhere. A new per-kind
   behaviour is a new `INodeKind` member with its usual answer in `NodeKind`. Per-type *data* (icons, default
   properties, size) stays on `NodeTypeInfo` in `NodeTypes.All`.
-- **One geometry, two renderers.** The canvas (Designer.razor) and the SVG export (SvgDiagramWriter) must draw the
+- **One geometry, two renderers.** The canvas (the layers in Components/Canvas) and the SVG export (SvgDiagramWriter) must draw the
   same thing. Put the maths in the shared classes (`EdgeRouter`, `TextLayout`, `Boxes`, the outlines and kinds) and the markup in
   `SvgShapes`, and call them from both. Any new visual feature
   needs both renderers updated, and the Mermaid export updated where Mermaid can express it.
@@ -193,13 +201,17 @@ tools/regression/                side-by-side regression suites (master vs worki
   are data on `NodeTypeInfo` (icon, round icon, property keys, size) or behaviour on the kind (`NewLabel`, `Init`);
   `NodeFactory` puts them together.
 - **The page is split into child components (Mediator).** A part of the page (a side panel, the toolbar and its menus,
-  the palette, the status bar) is a component that inherits `DesignerPart` and takes `Host="this"`. It reaches the
+  the palette, the status bar, a canvas layer) is a component that inherits `DesignerPart` and takes `Host="this"`. It reaches the
   editor as `Editor` / `D`, runs commands as `Run(Cmd.Delete)` (`CanRun`, `Tip`), and asks the page for anything else
   through `IDesignerHost` (add a member there and in `Designer.Host.cs` when a part needs more). Parts don't talk to each
   other. Blazor only re-renders the component that handled an event, so `DesignerPart` redraws the whole page after every
   event it handles: handlers don't call `StateHasChanged`, and a child's `OnChanged` is `Redraw`. Parts keep no state
   the page needs to outlive them (the icon search is bound back to the page with `@bind-IconFilter`). Dialogs are
   simpler: parameters in, `EventCallback`s out (an EventCallback made from a page method redraws the page by itself).
+  Canvas layers derive from `CanvasLayer` and hand pointer presses to the page (`Input.ItemDown(e, id)`, …); the drag
+  itself (pointer move / up) stays on the page's SVG, so `ShouldRender` can still skip moves that change nothing. A new
+  kind of item is a new layer, placed in `Designer.razor` where it should stack. Gesture previews (live connector,
+  marquee, connector handles) read the gesture, so they stay in the page.
 - **Undo.** Every model change goes through `Editor.Change()` (snapshot + dirty) or, for drags, a snapshot taken at
   gesture start and pushed on pointer-up (`UndoableDragGesture` does this). Panel inputs call `Editor.Checkpoint` on focus.
 - **Gestures use the State pattern.** A drag is an `IGesture` object held in `gesture` (null when idle). New drags are
@@ -298,7 +310,7 @@ tools/regression/                side-by-side regression suites (master vs worki
 - **How much regression to run** (agreed with Nick 2026-11-05 — he tests every merge himself and reports problems):
   - **Full run** (all four suites) for refactors (no behaviour change allowed), and for any change to shared code:
     `Models/Routing`, `Models/Text`, `Boxes`, `Rendering`, the exporters (`Services/Export/`, including `Pdf/`), `DiagramEditor` beyond a new method or
-    two, the canvas markup in `Designer.razor`, or `CommandRegistry` / `designer.js` keys.
+    two, the canvas markup in `Designer.razor` or `Components/Canvas`, or `CommandRegistry` / `designer.js` keys.
   - **Small features and fixes** that touch only a few classes: a hands-on Playwright test of the change itself, plus
     only the suites that cover the area touched, e.g. `SUITES="panel" tools/regression/run.sh` —
     `gestures` for dragging, moving, resizing, connecting; `keyboard` for shortcuts, commands, toolbar buttons;

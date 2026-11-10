@@ -45,8 +45,6 @@ public partial class Designer
         gesture = new MarqueeGesture(this, x, y, clickSelects: id);
     }
 
-    void PortDown(PointerEventArgs e, string id) => PortDown(e, id, null);
-
     /// <summary>Pressing a ● port: a shape's side, or (<paramref name="itemId"/>) a row of a list / IPO node.</summary>
     void PortDown(PointerEventArgs e, string id, string? itemId)
     {

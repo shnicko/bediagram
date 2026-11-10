@@ -44,142 +44,16 @@
 
             <g transform="@GridTransform">
                 @* Page sheet (fixed paper size) *@
-                @if (D.Page.Enabled)
-                {
-                    <g class="page">
-                        <rect x="0" y="0" width="@F(D.Page.WidthPx)" height="@F(D.Page.HeightPx)" fill="#ffffff" filter="url(#page-shadow)" />
-                        @if (PageGridFill is { } pageFill)
-                        {
-                            <rect x="0" y="0" width="@F(D.Page.WidthPx)" height="@F(D.Page.HeightPx)" fill="@pageFill" />
-                        }
-                        @if (D.Page.MarginPx > 0)
-                        {
-                            <rect class="page-margin" x="@F(D.Page.MarginPx)" y="@F(D.Page.MarginPx)" width="@F(PrintableW)" height="@F(PrintableH)" />
-                        }
-                        <g><text class="page-caption" x="0" y="-8" style="@PageCaptionStyle">@D.Page.Describe()</text></g>
-                    </g>
-                }
+                <PageSheet Host="this" />
 
                 @* Groups are the bottom layer *@
-                @foreach (GroupView v in GroupViews())
-                {
-                    <g class="group @(v.Selected ? "selected" : "")">
-                        @if (v.Selected)
-                        {
-                            <rect class="sel-outline" x="@F(GroupSelectionRect(v.G).X)" y="@F(GroupSelectionRect(v.G).Y)"
-                                  width="@F(GroupSelectionRect(v.G).W)" height="@F(GroupSelectionRect(v.G).H)" rx="13" />
-                        }
-                        <rect class="group-body" x="@F(v.G.X)" y="@F(v.G.Y)" width="@F(v.G.W)" height="@F(v.G.H)" rx="10"
-                              fill="@v.Swatch.Light" fill-opacity="@F(v.FillOpacity)" stroke="@v.Swatch.Stroke" stroke-width="@F(v.Width)"
-                              stroke-dasharray="@v.Dash"
-                              @onpointerdown="e => GroupBodyDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
-                        @if (v.BandPath is { } band)
-                        {
-                            <path d="@band" fill="@v.Swatch.Stroke" fill-opacity="0.14" pointer-events="none" />
-                        }
-                        @* Title area: the drag handle (double-click to rename) *@
-                        <rect class="group-header" x="@F(v.TitleArea.X)" y="@F(v.TitleArea.Y)" width="@F(v.TitleArea.W)" height="@F(v.TitleArea.H)" fill="transparent"
-                              @onpointerdown="e => ItemDown(e, v.G.Id)" @onpointerdown:stopPropagation="true"
-                              @ondblclick="() => Editor.BeginEdit(v.G.Id)" @ondblclick:stopPropagation="true" />
-                        @if (Editor.EditingId == v.G.Id)
-                        {
-                            <foreignObject x="@F(GroupTitleEditRect(v).X)" y="@F(GroupTitleEditRect(v).Y)" width="@F(GroupTitleEditRect(v).W)" height="24">
-                                <input id="edit-box" class="inline-edit group-input" @bind="v.G.Title" @bind:event="oninput" @bind:after="Editor.MarkDirty"
-                                       @onblur="Editor.EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true" />
-                            </foreignObject>
-                        }
-                        else
-                        {
-                            <g><text class="group-title" x="@F(v.TitleX)" y="@F(v.TitleY)" text-anchor="@v.TitleAnchor" fill="@v.Swatch.Stroke">@v.G.Title</text></g>
-                        }
-                        @foreach ((double px, double py) in Ports(v.G))
-                        {
-                            <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
-                                    @onpointerdown="e => PortDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
-                        }
-                        @if (v.Selected && Editor.Selection.Count == 1)
-                        {
-                            <rect class="resize" x="@F(v.G.X + v.G.W - 6)" y="@F(v.G.Y + v.G.H - 6)" width="12" height="12"
-                                  @onpointerdown="e => ResizeDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
-                        }
-                    </g>
-                }
+                <GroupLayer Host="this" />
 
                 @* Text boxes sit underneath connectors and shapes *@
-                @foreach (TextBoxView v in TextBoxViews())
-                {
-                    <g class="textbox @(v.T.IsComment ? "comment" : "") @(v.Selected ? "selected" : "")"
-                       @onpointerdown="e => ItemDown(e, v.T.Id)" @onpointerdown:stopPropagation="true"
-                       @ondblclick="() => Editor.BeginEdit(v.T.Id)" @ondblclick:stopPropagation="true">
-                        @* Always-hittable body; only painted when the box has a fill *@
-                        <path d="@v.Outline" fill="@(v.Style.Fill ?? "transparent")" stroke="none" />
-                        @if (v.Style.Stroke is null)
-                        {
-                            <path d="@v.Outline" class="text-guide @(string.IsNullOrWhiteSpace(v.T.Text) ? "empty" : "")" />
-                        }
-                        else
-                        {
-                            <path d="@v.Outline" fill="none" stroke="@v.Style.Stroke" stroke-width="@F(v.Style.StrokeWidth)"
-                                  stroke-dasharray="@v.Style.Dash" stroke-linecap="@v.Style.Cap" />
-                        }
-                        @if (v.T.IsComment)
-                        {
-                            <path d="@SvgShapes.FoldPath(v.T)" fill="none" stroke="@v.Style.FoldColour" />
-                        }
-                        @if (v.Selected)
-                        {
-                            <rect x="@F(v.T.X - 4)" y="@F(v.T.Y - 4)" width="@F(v.T.W + 8)" height="@F(v.T.H + 8)" rx="6" class="sel-outline" />
-                        }
-                        @if (Editor.EditingId == v.T.Id)
-                        {
-                            <foreignObject x="@F(v.T.X)" y="@F(v.T.Y)" width="@F(v.T.W)" height="@F(Math.Max(v.T.H, v.Layout.ContentHeight))">
-                                <textarea id="edit-box" class="inline-edit multiline" style="@TextEditStyle(v.T, v.Style)"
-                                          @bind="v.T.Text" @bind:event="oninput" @bind:after="Editor.MarkDirty"
-                                          @onblur="Editor.EndEdit" @onpointerdown:stopPropagation="true"></textarea>
-                            </foreignObject>
-                        }
-                        else
-                        {
-                            <g>
-                                <text class="text-body" font-family="@v.Style.Family" font-size="@F(v.T.FontSize)" font-weight="@(v.T.Bold ? "600" : null)"
-                                      fill="@v.Style.TextColour" text-anchor="@v.Layout.Anchor">
-                                    @foreach (TextLine line in v.Layout.Lines)
-                                    {
-                                        <tspan x="@F(line.X)" y="@F(line.Y)">@line.Text</tspan>
-                                    }
-                                </text>
-                            </g>
-                        }
-                        @foreach ((double px, double py) in Ports(v.T))
-                        {
-                            <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
-                                    @onpointerdown="e => PortDown(e, v.T.Id)" @onpointerdown:stopPropagation="true" />
-                        }
-                        @if (v.Selected && Editor.Selection.Count == 1)
-                        {
-                            <rect class="resize" x="@F(v.T.X + v.T.W - 6)" y="@F(v.T.Y + v.T.H - 6)" width="12" height="12"
-                                  @onpointerdown="e => ResizeDown(e, v.T.Id)" @onpointerdown:stopPropagation="true" />
-                        }
-                    </g>
-                }
+                <TextBoxLayer Host="this" />
 
                 @* Connectors *@
-                @foreach (EdgeView v in EdgeViews())
-                {
-                    <g class="edge @(v.Selected ? "selected" : "")"
-                       @onpointerdown="ev => EdgeDown(ev, v.E.Id)" @onpointerdown:stopPropagation="true"
-                       @ondblclick="() => Editor.BeginEdit(v.E.Id)" @ondblclick:stopPropagation="true">
-                        <path d="@v.Geo.D" class="edge-hit" />
-                        @if (v.Selected)
-                        {
-                            <path d="@v.Geo.D" class="edge-halo" stroke-width="@F(v.Width + 7)" />
-                        }
-                        <path d="@v.Geo.D" class="edge-line" stroke="@v.Colour" stroke-width="@F(v.Width)"
-                              stroke-dasharray="@LineLook.Dash(v.E.Pattern, v.Width)" stroke-linecap="@LineLook.Cap(v.E.Pattern)"
-                              marker-end="@(v.E.Arrows == LineLook.ArrowNone ? null : v.Marker)"
-                              marker-start="@(v.E.Arrows == LineLook.ArrowBoth ? v.Marker : null)" />
-                    </g>
-                }
+                <EdgeLayer Host="this" />
 
                 @* Live connector while dragging from a port *@
                 @if (LiveConnector() is { } live)
@@ -192,116 +66,10 @@
                 }
 
                 @* Shapes *@
-                @foreach (NodeView v in NodeViews())
-                {
-                    <g class="node @(v.Selected ? "selected" : "")"
-                       @onpointerdown="e => ItemDown(e, v.N.Id)" @onpointerdown:stopPropagation="true"
-                       @ondblclick="() => Editor.BeginEdit(v.N.Id)" @ondblclick:stopPropagation="true">
-                        @if (v.Selected)
-                        {
-                            <rect x="@F(v.N.X - 5)" y="@F(v.N.Y - 5)" width="@F(v.N.W + 10)" height="@F(v.N.H + 10 + v.Below)" rx="8" class="sel-outline" />
-                        }
-                        @if (HaloMarkup(v) is { } halo)
-                        {
-                            <g class="node-halo">@halo</g>
-                        }
-                        @if (Emphases.Of(v.N).ShadowOpacity > 0)
-                        {
-                            <path d="@SvgShapes.ShapePath(v.N)" class="node-shadow" transform="@SvgShapes.ShadowTransform" fill="@v.Style.Stroke" fill-opacity="@F(Emphases.Of(v.N).ShadowOpacity)" />
-                        }
-                        <path d="@SvgShapes.ShapePath(v.N)" fill="@v.Style.Fill" stroke="@v.Style.Stroke" stroke-width="@F(Emphases.Of(v.N).StrokeWidth)" />
-                        @if (v.Outline.HasSideStripe)
-                        {
-                            <rect x="@F(v.N.X)" y="@F(v.N.Y)" width="6" height="@F(v.N.H)" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" fill-opacity="@(v.N.Filled ? "0.5" : "1")" />
-                        }
-                        @if (PanelBody(v) is { } body)
-                        {
-                            <g class="panel-body">@body</g>
-                        }
-                        @if (v.Layout.HasIcon)
-                        {
-                            <g class="node-icon" transform="@NodeIconTransform(v.Layout)"
-                               fill="none" stroke="@v.Style.IconColor" stroke-width="@F(v.N.Kind.IconStroke)" stroke-linecap="round" stroke-linejoin="round">
-                                @NodeIconMarkup(v.N)
-                            </g>
-                        }
-                        @if (v.TextBack is { } back)
-                        {
-                            <rect class="label-bg" x="@F(back.X)" y="@F(back.Y)" width="@F(back.W)" height="@F(back.H)" rx="4" />
-                        }
-                        @if (Editor.EditingId == v.N.Id)
-                        {
-                            <foreignObject x="@F(NodeEditRect(v).X)" y="@F(NodeEditRect(v).Y)" width="@F(NodeEditRect(v).W)" height="@F(NodeEditRect(v).H)">
-                                <textarea id="edit-box" class="inline-edit" @bind="v.N.Label" @bind:event="oninput" @bind:after="Editor.MarkDirty"
-                                          @onblur="Editor.EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true"></textarea>
-                            </foreignObject>
-                        }
-                        else
-                        {
-                            <g>
-                                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? Emphases.Of(v.N).BelowLabelColour : v.Style.Text)" font-weight="@Emphases.Of(v.N).LabelWeight(v.N)">
-                                    @foreach ((string text, string dy) in LabelLines(v.Layout))
-                                    {
-                                        <tspan x="@F(v.Layout.TextX)" dy="@dy">@text</tspan>
-                                    }
-                                </text>
-                            </g>
-                        }
-                        @if (v.Layout.Desc.Count > 0)
-                        {
-                            <g>
-                                <text class="node-desc" x="@F(v.Layout.DescX)" y="@F(v.Layout.DescY)">
-                                    @foreach ((string text, string dy) in DescLines(v.Layout))
-                                    {
-                                        <tspan x="@F(v.Layout.DescX)" dy="@dy">@text</tspan>
-                                    }
-                                </text>
-                            </g>
-                        }
-                        @if (HasProperties(v.N))
-                        {
-                            <circle cx="@F(v.N.X + v.N.W - 8)" cy="@F(v.N.Y + 8)" r="3.5" fill="@(v.N.Filled ? "#ffffff" : v.Style.Stroke)" class="props-dot">
-                                <title>Has properties</title>
-                            </circle>
-                        }
-                        @if (SvgShapes.HasLink(v.N))
-                        {
-                            <LinkBadge Box="v.N" Colour="@v.Style.Stroke" Link="@(v.N.Link!)" OnFollow="FollowLink" />
-                        }
-                        @if (SvgShapes.ShownStep(D, v.N) is int step)
-                        {
-                            <g class="step-badge">@StepBadgeMarkup(v, step)</g>
-                        }
-                        @foreach ((double px, double py) in Ports(v.N))
-                        {
-                            <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
-                                    @onpointerdown="e => PortDown(e, v.N.Id)" @onpointerdown:stopPropagation="true" />
-                        }
-                        @foreach ((double px, double py, string itemId) in v.N.Kind.RowPorts(v.N))
-                        {
-                            <circle class="port row-port" cx="@F(px)" cy="@F(py)" r="5"
-                                    @onpointerdown="e => PortDown(e, v.N.Id, itemId)" @onpointerdown:stopPropagation="true" />
-                        }
-                    </g>
-                }
+                <NodeLayer Host="this" />
 
                 @* Connectors that end on a row of a list / IPO node: above the shapes, so the end on the row shows *@
-                @foreach (EdgeView v in EdgeViews(rowLayer: true))
-                {
-                    <g class="edge @(v.Selected ? "selected" : "")"
-                       @onpointerdown="ev => EdgeDown(ev, v.E.Id)" @onpointerdown:stopPropagation="true"
-                       @ondblclick="() => Editor.BeginEdit(v.E.Id)" @ondblclick:stopPropagation="true">
-                        <path d="@v.Geo.D" class="edge-hit" />
-                        @if (v.Selected)
-                        {
-                            <path d="@v.Geo.D" class="edge-halo" stroke-width="@F(v.Width + 7)" />
-                        }
-                        <path d="@v.Geo.D" class="edge-line" stroke="@v.Colour" stroke-width="@F(v.Width)"
-                              stroke-dasharray="@LineLook.Dash(v.E.Pattern, v.Width)" stroke-linecap="@LineLook.Cap(v.E.Pattern)"
-                              marker-end="@(v.E.Arrows == LineLook.ArrowNone ? null : v.Marker)"
-                              marker-start="@(v.E.Arrows == LineLook.ArrowBoth ? v.Marker : null)" />
-                    </g>
-                }
+                <EdgeLayer Host="this" RowLayer="true" />
 
                 @* Group link badges sit above the members so they're never hidden *@
                 @foreach (Group g in D.Groups.Where(SvgShapes.HasLink))
@@ -310,37 +78,7 @@
                 }
 
                 @* Connector labels sit above shapes so they're never hidden *@
-                @foreach (EdgeLabelView v in EdgeLabelViews())
-                {
-                    @if (v.Editing)
-                    {
-                        <foreignObject x="@F(v.Geo.LabelX - 85)" y="@F(v.Geo.LabelY - 22)" width="170" height="44">
-                            <textarea id="edit-box" class="inline-edit edge-input two-line" rows="2" @bind="v.E.Label" @bind:event="oninput" @bind:after="Editor.MarkDirty"
-                                      @onblur="Editor.EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true"></textarea>
-                        </foreignObject>
-                    }
-                    else
-                    {
-                        <g class="edge-label-wrap" transform="@EdgeLabelTransform(v.Geo)"
-                           @onpointerdown="ev => EdgeDown(ev, v.E.Id)" @onpointerdown:stopPropagation="true"
-                           @ondblclick="() => Editor.BeginEdit(v.E.Id)" @ondblclick:stopPropagation="true">
-                            @if (v.Layout.Box is not null)
-                            {
-                                <rect x="@F(v.Layout.Box.X)" y="@F(v.Layout.Box.Y)" width="@F(v.Layout.Box.W)" height="@F(v.Layout.Box.H)" rx="4" class="edge-label-bg @(v.Selected ? "sel" : "")" />
-                            }
-                            else
-                            {
-                                <rect x="@F(v.Layout.Hit.X)" y="@F(v.Layout.Hit.Y)" width="@F(v.Layout.Hit.W)" height="@F(v.Layout.Hit.H)" rx="3" class="edge-label-hit @(v.Selected ? "sel" : "")" />
-                            }
-                            <text class="edge-label @(v.Layout.Halo ? "halo" : "")" text-anchor="@v.Layout.Anchor">
-                                @foreach (EdgeLabelLine line in v.Layout.Lines)
-                                {
-                                    <tspan x="@F(line.X)" y="@F(line.Y)">@line.Text</tspan>
-                                }
-                            </text>
-                        </g>
-                    }
-                }
+                <EdgeLabelLayer Host="this" />
 
                 @* Handles on the selected connector: ends (move to another side) and the bend (drag sideways) *@
                 @if (SelectedEdgeHandles() is { } h)

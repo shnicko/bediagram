@@ -1,0 +1,45 @@
+@inherits CanvasLayer
+
+@foreach (GroupView v in GroupViews())
+{
+    <g class="group @(v.Selected ? "selected" : "")">
+        @if (v.Selected)
+        {
+            <rect class="sel-outline" x="@F(GroupSelectionRect(v.G).X)" y="@F(GroupSelectionRect(v.G).Y)"
+                  width="@F(GroupSelectionRect(v.G).W)" height="@F(GroupSelectionRect(v.G).H)" rx="13" />
+        }
+        <rect class="group-body" x="@F(v.G.X)" y="@F(v.G.Y)" width="@F(v.G.W)" height="@F(v.G.H)" rx="10"
+              fill="@v.Swatch.Light" fill-opacity="@F(v.FillOpacity)" stroke="@v.Swatch.Stroke" stroke-width="@F(v.Width)"
+              stroke-dasharray="@v.Dash"
+              @onpointerdown="e => Input.GroupBodyDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
+        @if (v.BandPath is { } band)
+        {
+            <path d="@band" fill="@v.Swatch.Stroke" fill-opacity="0.14" pointer-events="none" />
+        }
+        @* Title area: the drag handle (double-click to rename) *@
+        <rect class="group-header" x="@F(v.TitleArea.X)" y="@F(v.TitleArea.Y)" width="@F(v.TitleArea.W)" height="@F(v.TitleArea.H)" fill="transparent"
+              @onpointerdown="e => Input.ItemDown(e, v.G.Id)" @onpointerdown:stopPropagation="true"
+              @ondblclick="() => Editor.BeginEdit(v.G.Id)" @ondblclick:stopPropagation="true" />
+        @if (Editor.EditingId == v.G.Id)
+        {
+            <foreignObject x="@F(GroupTitleEditRect(v).X)" y="@F(GroupTitleEditRect(v).Y)" width="@F(GroupTitleEditRect(v).W)" height="24">
+                <input id="edit-box" class="inline-edit group-input" @bind="v.G.Title" @bind:event="oninput" @bind:after="Editor.MarkDirty"
+                       @onblur="Editor.EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true" />
+            </foreignObject>
+        }
+        else
+        {
+            <g><text class="group-title" x="@F(v.TitleX)" y="@F(v.TitleY)" text-anchor="@v.TitleAnchor" fill="@v.Swatch.Stroke">@v.G.Title</text></g>
+        }
+        @foreach ((double px, double py) in Ports(v.G))
+        {
+            <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
+                    @onpointerdown="e => Input.PortDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
+        }
+        @if (v.Selected && Editor.Selection.Count == 1)
+        {
+            <rect class="resize" x="@F(v.G.X + v.G.W - 6)" y="@F(v.G.Y + v.G.H - 6)" width="12" height="12"
+                  @onpointerdown="e => Input.ResizeDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
+        }
+    </g>
+}

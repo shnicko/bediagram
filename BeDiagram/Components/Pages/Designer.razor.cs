@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Editing;
@@ -93,23 +92,8 @@ public partial class Designer
 
     // ───────────── Canvas coordinates ─────────────
 
-    static IEnumerable<(double, double)> Ports(IBox n)
-    {
-        yield return (n.X + n.W / 2, n.Y);
-        yield return (n.X + n.W, n.Y + n.H / 2);
-        yield return (n.X + n.W / 2, n.Y + n.H);
-        yield return (n.X, n.Y + n.H / 2);
-    }
-
     (double X, double Y) ToWorld(double clientX, double clientY) =>
         ((clientX - canvasLeft - PanX) / Zoom, (clientY - canvasTop - PanY) / Zoom);
 
     (double X, double Y) ViewCentre() => ((canvasW / 2 - PanX) / Zoom, (canvasH / 2 - PanY) / Zoom);
-
-    // ───────────── Inline text editing (the editor tracks what is being edited) ─────────────
-
-    void EditKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !e.ShiftKey) Editor.EndEdit();
-    }
 }

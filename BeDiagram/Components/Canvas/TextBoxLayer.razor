@@ -1,0 +1,58 @@
+@inherits CanvasLayer
+
+@foreach (TextBoxView v in TextBoxViews())
+{
+    <g class="textbox @(v.T.IsComment ? "comment" : "") @(v.Selected ? "selected" : "")"
+       @onpointerdown="e => Input.ItemDown(e, v.T.Id)" @onpointerdown:stopPropagation="true"
+       @ondblclick="() => Editor.BeginEdit(v.T.Id)" @ondblclick:stopPropagation="true">
+        @* Always-hittable body; only painted when the box has a fill *@
+        <path d="@v.Outline" fill="@(v.Style.Fill ?? "transparent")" stroke="none" />
+        @if (v.Style.Stroke is null)
+        {
+            <path d="@v.Outline" class="text-guide @(string.IsNullOrWhiteSpace(v.T.Text) ? "empty" : "")" />
+        }
+        else
+        {
+            <path d="@v.Outline" fill="none" stroke="@v.Style.Stroke" stroke-width="@F(v.Style.StrokeWidth)"
+                  stroke-dasharray="@v.Style.Dash" stroke-linecap="@v.Style.Cap" />
+        }
+        @if (v.T.IsComment)
+        {
+            <path d="@SvgShapes.FoldPath(v.T)" fill="none" stroke="@v.Style.FoldColour" />
+        }
+        @if (v.Selected)
+        {
+            <rect x="@F(v.T.X - 4)" y="@F(v.T.Y - 4)" width="@F(v.T.W + 8)" height="@F(v.T.H + 8)" rx="6" class="sel-outline" />
+        }
+        @if (Editor.EditingId == v.T.Id)
+        {
+            <foreignObject x="@F(v.T.X)" y="@F(v.T.Y)" width="@F(v.T.W)" height="@F(Math.Max(v.T.H, v.Layout.ContentHeight))">
+                <textarea id="edit-box" class="inline-edit multiline" style="@TextEditStyle(v.T, v.Style)"
+                          @bind="v.T.Text" @bind:event="oninput" @bind:after="Editor.MarkDirty"
+                          @onblur="Editor.EndEdit" @onpointerdown:stopPropagation="true"></textarea>
+            </foreignObject>
+        }
+        else
+        {
+            <g>
+                <text class="text-body" font-family="@v.Style.Family" font-size="@F(v.T.FontSize)" font-weight="@(v.T.Bold ? "600" : null)"
+                      fill="@v.Style.TextColour" text-anchor="@v.Layout.Anchor">
+                    @foreach (TextLine line in v.Layout.Lines)
+                    {
+                        <tspan x="@F(line.X)" y="@F(line.Y)">@line.Text</tspan>
+                    }
+                </text>
+            </g>
+        }
+        @foreach ((double px, double py) in Ports(v.T))
+        {
+            <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
+                    @onpointerdown="e => Input.PortDown(e, v.T.Id)" @onpointerdown:stopPropagation="true" />
+        }
+        @if (v.Selected && Editor.Selection.Count == 1)
+        {
+            <rect class="resize" x="@F(v.T.X + v.T.W - 6)" y="@F(v.T.Y + v.T.H - 6)" width="12" height="12"
+                  @onpointerdown="e => Input.ResizeDown(e, v.T.Id)" @onpointerdown:stopPropagation="true" />
+        }
+    </g>
+}
