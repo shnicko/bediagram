@@ -1,6 +1,5 @@
 using Microsoft.JSInterop;
 using BeDiagram.Models;
-using BeDiagram.Services;
 
 namespace BeDiagram.Components.Pages;
 
@@ -23,26 +22,20 @@ public partial class Designer
         else Reset();
     }
 
-    void ShowOpen()
-    {
-        confirmDelete = null;
-        openFiles = Store.List();
-        dialog = Dialog.Open;
-    }
+    void ShowOpen() => dialog = Dialog.Open;
 
     void ShowSaveAs()
     {
-        saveAsName = D.Name;
         dialog = Dialog.SaveAs;
         _ = module?.InvokeVoidAsync("focus", "saveas-name");
     }
 
-    /// <summary>Opens the step order pop-up (Components/Shared/StepOrderDialog).</summary>
+    /// <summary>Opens the step order pop-up (Components/Dialogs/StepOrderDialog).</summary>
     void ShowStepOrder() => dialog = Dialog.StepOrder;
 
     void ShowShortcuts() => dialog = Dialog.Shortcuts;
 
-    void CloseDialog() { dialog = Dialog.None; confirmDelete = null; openMenu = null; }
+    void CloseDialog() { dialog = Dialog.None; openMenu = null; }
 
     /// <summary>Open from the Open dialog: a fresh start, so the linked-diagram trail is cleared.</summary>
     async Task Open(string name)
@@ -70,8 +63,6 @@ public partial class Designer
         }
     }
 
-    bool SaveAsWillOverwrite => Store.Exists(saveAsName) && DiagramStore.SafeName(saveAsName) != (hasFile ? D.Name : null);
-
-    string SaveAsPath => Path.Combine(Store.Folder, DiagramStore.SafeName(saveAsName) + DiagramStore.Extension);
-
+    /// <summary>The name the open diagram is saved under, or null when it has never been saved.</summary>
+    string? SavedName => hasFile ? D.Name : null;
 }

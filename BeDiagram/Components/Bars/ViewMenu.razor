@@ -1,0 +1,13 @@
+@inherits DesignerPart
+
+<DropMenu Title="View" OpenMenu="@Host.OpenMenu" OpenMenuChanged="Host.SetOpenMenu">
+    <div class="menu-settings" @onclick:stopPropagation="true">
+        <label title="Show each shape's step number (the order is kept either way)"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
+    </div>
+    <hr class="menu-divider" />
+    <button @onclick="() => Run(Cmd.ZoomIn)">Zoom in<span class="menu-key">@KeyText(Cmd.ZoomIn)</span></button>
+    <button @onclick="() => Run(Cmd.ZoomOut)">Zoom out<span class="menu-key">@KeyText(Cmd.ZoomOut)</span></button>
+    <button @onclick="() => Run(Cmd.ResetZoom)">Zoom to 100%<span class="menu-key">@KeyText(Cmd.ResetZoom)</span></button>
+    <button @onclick="() => Run(Cmd.Fit)">Fit to window<span class="menu-key">@KeyText(Cmd.Fit)</span></button>
+    <button disabled="@(!CanRun(Cmd.FitSelection))" @onclick="() => Run(Cmd.FitSelection)">Zoom to selection<span class="menu-key">@KeyText(Cmd.FitSelection)</span></button>
+</DropMenu>

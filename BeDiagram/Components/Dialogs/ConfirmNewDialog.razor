@@ -1,0 +1,10 @@
+<div class="modal-bg" @onclick="OnCancel">
+    <div class="modal" @onclick:stopPropagation="true">
+        <h3>Discard unsaved changes?</h3>
+        <p>"@DiagramName" has changes that haven't been saved.</p>
+        <div class="actions">
+            <button @onclick="OnCancel">Cancel</button>
+            <button class="danger" @onclick="OnDiscard">Discard and start new</button>
+        </div>
+    </div>
+</div>

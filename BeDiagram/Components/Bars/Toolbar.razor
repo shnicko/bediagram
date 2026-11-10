@@ -1,0 +1,59 @@
+@inherits DesignerPart
+
+<header class="toolbar">
+    <div class="brand">◆ BeDiagram</div>
+    <nav class="menubar">
+        <FileMenu Host="Host" />
+        <EditMenu Host="Host" />
+        <ArrangeMenu Host="Host" />
+        <ViewMenu Host="Host" />
+        <DropMenu Title="Help" OpenMenu="@Host.OpenMenu" OpenMenuChanged="Host.SetOpenMenu">
+            <button @onclick="Host.ShowShortcuts">Keyboard shortcuts…</button>
+        </DropMenu>
+    </nav>
+    @if (Host.Trail.Count > 0)
+    {
+        <div class="group trail" title="You opened this diagram from a link — click a name to go back up">
+            <button class="back" @onclick="Host.GoBack" title="Back to @Host.Trail[^1]">← Back</button>
+            @foreach (Crumb c in Crumbs)
+            {
+                <button class="link crumb" @onclick="() => Host.GoUpTo(c.Level)">@c.Name</button><span class="crumb-sep">›</span>
+            }
+            <span class="crumb-here">@D.Name</span>
+        </div>
+    }
+    <div class="group">
+        <button @onclick="() => Run(Cmd.Undo)" disabled="@(!CanRun(Cmd.Undo))" title="@Tip(Cmd.Undo)">↶</button>
+        <button @onclick="() => Run(Cmd.Redo)" disabled="@(!CanRun(Cmd.Redo))" title="@Tip(Cmd.Redo)">↷</button>
+    </div>
+    <div class="group" title="Background grid (screen only, not exported)">
+        <span class="muted-label">Grid</span>
+        <div class="seg">
+            @foreach ((string k, string name, string icon) in GridLook.Options)
+            {
+                <button class="@(Host.Grid == k ? "on" : "")" title="@name" @onclick="() => Host.SetGrid(k)">@IconSvg(icon, 16)</button>
+            }
+        </div>
+    </div>
+    <div class="group">
+        <button @onclick="() => Run(Cmd.ZoomOut)" title="@Tip(Cmd.ZoomOut)">−</button>
+        <span class="zoom">@((int)Math.Round(Host.Zoom * 100))%</span>
+        <button @onclick="() => Run(Cmd.ZoomIn)" title="@Tip(Cmd.ZoomIn)">+</button>
+        <button @onclick="() => Run(Cmd.Fit)" title="@Tip(Cmd.Fit)">Fit</button>
+        <button @onclick="() => Run(Cmd.FitSelection)" disabled="@(!CanRun(Cmd.FitSelection))" title="@Tip(Cmd.FitSelection)">Selection</button>
+    </div>
+    <div class="group">
+        <div class="seg" title="Flow direction: where the next step goes when you add one from the sidebar, a number key or + Next step">
+            <button class="@FlowClass(FlowDirection.Right)" title="Flow left → right: new steps go to the right" @onclick="() => Editor.SetFlow(FlowDirection.Right)">@IconSvg("arrow-right", 16)</button>
+            <button class="@FlowClass(FlowDirection.Down)" title="Flow top → down: new steps go below" @onclick="() => Editor.SetFlow(FlowDirection.Down)">@IconSvg("arrow-down", 16)</button>
+        </div>
+        <button class="@SnapClass" title="@SnapTip" @onclick="ToggleSnap">@IconSvg("magnet", 16)</button>
+    </div>
+    <div class="title">
+        <span>@D.Name</span>@if (Editor.Dirty) {<span class="dirty" title="Unsaved changes">●</span>}
+    </div>
+</header>
+@if (Host.OpenMenu is not null)
+{
+    <div class="menu-backdrop" @onclick="CloseMenus"></div>
+}

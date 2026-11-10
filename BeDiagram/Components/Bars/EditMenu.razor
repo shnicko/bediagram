@@ -1,0 +1,27 @@
+@inherits DesignerPart
+
+<DropMenu Title="Edit" OpenMenu="@Host.OpenMenu" OpenMenuChanged="Host.SetOpenMenu">
+    <button disabled="@(!CanRun(Cmd.Undo))" @onclick="() => Run(Cmd.Undo)">Undo<span class="menu-key">@KeyText(Cmd.Undo)</span></button>
+    <button disabled="@(!CanRun(Cmd.Redo))" @onclick="() => Run(Cmd.Redo)">Redo<span class="menu-key">@KeyText(Cmd.Redo)</span></button>
+    <hr class="menu-divider" />
+    <button @onclick="() => Run(Cmd.SelectAll)">Select all<span class="menu-key">@KeyText(Cmd.SelectAll)</span></button>
+    <button disabled="@(!CanRun(Cmd.Duplicate))" @onclick="() => Run(Cmd.Duplicate)">Duplicate<span class="menu-key">@KeyText(Cmd.Duplicate)</span></button>
+    <button disabled="@(!CanRun(Cmd.Delete))" @onclick="() => Run(Cmd.Delete)">Delete<span class="menu-key">@KeyText(Cmd.Delete)</span></button>
+    <hr class="menu-divider" />
+    <button disabled="@(!CanRun(Cmd.Join))" @onclick="() => Run(Cmd.Join)">Join in selection order<span class="menu-key">@KeyText(Cmd.Join)</span></button>
+    <button disabled="@(!CanRun(Cmd.Branch))" @onclick="() => Run(Cmd.Branch)">Branch pass / fail<span class="menu-key">@KeyText(Cmd.Branch)</span></button>
+    <button disabled="@(!CanRun(Cmd.Group))" @onclick="() => Run(Cmd.Group)">Group<span class="menu-key">@KeyText(Cmd.Group)</span></button>
+    <button disabled="@(!CanRun(Cmd.Ungroup))" @onclick="() => Run(Cmd.Ungroup)">Ungroup<span class="menu-key">@KeyText(Cmd.Ungroup)</span></button>
+    <hr class="menu-divider" />
+    <div class="menu-settings" @onclick:stopPropagation="true">
+        <label title="New items join to the selected item automatically"><input type="checkbox" @bind="Editor.AutoConnect" /> Auto-join new items</label>
+        <label title="Snap to a 10px grid"><input type="checkbox" @bind="Editor.Snap" /> Snap to grid</label>
+        <span class="muted-label">Angle lock</span>
+        <div class="seg" title="Angle lock when moving items and placing joined steps">
+            @foreach (IAngleLock a in AngleLocks.All)
+            {
+                <button class="@(Editor.AngleLock == a ? "on" : "")" title="@a.Name" @onclick="() => SetAngleLock(a)">@a.Label</button>
+            }
+        </div>
+    </div>
+</DropMenu>

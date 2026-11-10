@@ -1,0 +1,28 @@
+<div class="modal-bg" @onclick="OnClose">
+    <div class="modal" @onclick:stopPropagation="true">
+        <h3>Open diagram</h3>
+        @if (Dirty) { <p class="warn">You have unsaved changes — opening another diagram will discard them.</p> }
+        @if (files.Count == 0)
+        {
+            <p class="muted">No saved diagrams yet in @Store.Folder</p>
+        }
+        <ul class="files">
+            @foreach ((string name, DateTime modified) in files)
+            {
+                <li>
+                    <button class="link" @onclick="() => OnOpen.InvokeAsync(name)">@name</button>
+                    <span class="muted">@modified.ToString("dd MMM yyyy HH:mm")</span>
+                    @if (confirmDelete == name)
+                    {
+                        <button class="danger small" @onclick="() => Delete(name)">Confirm delete</button>
+                    }
+                    else
+                    {
+                        <button class="icon" title="Delete file" @onclick="() => AskDelete(name)">🗑</button>
+                    }
+                </li>
+            }
+        </ul>
+        <div class="actions"><button @onclick="OnClose">Cancel</button></div>
+    </div>
+</div>

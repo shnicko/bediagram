@@ -1,0 +1,61 @@
+@inherits DesignerPart
+
+<DropMenu Title="File" OpenMenu="@Host.OpenMenu" OpenMenuChanged="Host.SetOpenMenu">
+    <button @onclick="Host.NewDiagram" title="New diagram">New</button>
+    <button @onclick="Host.ShowOpen" title="Open a saved diagram">Open…</button>
+    <button @onclick="() => Run(Cmd.Save)" title="@Tip(Cmd.Save)">Save<span class="menu-key">@KeyText(Cmd.Save)</span></button>
+    <button @onclick="() => Run(Cmd.SaveAs)" title="@Tip(Cmd.SaveAs)">Save as…<span class="menu-key">@KeyText(Cmd.SaveAs)</span></button>
+    <hr class="menu-divider" />
+    <div class="menu-heading">Export <span class="muted-label">next to the saved diagram</span></div>
+    @foreach (ExportMenuItem item in ExportMenuItems())
+    {
+        if (item.StartsGroup)
+        {
+            <hr class="menu-divider" />
+        }
+        <button @onclick="() => Export(item.Choice)" title="@item.Tip">@item.Label</button>
+    }
+    <div class="menu-settings" @onclick:stopPropagation="true">
+        <span class="muted-label">PNG settings</span>
+        <label title="Size of the PNG in pixels">
+            Resolution
+            <select value="@exportOptions.PngResolution" @onchange="SetPngResolution">
+                @for (int i = 0; i < PngResolutions.Count; i++)
+                {
+                    <option value="@i">@PngResolutions[i].Label</option>
+                }
+            </select>
+        </label>
+        <label title="No white background — for placing over slides or coloured pages">
+            <input type="checkbox" checked="@exportOptions.PngTransparent" @onchange="SetPngTransparent" />
+            Transparent background
+        </label>
+    </div>
+    <hr class="menu-divider" />
+    <div class="menu-settings" @onclick:stopPropagation="true" title="Where the next step goes when you add one from the sidebar, a number key or + Next step">
+        <span class="muted-label">Flow direction</span>
+        <div class="seg">
+            <button class="@FlowClass(FlowDirection.Right)" title="New steps go to the right" @onclick="() => Editor.SetFlow(FlowDirection.Right)">@IconSvg("arrow-right", 16) Left → right</button>
+            <button class="@FlowClass(FlowDirection.Down)" title="New steps go below" @onclick="() => Editor.SetFlow(FlowDirection.Down)">@IconSvg("arrow-down", 16) Top → down</button>
+        </div>
+    </div>
+    <hr class="menu-divider" />
+    <div class="menu-settings" @onclick:stopPropagation="true" title="Canvas size: open canvas or a fixed paper size">
+        <span class="muted-label">Page</span>
+        <select class="page-select" value="@D.Page.Size" @onchange="PageSizePicked">
+            <option value="@PageSetup.None">Open canvas</option>
+            @foreach ((string Key, string Name, double W, double H) ps in PageSetup.Sizes)
+            {
+                <option value="@ps.Key">@ps.Name</option>
+            }
+            <option value="@PageSetup.Custom">Custom…</option>
+        </select>
+        @if (D.Page.Enabled)
+        {
+            <div class="seg">
+                <button class="@(!D.Page.IsLandscape() ? "on" : "")" title="Portrait" @onclick="() => Host.SetLandscape(false)">@IconSvg("rectangle-vertical", 16) Portrait</button>
+                <button class="@(D.Page.IsLandscape() ? "on" : "")" title="Landscape" @onclick="() => Host.SetLandscape(true)">@IconSvg("rectangle-horizontal", 16) Landscape</button>
+            </div>
+        }
+    </div>
+</DropMenu>

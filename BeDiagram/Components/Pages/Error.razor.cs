@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Components;
+using System.Diagnostics;
 
 namespace BeDiagram.Components.Pages;
 

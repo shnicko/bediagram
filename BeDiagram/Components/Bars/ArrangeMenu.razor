@@ -1,0 +1,24 @@
+@inherits DesignerPart
+
+<DropMenu Title="Arrange" OpenMenu="@Host.OpenMenu" OpenMenuChanged="Host.SetOpenMenu">
+    <button title="Put the steps in order: drag to reorder, or set steps to run in parallel" @onclick="Host.ShowStepOrder">Step order…</button>
+    <button title="@Cmd.TidyTip" disabled="@(!CanRun(Cmd.Tidy))" @onclick="() => Run(Cmd.Tidy)">Tidy connectors</button>
+    <hr class="menu-divider" />
+    <div class="menu-heading">Auto-layout</div>
+    <button title="@Cmd.LayoutTip(Cmd.LayoutAcross)" disabled="@(!CanRun(Cmd.LayoutAcross))" @onclick="() => Run(Cmd.LayoutAcross)">@IconSvg("arrow-right", 16) Left → right</button>
+    <button title="@Cmd.LayoutTip(Cmd.LayoutDown)" disabled="@(!CanRun(Cmd.LayoutDown))" @onclick="() => Run(Cmd.LayoutDown)">@IconSvg("workflow", 16) Top → down</button>
+    <div class="menu-heading">Swim lanes</div>
+    <button title="@Cmd.LanesTip(Cmd.LanesAcross)" disabled="@(!CanRun(Cmd.LanesAcross))" @onclick="() => Run(Cmd.LanesAcross)">@IconSvg("rows-3", 16) Left → right</button>
+    <button title="@Cmd.LanesTip(Cmd.LanesDown)" disabled="@(!CanRun(Cmd.LanesDown))" @onclick="() => Run(Cmd.LanesDown)">@IconSvg("columns-3", 16) Top → down</button>
+    <div class="menu-settings" @onclick:stopPropagation="true">
+        <label title="Adding or moving shapes won't resize the lanes. Arrange, resizing a lane by hand and Fit to contents still do."><input type="checkbox" checked="@D.LockLanes" @onchange="SetLockLanes" /> Lock lane size</label>
+    </div>
+    <hr class="menu-divider" />
+    <div class="menu-settings" @onclick:stopPropagation="true" title="Line style for new connectors">
+        <span class="muted-label">New connectors</span>
+        <div class="seg">
+            <button class="@(D.DefaultConnector == EdgeStyle.Elbow ? "on" : "")" title="Right-angled connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
+            <button class="@(D.DefaultConnector == EdgeStyle.Straight ? "on" : "")" title="Straight connectors" @onclick="() => Editor.SetDefaultConnector(EdgeStyle.Straight)">@IconSvg("move-up-right", 16) Straight</button>
+        </div>
+    </div>
+</DropMenu>

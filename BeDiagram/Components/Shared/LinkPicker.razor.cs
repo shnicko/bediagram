@@ -1,5 +1,5 @@
-using BeDiagram.Services;
 using Microsoft.AspNetCore.Components;
+using BeDiagram.Services;
 
 namespace BeDiagram.Components.Shared;
 

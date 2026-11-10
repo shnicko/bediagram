@@ -1,7 +1,7 @@
+using Microsoft.AspNetCore.Components;
 using BeDiagram.Editing;
 using BeDiagram.Editing.Lanes;
 using BeDiagram.Models;
-using Microsoft.AspNetCore.Components;
 
 namespace BeDiagram.Components.Shared;
 

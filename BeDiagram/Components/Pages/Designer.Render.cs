@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Components.Pages.Views;
-using BeDiagram.Editing.Angles;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
@@ -9,7 +8,6 @@ using BeDiagram.Models.Routing;
 using BeDiagram.Models.Styles;
 using BeDiagram.Models.Text;
 using BeDiagram.Rendering;
-using BeDiagram.Services.Export;
 using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Components.Pages;
@@ -20,20 +18,10 @@ public partial class Designer
     // ───────────── Render helpers (read by Designer.razor) ─────────────
     // The markup only loops and reads values; anything that needs working out lives here.
 
-    /// <summary>Palette shapes (outcomes have their own section), numbered for the 1–9 shortcut keys.</summary>
-    static readonly List<PaletteShape> PaletteShapes = NodeTypes.All
-        .Where(t => !t.Kind.HasOutcome)
-        .Select((t, i) => new PaletteShape(t, i + 1))
-        .ToList();
-
-    /// <summary>The classic shapes, each offered again as a circle with its type's icon (<see cref="Node.Round"/>).</summary>
-    static readonly List<NodeTypeInfo> RoundShapes = NodeTypes.All.Where(t => t.Kind.CanBeRound).ToList();
 
     /// <summary>The inside of a list / IPO node (title band, sections, rows) — same markup as the export — or null.</summary>
     static MarkupString? PanelBody(NodeView v) => v.N.Kind.Body(v.N, v.Style) is { } body ? (MarkupString)body : null;
 
-    void SetPortrait() => SetOrientation("portrait");
-    void SetLandscape() => SetOrientation("landscape");
 
     double BendHandleSize => 12 / Zoom;
 
@@ -62,8 +50,6 @@ public partial class Designer
         lay.Desc.Select((line, i) => (line, i == 0 ? "0" : F(TextLayout.DescLineHeight)));
 
 
-    IEnumerable<Crumb> Crumbs => trail.Select((name, i) => new Crumb(i, name));
-
     /// <summary>Canvas background: grey around a page sheet, otherwise the chosen grid (or nothing).</summary>
     string CanvasFill =>
         D.Page.Enabled ? "#e3e7ec" : GridLook.CanvasPattern(grid) is { } pattern ? $"url(#{pattern})" : "transparent";
@@ -71,10 +57,6 @@ public partial class Designer
     /// <summary>The grid drawn on the page sheet, or null for no grid.</summary>
     string? PageGridFill => GridLook.PagePattern(grid) is { } pattern ? $"url(#{pattern})" : null;
 
-    void SetGrid(string key) => grid = key;
-
-    /// <summary>Toolbar angle lock: a view-time setting on the editor, kept while the page is open, not saved in the file.</summary>
-    void SetAngleLock(IAngleLock a) => Editor.AngleLock = a;
 
     string GridTransform => $"translate({F(PanX)},{F(PanY)}) scale({F(Zoom)})";
 
@@ -185,7 +167,7 @@ public partial class Designer
 
     int OffPageCount => Editor.OutsidePage().Count;
 
-    string? LinkExclude => hasFile ? D.Name : null;
+    string? LinkExclude => SavedName;
 
     /// <summary>Inline editor styled like the box itself, so editing looks the same as the finished text.</summary>
     static string TextEditStyle(TextBox t, TextStyle s) =>
@@ -197,9 +179,7 @@ public partial class Designer
     /// <summary>After the lane creator adds lanes: fit them in view.</summary>
     Task FitAfterLanes() => Run(Cmd.Fit);
 
-    void SetOpenMenu(string? menu) => openMenu = menu;
     void CloseMenus() => openMenu = null;
-    void AskDelete(string name) => confirmDelete = name;
     void DiscardAndNew() { Reset(); CloseDialog(); }
 
 }
