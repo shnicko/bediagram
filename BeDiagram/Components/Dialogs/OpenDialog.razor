@@ -1,16 +1,44 @@
 <div class="modal-bg" @onclick="OnClose">
-    <div class="modal" @onclick:stopPropagation="true">
+    <div class="modal open-dialog" @onclick:stopPropagation="true">
         <h3>Open diagram</h3>
         @if (Dirty) { <p class="warn">You have unsaved changes — opening another diagram will discard them.</p> }
-        @if (files.Count == 0)
+        <input class="open-find" placeholder="Find a diagram in any folder…" @bind="find" @bind:event="oninput" />
+        @if (!Finding)
         {
-            <p class="muted">No saved diagrams yet in @Store.Folder</p>
+            <div class="folder-path" title="@Store.Folder">
+                @foreach ((string label, string path) in Crumbs.SkipLast(1))
+                {
+                    <button class="link crumb" @onclick="() => Show(path)">@label</button><span class="crumb-sep">›</span>
+                }
+                <span class="crumb-here">@Crumbs[^1].Label</span>
+            </div>
         }
         <ul class="files">
-            @foreach ((string name, DateTime modified) in files)
+            @if (!Finding)
+            {
+                @if (!AtTop)
+                {
+                    <li><button class="link folder" title="Up one folder" @onclick="Up">@IconSvg("folder-open", 14) ..</button></li>
+                }
+                @foreach (string f in folders)
+                {
+                    <li>
+                        <button class="link folder" @onclick="() => Show(f)">@IconSvg("folder", 14) @Leaf(f)</button>
+                        @if (CanDelete(f))
+                        {
+                            <button class="icon" title="Delete this empty folder" @onclick="() => DeleteFolder(f)">🗑</button>
+                        }
+                    </li>
+                }
+            }
+            @foreach ((string name, DateTime modified) in Shown)
             {
                 <li>
-                    <button class="link" @onclick="() => OnOpen.InvokeAsync(name)">@name</button>
+                    <button class="link" title="@name" @onclick="() => OnOpen.InvokeAsync(name)">@Leaf(name)</button>
+                    @if (Finding)
+                    {
+                        <span class="muted where">@FolderLabel(name)</span>
+                    }
                     <span class="muted">@modified.ToString("dd MMM yyyy HH:mm")</span>
                     @if (confirmDelete == name)
                     {
@@ -23,6 +51,28 @@
                 </li>
             }
         </ul>
-        <div class="actions"><button @onclick="OnClose">Cancel</button></div>
+        @if (EmptyNote is { } note)
+        {
+            <p class="muted">@note</p>
+        }
+        @if (newFolder is not null)
+        {
+            <div class="new-folder">
+                <input @ref="newFolderInput" placeholder="Folder name" @bind="newFolder" @bind:event="oninput" @onkeydown="NewFolderKey" />
+                <button class="small primary" @onclick="CreateFolder">Create</button>
+                <button class="small" @onclick="CancelNewFolder">Cancel</button>
+            </div>
+            @if (folderError is not null)
+            {
+                <p class="warn">@folderError</p>
+            }
+        }
+        <div class="actions">
+            @if (!Finding && newFolder is null)
+            {
+                <button class="new-folder-button" title="Make a folder inside this one" @onclick="StartNewFolder">@IconSvg("folder", 14) New folder</button>
+            }
+            <button @onclick="OnClose">Cancel</button>
+        </div>
     </div>
 </div>

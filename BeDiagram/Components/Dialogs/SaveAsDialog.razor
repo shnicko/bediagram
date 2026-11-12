@@ -1,6 +1,14 @@
 <div class="modal-bg" @onclick="OnCancel">
     <div class="modal" @onclick:stopPropagation="true">
         <h3>Save diagram as</h3>
+        <label>Folder</label>
+        <select value="@folder" @onchange="FolderPicked">
+            <option value="">@TopLabel</option>
+            @foreach (string f in folders)
+            {
+                <option value="@f">@f</option>
+            }
+        </select>
         <label>Name</label>
         <input id="saveas-name" @bind="name" @bind:event="oninput" @onkeydown="Key" />
         @if (WillOverwrite)
@@ -8,6 +16,7 @@
             <p class="warn">A diagram with this name exists and will be overwritten.</p>
         }
         <p class="muted">@SavePath</p>
+        <p class="muted">Type <em>Folder/Name</em> to save into a new folder.</p>
         <div class="actions">
             <button @onclick="OnCancel">Cancel</button>
             <button class="primary" @onclick="Save">Save</button>

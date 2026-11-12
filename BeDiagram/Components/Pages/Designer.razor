@@ -157,7 +157,7 @@
 @* ───────────── Dialogs (Components/Dialogs) ───────────── *@
 @if (dialog == Dialog.Open)
 {
-    <OpenDialog Dirty="@Editor.Dirty" OnOpen="Open" OnDelete="DeleteFile" OnClose="CloseDialog" />
+    <OpenDialog Dirty="@Editor.Dirty" StartFolder="@OpenFolder" OnOpen="Open" OnDelete="DeleteFile" OnClose="CloseDialog" />
 }
 else if (dialog == Dialog.SaveAs)
 {

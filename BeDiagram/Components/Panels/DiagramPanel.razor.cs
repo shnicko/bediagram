@@ -17,9 +17,16 @@ public partial class DiagramPanel : DesignerPart
 
     void SetFitOnExport(ChangeEventArgs e) { Editor.Change(); D.Page.FitOnExport = e.Value is true; }
 
+    /// <summary>The diagram's name without its folder (the name box).</summary>
+    string DiagramLeaf => DiagramStore.LeafOf(D.Name);
+
+    /// <summary>The folder the diagram is saved in ("" = the top of the storage folder).</summary>
+    string DiagramFolder => DiagramStore.FolderOf(D.Name);
+
+    /// <summary>Renames the diagram in its own folder (Save as moves it to another).</summary>
     void RenameDiagram(ChangeEventArgs e)
     {
-        D.Name = DiagramStore.SafeName(e.Value?.ToString() ?? string.Empty);
+        D.Name = DiagramStore.SafeName(DiagramStore.Join(DiagramFolder, DiagramStore.LeafOf(DiagramStore.SafeName(e.Value?.ToString() ?? string.Empty))));
         Editor.MarkDirty();
     }
 }
