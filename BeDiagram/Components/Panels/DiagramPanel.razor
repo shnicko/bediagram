@@ -2,7 +2,11 @@
 
 <h3>Diagram</h3>
 <label>Name</label>
-<input value="@D.Name" @onchange="RenameDiagram" />
+<input value="@DiagramLeaf" @onchange="RenameDiagram" />
+@if (DiagramFolder.Length > 0)
+{
+    <p class="muted">In folder @DiagramFolder</p>
+}
 <p class="muted">@DiagramSummary</p>
 
 <h4>Steps <InfoTip>Every shape except outcomes has a step number, shown or not — new shapes go on the end. Reorder them all in <em>Step order…</em>, or change one shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</InfoTip></h4>

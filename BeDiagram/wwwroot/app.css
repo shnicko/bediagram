@@ -172,7 +172,7 @@ kbd {
 .panel h3 { margin: 4px 0 12px; font-size: 15px; }
 .panel h4 { margin: 18px 0 8px; font-size: 13px; color: var(--muted); }
 .panel label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
-.panel input, .panel textarea, .panel select, .modal input {
+.panel input, .panel textarea, .panel select, .modal input, .modal select {
     width: 100%;
     font: inherit;
     padding: 6px 8px;
@@ -224,6 +224,17 @@ kbd {
 .files { list-style: none; padding: 0; margin: 0; }
 .files li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f0f2f5; }
 .files li .link { flex: 1; }
+.files li .link.folder { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+.files li .where { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal select { margin: 4px 0 10px; }
+.modal.open-dialog { width: 520px; }
+.open-find { width: 100%; margin-bottom: 8px; }
+.folder-path { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 13px; padding: 2px 0 6px; border-bottom: 1px solid #f0f2f5; }
+.folder-path .crumb-sep { color: #9aa3ad; }
+.folder-path .crumb-here { font-weight: 600; }
+.new-folder { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
+.new-folder input { flex: 1; }
+.modal .actions .new-folder-button { margin-right: auto; display: inline-flex; align-items: center; gap: 6px; }
 .modal .actions { justify-content: flex-end; }
 
 /* Blazor error UI (kept from template) */

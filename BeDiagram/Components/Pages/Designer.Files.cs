@@ -1,5 +1,6 @@
 using Microsoft.JSInterop;
 using BeDiagram.Models;
+using BeDiagram.Services;
 
 namespace BeDiagram.Components.Pages;
 
@@ -65,4 +66,7 @@ public partial class Designer
 
     /// <summary>The name the open diagram is saved under, or null when it has never been saved.</summary>
     string? SavedName => hasFile ? D.Name : null;
+
+    /// <summary>The folder the Open dialog starts in: the open diagram's, or the top when it has never been saved.</summary>
+    string OpenFolder => hasFile ? DiagramStore.FolderOf(D.Name) : "";
 }
