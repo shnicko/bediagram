@@ -32,6 +32,12 @@
 @if (SelectedNodes.Count > 0)
 {
     <h4 class="bulk">Shapes · @SelectedNodes.Count <InfoTip>Changes here apply to every selected shape at once (one undo step). A setting shows as on when all of them have it.</InfoTip></h4>
+    @if (AllCanBeRound)
+    {
+        <label class="check" title="Icon in a circle with the label underneath (presentation style). The shapes keep their type and meaning.">
+            <input type="checkbox" checked="@AllRound" @onchange="e => Editor.SetRound(SelectedNodes, e.Value is true)" /> Draw as circle
+        </label>
+    }
     <ShapeStyle Editor="Editor" Nodes="SelectedNodes" OnChanged="Redraw" />
     <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@SelectedNodes.All(n => n.ClearTextBack)" @onchange="e => Editor.Restyle(SelectedNodes, n => n.ClearTextBack = e.Value is true)" /> Transparent text background</label>
 }

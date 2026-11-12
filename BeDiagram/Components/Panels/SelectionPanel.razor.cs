@@ -12,6 +12,12 @@ public partial class SelectionPanel : DesignerPart
     /// <summary>How many of the selected items are steps (shapes other than outcomes).</summary>
     int SelectedStepCount => D.Nodes.Count(n => Editor.Selection.Contains(n.Id) && n.Kind.IsStep);
 
+    /// <summary>Every selected shape has a circle version (classic shapes), so *Draw as circle* can apply to them all.</summary>
+    bool AllCanBeRound => SelectedNodes.All(n => n.Kind.CanBeRound);
+
+    /// <summary>Every selected shape is already drawn as a circle: the checkbox shows as on.</summary>
+    bool AllRound => SelectedNodes.All(n => n.Round);
+
     List<Node> SelectedNodes => D.Nodes.Where(n => Editor.Selection.Contains(n.Id)).ToList();
 
     List<TextBox> SelectedTextBoxes => D.TextBoxes.Where(t => Editor.Selection.Contains(t.Id)).ToList();
