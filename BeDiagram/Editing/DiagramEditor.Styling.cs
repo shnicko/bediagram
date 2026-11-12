@@ -61,10 +61,22 @@ public partial class DiagramEditor
     /// centre, label, colour and step. Going round, a shape with no icon gets its type's circle icon; going back, that
     /// icon is swapped for the type's usual one (none for most shapes) so it doesn't sit beside the label.
     /// </summary>
-    public void SetRound(Node n, bool round)
+    public void SetRound(Node n, bool round) => SetRound([n], round);
+
+    /// <summary>
+    /// <see cref="SetRound(Node, bool)"/> for several shapes in one undo step (the multi-select panel). Shapes that can't
+    /// be drawn as a circle, or already match, are left alone.
+    /// </summary>
+    public void SetRound(IReadOnlyList<Node> nodes, bool round)
     {
-        if (!n.Kind.CanBeRound || n.Round == round) return;
+        List<Node> todo = nodes.Where(n => n.Kind.CanBeRound && n.Round != round).ToList();
+        if (todo.Count == 0) return;
         Change();
+        foreach (Node n in todo) ApplyRound(n, round);
+    }
+
+    void ApplyRound(Node n, bool round)
+    {
         double cx = n.X + n.W / 2, cy = n.Y + n.H / 2;
         NodeTypeInfo t = NodeTypes.Get(n.Type);
         n.Round = round;
