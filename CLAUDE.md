@@ -157,6 +157,54 @@ tools/regression/                side-by-side regression suites (master vs worki
   a one-line lambda that only passes an argument (`@onclick="() => Select(n.Id)"`) is fine.
   Markup that needs parameters becomes a small component in `Components/Shared`, not a `RenderFragment` in C#.
 
+### Explicit, step-by-step C#
+
+Nick reads explicit, step-by-step code more easily than compact modern C#. Prefer clarity and debuggability over brevity.
+
+**Methods and properties**
+- Use full method bodies with braces and an explicit `return`. Do not use expression-bodied members (`=>`) for
+  methods or properties.
+- Explicit types, never `var` (see above — no exceptions, `.editorconfig` enforces it).
+
+**Collections**
+- Use `foreach` / `for` loops with `if` statements instead of LINQ chains (`Where`, `Select`, `Concat`, `Cast`, `Any`,
+  `First`, etc.).
+- Return concrete collections (e.g. `List<T>`) built inside the method, rather than lazily evaluated `IEnumerable<T>`
+  sequences.
+- Exception: a single simple LINQ call is fine if a loop would be much longer (e.g. `list.Count(x => x.IsSelected)`).
+  Never chain more than three.
+
+**Other modern syntax to avoid**
+- No `switch` expressions; use `switch` statements or `if` / `else`.
+- No pattern matching beyond simple `is Type t` checks.
+
+**Example of preferred style**
+
+```csharp
+// Preferred
+public List<IGroupable> Children(Group g)
+{
+    List<IGroupable> result = new List<IGroupable>();
+    foreach (Node n in d.Nodes)
+    {
+        if (n.GroupId == g.Id)
+        {
+            result.Add(n);
+        }
+    }
+    return result;
+}
+
+// Avoid
+public IEnumerable<IGroupable> Children(Group g) =>
+    d.Nodes.Where(n => n.GroupId == g.Id).Cast<IGroupable>();
+```
+
+**Comments**
+- Add a brief comment above any non-obvious block explaining what it does.
+
+These rules are for new and changed code. Don't rewrite existing code just to match them unless asked.
+
 ## Design rules
 
 - **Fixed sets of values are enums, saved by name.** Node type, outcome, side, connector style, label place and
