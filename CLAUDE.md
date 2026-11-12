@@ -203,7 +203,23 @@ public IEnumerable<IGroupable> Children(Group g) =>
 **Comments**
 - Add a brief comment above any non-obvious block explaining what it does.
 
-These rules are for new and changed code. Don't rewrite existing code just to match them unless asked.
+**Bringing old code into line (gradually)**
+
+New code always follows these rules. Old code is converted a piece at a time, only where a feature or fix is already
+working:
+- **Methods you change:** rewrite the whole method in this style, not just the lines the feature needs.
+- **Whole file:** also convert the rest of the file when it is small (roughly under 150 lines) or the change already
+  touches most of it. In bigger files, convert only the methods you change.
+- **Files you aren't otherwise changing:** leave them alone. No drive-by clean-ups, so each PR stays about one thing.
+- **Separate commit:** put the style conversion in its own commit, before the feature commit, named
+  `Style: <file or area>`. Nick can then read the feature diff on its own.
+- **No behaviour change.** A style conversion is a refactor. Watch the traps when replacing LINQ: a lazy
+  `IEnumerable` read later sees later changes, a `List` built up front doesn't; `First()` throws where a loop may
+  quietly find nothing; `Any()` / `First()` stop early. Keep the same result, including what happens when nothing is found.
+- **Regression:** the conversion counts towards the regression rules below. If it touches shared code, that means a
+  full run, and the only differences must be the ones the feature itself makes.
+- **PR:** list which files or methods were converted, under their own heading.
+- A cleanup PR for a whole area (`fix/style-<area>`, full regression run, must be ALL THE SAME) only when Nick asks.
 
 ## Design rules
 
