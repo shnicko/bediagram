@@ -24,8 +24,12 @@ public class MermaidExportFormat : IExportFormat
     public string Extension => ".mmd";
     public bool UsesArea => false;
 
-    public Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options) =>
-        Task.FromResult(new ExportFile(Encoding.UTF8.GetBytes(Write(d))));
+    public Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options)
+    {
+        string text = Write(d);
+        byte[] bytes = Encoding.UTF8.GetBytes(text);
+        return Task.FromResult(new ExportFile(bytes));
+    }
 
     /// <summary>Mermaid link syntax: dotted for any broken pattern, thick for heavy solid lines.</summary>
     string MermaidLink(Edge e)

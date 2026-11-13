@@ -41,14 +41,48 @@ public class Diagram : IJsonOnDeserialized
 
     void IJsonOnDeserialized.OnDeserialized()
     {
-        if (Comments is null) return;
+        if (Comments is null)
+        {
+            return;
+        }
         foreach (LegacyComment c in Comments)
         {
             TextBox t = TextBox.NewComment();
-            t.Id = c.Id; t.Text = c.Text; t.X = c.X; t.Y = c.Y; t.W = c.W; t.H = c.H; t.GroupId = c.GroupId;
-            t.Fill = t.BorderColor = c.Color switch { "blue" => "sky", "green" => "mint", "pink" => "rose", _ => "yellow" };
+            t.Id = c.Id;
+            t.Text = c.Text;
+            t.X = c.X;
+            t.Y = c.Y;
+            t.W = c.W;
+            t.H = c.H;
+            t.GroupId = c.GroupId;
+            // Old comment colours map onto the text box palette.
+            string colour;
+            switch (c.Color)
+            {
+                case "blue":
+                    colour = "sky";
+                    break;
+                case "green":
+                    colour = "mint";
+                    break;
+                case "pink":
+                    colour = "rose";
+                    break;
+                default:
+                    colour = "yellow";
+                    break;
+            }
+            t.Fill = colour;
+            t.BorderColor = colour;
             TextBoxes.Add(t);
-            foreach (Edge e in Edges.Where(e => e.From == c.Id || e.To == c.Id)) TextBox.ApplyPinLook(e);
+            // Lines to the old comment get the dashed pin look.
+            foreach (Edge e in Edges)
+            {
+                if (e.From == c.Id || e.To == c.Id)
+                {
+                    TextBox.ApplyPinLook(e);
+                }
+            }
         }
         Comments = null;
     }
