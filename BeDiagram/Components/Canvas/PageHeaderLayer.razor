@@ -1,0 +1,26 @@
+@inherits CanvasLayer
+
+@if (Views.Count > 0)
+{
+    <g class="page-header">
+        @foreach (TextBoxView v in Views)
+        {
+            @if (v.Style.Fill is not null || v.Style.Stroke is not null)
+            {
+                <path d="@v.Outline" fill="@(v.Style.Fill ?? "none")" stroke="@(v.Style.Stroke ?? "none")" stroke-width="@F(v.Style.StrokeWidth)"
+                      stroke-dasharray="@v.Style.Dash" stroke-linecap="@v.Style.Cap" />
+            }
+            <g>
+                <text font-family="@v.Style.Family" font-size="@F(v.T.FontSize)" font-weight="@(v.T.Bold ? "600" : null)"
+                      fill="@v.Style.TextColour" text-anchor="@v.Layout.Anchor" xml:space="preserve">
+                    @foreach (TextLine line in v.Layout.Lines)
+                    {
+                        <tspan x="@F(line.X)" y="@F(line.Y)">@line.Text</tspan>
+                    }
+                </text>
+            </g>
+        }
+        @* Where the drawing area starts: the drawing is kept below this line *@
+        <line class="page-margin" x1="@F(Area.X)" y1="@F(Area.Y)" x2="@F(Area.X + Area.W)" y2="@F(Area.Y)" />
+    </g>
+}

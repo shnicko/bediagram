@@ -28,26 +28,126 @@ public class SvgDiagramWriter
     /// </summary>
     public string Write(Diagram d, ExportView? view = null, bool background = true)
     {
-        List<IBox> boxes = d.Nodes.Cast<IBox>().Concat(d.TextBoxes).Concat(d.Groups).ToList();
-        Dictionary<string, IBox> lookup = boxes.ToDictionary(b => b.Id);
+        Dictionary<string, IBox> lookup = new Dictionary<string, IBox>();
+        foreach (IBox b in AllBoxes(d))
+        {
+            lookup.Add(b.Id, b);
+        }
         StringBuilder sb = new StringBuilder();
-        string defs = "<defs>" + string.Concat(d.Edges.Select(x => (LineLook.Colour(x.Color), x.Weight)).Distinct()
-            .Select(m => LineLook.MarkerDef(m.Item1, m.Weight))) + "</defs>\n";
-        string closeContent = "";
+        string closeContent = WriteOpening(sb, d, view, background, MarkerDefs(d));
 
+        // Drawing order: a group inside another is drawn over it.
+        foreach (Group g in new GroupTree(d).PaintOrder())
+        {
+            sb.Append(GroupSvg(g));
+        }
+
+        foreach (TextBox t in d.TextBoxes)
+        {
+            sb.Append(TextBoxSvg(t));
+        }
+
+        StringBuilder labels = new StringBuilder();
+        // Connectors ending on a row of a list / IPO node go above the shapes, so that end isn't hidden.
+        StringBuilder rowEdges = new StringBuilder();
+        foreach (Edge e in d.Edges)
+        {
+            StringBuilder lines = sb;
+            if (e.EndsOnRow)
+            {
+                lines = rowEdges;
+            }
+            WriteEdge(lines, labels, e, lookup);
+        }
+
+        foreach (Node n in d.Nodes)
+        {
+            WriteNode(sb, d, n);
+        }
+        sb.Append(rowEdges);
+        // Group link badges sit above the members so they're never hidden.
+        foreach (Group g in d.Groups)
+        {
+            if (SvgShapes.HasLink(g))
+            {
+                sb.Append(SvgShapes.LinkBadgeSvg(g, Palette.Get(g.Color).Stroke)).Append('\n');
+            }
+        }
+        sb.Append(labels);
+        sb.Append(closeContent);
+        sb.Append("</svg>\n");
+        return sb.ToString();
+    }
+
+    /// <summary>Every shape, text box and group, in that order.</summary>
+    static List<IBox> AllBoxes(Diagram d)
+    {
+        List<IBox> result = new List<IBox>();
+        foreach (Node n in d.Nodes)
+        {
+            result.Add(n);
+        }
+        foreach (TextBox t in d.TextBoxes)
+        {
+            result.Add(t);
+        }
+        foreach (Group g in d.Groups)
+        {
+            result.Add(g);
+        }
+        return result;
+    }
+
+    /// <summary>The &lt;defs&gt; block: one arrow marker per colour and weight the connectors use.</summary>
+    static string MarkerDefs(Diagram d)
+    {
+        List<(string Colour, string Weight)> markers = new List<(string Colour, string Weight)>();
+        foreach (Edge x in d.Edges)
+        {
+            (string Colour, string Weight) m = (LineLook.Colour(x.Color), x.Weight);
+            if (!markers.Contains(m))
+            {
+                markers.Add(m);
+            }
+        }
+        StringBuilder sb = new StringBuilder("<defs>");
+        foreach ((string Colour, string Weight) m in markers)
+        {
+            sb.Append(LineLook.MarkerDef(m.Colour, m.Weight));
+        }
+        sb.Append("</defs>\n");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// The &lt;svg&gt; element, defs and white background, and the transform that places the drawing (fitted to the
+    /// page or scaled down to fit the margins). Returns the markup that closes that transform ("" when there is none).
+    /// </summary>
+    static string WriteOpening(StringBuilder sb, Diagram d, ExportView? view, bool background, string defs)
+    {
+        string closeContent = "";
         if (view is not null)
         {
             if (d.Page.Enabled)
             {
                 (double wmm, double hmm) = d.Page.Mm;
-                double W = d.Page.WidthPx, H = d.Page.HeightPx, m = d.Page.MarginPx;
-                double availW = Math.Max(1, W - 2 * m), availH = Math.Max(1, H - 2 * m);
+                double W = d.Page.WidthPx;
+                double H = d.Page.HeightPx;
+                // The window is fitted into the drawing area: inside the margins, below the page title.
+                Rect area = PageHeader.DrawingArea(d);
+                double availW = Math.Max(1, area.W);
+                double availH = Math.Max(1, area.H);
                 double scale = Math.Min(availW / view.W, availH / view.H);
-                double tx = m + (availW - view.W * scale) / 2 - view.X * scale;
-                double ty = m + (availH - view.H * scale) / 2 - view.Y * scale;
+                double tx = area.X + (availW - view.W * scale) / 2 - view.X * scale;
+                double ty = area.Y + (availH - view.H * scale) / 2 - view.Y * scale;
                 sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(wmm)}mm\" height=\"{F(hmm)}mm\" viewBox=\"0 0 {F(W)} {F(H)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+                sb.Append(MetadataSvg(d));
                 sb.Append(defs.Replace("</defs>", $"<clipPath id=\"view\"><rect x=\"{F(view.X)}\" y=\"{F(view.Y)}\" width=\"{F(view.W)}\" height=\"{F(view.H)}\"/></clipPath></defs>"));
-                if (background) sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
+                if (background)
+                {
+                    sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
+                }
+                sb.Append(HeaderSvg(d));
                 sb.Append($"<g transform=\"translate({F(tx)},{F(ty)}) scale({F(scale)})\"><g clip-path=\"url(#view)\">\n");
                 closeContent = "</g></g>\n";
             }
@@ -55,27 +155,44 @@ public class SvgDiagramWriter
             {
                 // Exactly the screen: the viewBox does the clipping.
                 sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{F(view.X)} {F(view.Y)} {F(view.W)} {F(view.H)}\" width=\"{F(view.ScreenW)}\" height=\"{F(view.ScreenH)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+                sb.Append(MetadataSvg(d));
                 sb.Append(defs);
-                if (background) sb.Append($"<rect x=\"{F(view.X)}\" y=\"{F(view.Y)}\" width=\"{F(view.W)}\" height=\"{F(view.H)}\" fill=\"#ffffff\"/>\n");
+                if (background)
+                {
+                    sb.Append($"<rect x=\"{F(view.X)}\" y=\"{F(view.Y)}\" width=\"{F(view.W)}\" height=\"{F(view.H)}\" fill=\"#ffffff\"/>\n");
+                }
             }
         }
         else if (d.Page.Enabled)
         {
             // Fixed paper size: physical mm dimensions so it drops into Word/PowerPoint at the right size.
             (double wmm, double hmm) = d.Page.Mm;
-            double W = d.Page.WidthPx, H = d.Page.HeightPx, m = d.Page.MarginPx;
+            double W = d.Page.WidthPx;
+            double H = d.Page.HeightPx;
             sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(wmm)}mm\" height=\"{F(hmm)}mm\" viewBox=\"0 0 {F(W)} {F(H)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+            sb.Append(MetadataSvg(d));
             sb.Append(defs);
-            if (background) sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
-            if (Boxes.ContentBounds(d) is { } cb && d.Page.FitOnExport)
+            if (background)
             {
-                double availW = W - 2 * m, availH = H - 2 * m;
-                bool fits = cb.X >= m - 0.5 && cb.Y >= m - 0.5 && cb.X + cb.W <= W - m + 0.5 && cb.Y + cb.H <= H - m + 0.5;
+                sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
+            }
+            // The page title is drawn at full size, outside the scaling below.
+            sb.Append(HeaderSvg(d));
+            (double X, double Y, double W, double H)? bounds = Boxes.ContentBounds(d);
+            if (bounds is not null && d.Page.FitOnExport)
+            {
+                (double X, double Y, double W, double H) cb = bounds.Value;
+                // The drawing area: inside the margins, below the page title.
+                Rect area = PageHeader.DrawingArea(d);
+                double availW = area.W;
+                double availH = area.H;
+                bool fits = cb.X >= area.X - 0.5 && cb.Y >= area.Y - 0.5 && cb.X + cb.W <= area.X + area.W + 0.5 && cb.Y + cb.H <= area.Y + area.H + 0.5;
+                // Too big or outside the drawing area: scale down (never up) and centre inside it.
                 if (!fits && availW > 0 && availH > 0)
                 {
                     double scale = Math.Min(1, Math.Min(availW / cb.W, availH / cb.H));
-                    double tx = m + (availW - cb.W * scale) / 2 - cb.X * scale;
-                    double ty = m + (availH - cb.H * scale) / 2 - cb.Y * scale;
+                    double tx = area.X + (availW - cb.W * scale) / 2 - cb.X * scale;
+                    double ty = area.Y + (availH - cb.H * scale) / 2 - cb.Y * scale;
                     sb.Append($"<g transform=\"translate({F(tx)},{F(ty)}) scale({F(scale)})\">\n");
                     closeContent = "</g>\n";
                 }
@@ -83,109 +200,230 @@ public class SvgDiagramWriter
         }
         else
         {
-            double minX = 0, minY = 0, maxX = 400, maxY = 300;
-            if (Boxes.ContentBounds(d) is { } cb)
+            double minX = 0;
+            double minY = 0;
+            double maxX = 400;
+            double maxY = 300;
+            (double X, double Y, double W, double H)? bounds = Boxes.ContentBounds(d);
+            if (bounds is not null)
             {
-                minX = cb.X - 40; minY = cb.Y - 40; maxX = cb.X + cb.W + 40; maxY = cb.Y + cb.H + 40;
+                (double X, double Y, double W, double H) cb = bounds.Value;
+                minX = cb.X - 40;
+                minY = cb.Y - 40;
+                maxX = cb.X + cb.W + 40;
+                maxY = cb.Y + cb.H + 40;
             }
             sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{F(minX)} {F(minY)} {F(maxX - minX)} {F(maxY - minY)}\" width=\"{F(maxX - minX)}\" height=\"{F(maxY - minY)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+            sb.Append(MetadataSvg(d));
             sb.Append(defs);
-            if (background) sb.Append($"<rect x=\"{F(minX)}\" y=\"{F(minY)}\" width=\"{F(maxX - minX)}\" height=\"{F(maxY - minY)}\" fill=\"#ffffff\"/>\n");
-        }
-
-        // Drawing order: a group inside another is drawn over it.
-        foreach (Group g in new GroupTree(d).PaintOrder())
-        {
-            Swatch sw = Palette.Get(g.Color);
-            string fill = g.Filled ? $"fill=\"{sw.Light}\" fill-opacity=\"{F(g.FillOpacity())}\"" : "fill=\"none\"";
-            double width = GroupLook.Width(g.BorderWeight);
-            string? dash = LineLook.Dash(g.Border, width);
-            sb.Append($"<rect x=\"{F(g.X)}\" y=\"{F(g.Y)}\" width=\"{F(g.W)}\" height=\"{F(g.H)}\" rx=\"10\" {fill} stroke=\"{sw.Stroke}\" stroke-width=\"{F(width)}\"{(dash is null ? "" : $" stroke-dasharray=\"{dash}\"")}/>\n");
-            if (g.BandPath() is { } band)
-                sb.Append($"<path d=\"{band}\" fill=\"{sw.Stroke}\" fill-opacity=\"0.14\"/>\n");
-            (double tx, double ty, string anchor) = g.TitlePos();
-            sb.Append($"<text x=\"{F(tx)}\" y=\"{F(ty)}\" font-size=\"13\" font-weight=\"600\" text-anchor=\"{anchor}\" fill=\"{sw.Stroke}\">{E(g.Title)}</text>\n");
-        }
-
-        foreach (TextBox t in d.TextBoxes)
-            sb.Append(TextBoxSvg(t));
-
-        StringBuilder labels = new StringBuilder();
-        // Connectors ending on a row of a list / IPO node go above the shapes, so that end isn't hidden.
-        StringBuilder rowEdges = new StringBuilder();
-        foreach (Edge e in d.Edges)
-        {
-            StringBuilder lines = e.EndsOnRow ? rowEdges : sb;
-            if (e.Ends(id => lookup.GetValueOrDefault(id)) is not { } ends) continue;
-            (IBox a, IBox b) = ends;
-            EdgeGeom geo = EdgeRouter.EdgeGeometry(a, b, e);
-            double lw = LineLook.Width(e.Weight);
-            string lc = LineLook.Colour(e.Color);
-            string? dash = LineLook.Dash(e.Pattern, lw);
-            string mk = $"url(#{LineLook.MarkerId(lc, e.Weight)})";
-            lines.Append($"<path d=\"{geo.D}\" fill=\"none\" stroke=\"{lc}\" stroke-width=\"{F(lw)}\" stroke-linecap=\"{LineLook.Cap(e.Pattern)}\"");
-            if (dash is not null) lines.Append($" stroke-dasharray=\"{dash}\"");
-            if (e.Arrows != LineLook.ArrowNone) lines.Append($" marker-end=\"{mk}\"");
-            if (e.Arrows == LineLook.ArrowBoth) lines.Append($" marker-start=\"{mk}\"");
-            lines.Append("/>\n");
-            if (!string.IsNullOrWhiteSpace(e.Label))
+            if (background)
             {
-                EdgeLabelLayout lab = EdgeLabels.LayoutEdgeLabel(e, geo);
-                // Labels are written after the shapes so they sit on top.
-                labels.Append($"<g transform=\"translate({F(geo.LabelX)},{F(geo.LabelY)}) rotate({F(geo.LabelAngle)})\">");
-                if (lab.Box is { } bx)
-                    labels.Append($"<rect x=\"{F(bx.X)}\" y=\"{F(bx.Y)}\" width=\"{F(bx.W)}\" height=\"{F(bx.H)}\" rx=\"4\" fill=\"#fff\" stroke=\"#cfd4da\"/>");
-                string halo = lab.Halo ? " stroke=\"#fff\" stroke-width=\"3\" stroke-linejoin=\"round\" paint-order=\"stroke\"" : "";
-                labels.Append($"<text font-size=\"12\" text-anchor=\"{lab.Anchor}\" fill=\"#333\"{halo}>");
-                foreach (EdgeLabelLine line in lab.Lines)
-                    labels.Append($"<tspan x=\"{F(line.X)}\" y=\"{F(line.Y)}\">{E(line.Text)}</tspan>");
-                labels.Append("</text></g>\n");
+                sb.Append($"<rect x=\"{F(minX)}\" y=\"{F(minY)}\" width=\"{F(maxX - minX)}\" height=\"{F(maxY - minY)}\" fill=\"#ffffff\"/>\n");
             }
         }
+        return closeContent;
+    }
 
-        foreach (Node n in d.Nodes)
+    /// <summary>The diagram's title and description as SVG &lt;title&gt; and &lt;desc&gt; (read by screen readers, file
+    /// browsers and document tools; not drawn). Empty when neither is set.</summary>
+    static string MetadataSvg(Diagram d)
+    {
+        StringBuilder sb = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(d.Title))
         {
-            NodeStyle st = NodeStyle.For(n);
-            string shape = SvgShapes.ShapePath(n);
-            if (SvgShapes.HaloSvg(n, st.Stroke) is { } halo) sb.Append(halo).Append('\n');
-            if (Emphases.Of(n).ShadowOpacity > 0)
-                sb.Append($"<path d=\"{shape}\" transform=\"{SvgShapes.ShadowTransform}\" fill=\"{st.Stroke}\" fill-opacity=\"{F(Emphases.Of(n).ShadowOpacity)}\"/>\n");
-            sb.Append($"<path d=\"{shape}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"{F(Emphases.Of(n).StrokeWidth)}\"/>\n");
-            if (n.Kind.OutlineOf(n).HasSideStripe)
-                sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{(n.Filled ? "#ffffff" : st.Stroke)}\" fill-opacity=\"{(n.Filled ? "0.5" : "1")}\"/>");
-            if (n.Kind.Body(n, st) is { } body) sb.Append(body).Append('\n');
-            LabelLayout lay = TextLayout.Layout(n);
-            if (lay.HasIcon)
-                sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(n.Kind.IconStroke)}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(n.Kind.IconOf(n))}</g>\n");
-            if (TextLayout.DrawnTextBack(n, lay) is { } back)
-                sb.Append($"<rect x=\"{F(back.X)}\" y=\"{F(back.Y)}\" width=\"{F(back.W)}\" height=\"{F(back.H)}\" rx=\"4\" fill=\"#ffffff\" fill-opacity=\"0.92\"/>");
-            string weight = Emphases.Of(n).LabelWeight(n) is { } lw ? $" font-weight=\"{lw}\"" : "";
-            sb.Append($"<text x=\"{F(lay.TextX)}\" y=\"{F(lay.TextY)}\" font-size=\"13\"{weight} text-anchor=\"middle\" fill=\"{(lay.Below ? Emphases.Of(n).BelowLabelColour : st.Text)}\">");
-            for (int i = 0; i < lay.Lines.Count; i++)
-                sb.Append($"<tspan x=\"{F(lay.TextX)}\" dy=\"{(i == 0 ? "0" : "16")}\">{E(lay.Lines[i])}</tspan>");
-            sb.Append("</text>\n");
-            if (lay.Desc.Count > 0)
-            {
-                sb.Append($"<text x=\"{F(lay.DescX)}\" y=\"{F(lay.DescY)}\" font-size=\"{F(TextLayout.DescFontSize)}\" text-anchor=\"middle\" fill=\"#55606e\">");
-                for (int i = 0; i < lay.Desc.Count; i++)
-                    sb.Append($"<tspan x=\"{F(lay.DescX)}\" dy=\"{(i == 0 ? "0" : F(TextLayout.DescLineHeight))}\">{E(lay.Desc[i])}</tspan>");
-                sb.Append("</text>\n");
-            }
-            if (SvgShapes.HasLink(n)) sb.Append(SvgShapes.LinkBadgeSvg(n, st.Stroke)).Append('\n');
-            if (SvgShapes.ShownStep(d, n) is int step) sb.Append(SvgShapes.StepBadgeSvg(n, step, st.Stroke)).Append('\n');
+            sb.Append($"<title>{E(d.Title.Trim())}</title>\n");
         }
-        sb.Append(rowEdges);
-        // Group link badges sit above the members so they're never hidden.
-        foreach (Group g in d.Groups.Where(SvgShapes.HasLink))
-            sb.Append(SvgShapes.LinkBadgeSvg(g, Palette.Get(g.Color).Stroke)).Append('\n');
-        sb.Append(labels);
-        sb.Append(closeContent);
-        sb.Append("</svg>\n");
+        if (!string.IsNullOrWhiteSpace(d.Description))
+        {
+            sb.Append($"<desc>{E(d.Description.Trim())}</desc>\n");
+        }
         return sb.ToString();
     }
 
+    /// <summary>The page title and description, drawn as text boxes at the top of the page (see <see cref="PageHeader"/>).</summary>
+    static string HeaderSvg(Diagram d)
+    {
+        StringBuilder sb = new StringBuilder();
+        foreach (TextBox t in PageHeader.Boxes(d))
+        {
+            sb.Append(TextBoxSvg(t));
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>A group: box, title band and title.</summary>
+    static string GroupSvg(Group g)
+    {
+        StringBuilder sb = new StringBuilder();
+        Swatch sw = Palette.Get(g.Color);
+        string fill = "fill=\"none\"";
+        if (g.Filled)
+        {
+            fill = $"fill=\"{sw.Light}\" fill-opacity=\"{F(g.FillOpacity())}\"";
+        }
+        double width = GroupLook.Width(g.BorderWeight);
+        string? dash = LineLook.Dash(g.Border, width);
+        string dashAttr = "";
+        if (dash is not null)
+        {
+            dashAttr = $" stroke-dasharray=\"{dash}\"";
+        }
+        sb.Append($"<rect x=\"{F(g.X)}\" y=\"{F(g.Y)}\" width=\"{F(g.W)}\" height=\"{F(g.H)}\" rx=\"10\" {fill} stroke=\"{sw.Stroke}\" stroke-width=\"{F(width)}\"{dashAttr}/>\n");
+        string? band = g.BandPath();
+        if (band is not null)
+        {
+            sb.Append($"<path d=\"{band}\" fill=\"{sw.Stroke}\" fill-opacity=\"0.14\"/>\n");
+        }
+        (double tx, double ty, string anchor) = g.TitlePos();
+        sb.Append($"<text x=\"{F(tx)}\" y=\"{F(ty)}\" font-size=\"13\" font-weight=\"600\" text-anchor=\"{anchor}\" fill=\"{sw.Stroke}\">{E(g.Title)}</text>\n");
+        return sb.ToString();
+    }
+
+    /// <summary>A connector's line into <paramref name="lines"/>, and its label (if any) into <paramref name="labels"/>,
+    /// which are written after the shapes so they sit on top.</summary>
+    static void WriteEdge(StringBuilder lines, StringBuilder labels, Edge e, Dictionary<string, IBox> lookup)
+    {
+        (IBox A, IBox B)? ends = e.Ends(id => lookup.GetValueOrDefault(id));
+        if (ends is null)
+        {
+            return;
+        }
+        (IBox a, IBox b) = ends.Value;
+        EdgeGeom geo = EdgeRouter.EdgeGeometry(a, b, e);
+        double lw = LineLook.Width(e.Weight);
+        string lc = LineLook.Colour(e.Color);
+        string? dash = LineLook.Dash(e.Pattern, lw);
+        string mk = $"url(#{LineLook.MarkerId(lc, e.Weight)})";
+        lines.Append($"<path d=\"{geo.D}\" fill=\"none\" stroke=\"{lc}\" stroke-width=\"{F(lw)}\" stroke-linecap=\"{LineLook.Cap(e.Pattern)}\"");
+        if (dash is not null)
+        {
+            lines.Append($" stroke-dasharray=\"{dash}\"");
+        }
+        if (e.Arrows != LineLook.ArrowNone)
+        {
+            lines.Append($" marker-end=\"{mk}\"");
+        }
+        if (e.Arrows == LineLook.ArrowBoth)
+        {
+            lines.Append($" marker-start=\"{mk}\"");
+        }
+        lines.Append("/>\n");
+        if (string.IsNullOrWhiteSpace(e.Label))
+        {
+            return;
+        }
+        EdgeLabelLayout lab = EdgeLabels.LayoutEdgeLabel(e, geo);
+        labels.Append($"<g transform=\"translate({F(geo.LabelX)},{F(geo.LabelY)}) rotate({F(geo.LabelAngle)})\">");
+        if (lab.Box is not null)
+        {
+            Rect bx = lab.Box;
+            labels.Append($"<rect x=\"{F(bx.X)}\" y=\"{F(bx.Y)}\" width=\"{F(bx.W)}\" height=\"{F(bx.H)}\" rx=\"4\" fill=\"#fff\" stroke=\"#cfd4da\"/>");
+        }
+        string halo = "";
+        if (lab.Halo)
+        {
+            halo = " stroke=\"#fff\" stroke-width=\"3\" stroke-linejoin=\"round\" paint-order=\"stroke\"";
+        }
+        labels.Append($"<text font-size=\"12\" text-anchor=\"{lab.Anchor}\" fill=\"#333\"{halo}>");
+        foreach (EdgeLabelLine line in lab.Lines)
+        {
+            labels.Append($"<tspan x=\"{F(line.X)}\" y=\"{F(line.Y)}\">{E(line.Text)}</tspan>");
+        }
+        labels.Append("</text></g>\n");
+    }
+
+    /// <summary>A shape: halo, shadow, outline, side stripe, body, icon, label, description and badges.</summary>
+    static void WriteNode(StringBuilder sb, Diagram d, Node n)
+    {
+        NodeStyle st = NodeStyle.For(n);
+        IEmphasis emphasis = Emphases.Of(n);
+        string shape = SvgShapes.ShapePath(n);
+        string? haloSvg = SvgShapes.HaloSvg(n, st.Stroke);
+        if (haloSvg is not null)
+        {
+            sb.Append(haloSvg).Append('\n');
+        }
+        if (emphasis.ShadowOpacity > 0)
+        {
+            sb.Append($"<path d=\"{shape}\" transform=\"{SvgShapes.ShadowTransform}\" fill=\"{st.Stroke}\" fill-opacity=\"{F(emphasis.ShadowOpacity)}\"/>\n");
+        }
+        sb.Append($"<path d=\"{shape}\" fill=\"{st.Fill}\" stroke=\"{st.Stroke}\" stroke-width=\"{F(emphasis.StrokeWidth)}\"/>\n");
+        if (n.Kind.OutlineOf(n).HasSideStripe)
+        {
+            string stripeFill = st.Stroke;
+            string stripeOpacity = "1";
+            if (n.Filled)
+            {
+                stripeFill = "#ffffff";
+                stripeOpacity = "0.5";
+            }
+            sb.Append($"<rect x=\"{F(n.X)}\" y=\"{F(n.Y)}\" width=\"6\" height=\"{F(n.H)}\" fill=\"{stripeFill}\" fill-opacity=\"{stripeOpacity}\"/>");
+        }
+        string? body = n.Kind.Body(n, st);
+        if (body is not null)
+        {
+            sb.Append(body).Append('\n');
+        }
+        LabelLayout lay = TextLayout.Layout(n);
+        if (lay.HasIcon)
+        {
+            sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(n.Kind.IconStroke)}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(n.Kind.IconOf(n))}</g>\n");
+        }
+        (double X, double Y, double W, double H)? textBack = TextLayout.DrawnTextBack(n, lay);
+        if (textBack is not null)
+        {
+            (double X, double Y, double W, double H) back = textBack.Value;
+            sb.Append($"<rect x=\"{F(back.X)}\" y=\"{F(back.Y)}\" width=\"{F(back.W)}\" height=\"{F(back.H)}\" rx=\"4\" fill=\"#ffffff\" fill-opacity=\"0.92\"/>");
+        }
+        string weight = "";
+        string? labelWeight = emphasis.LabelWeight(n);
+        if (labelWeight is not null)
+        {
+            weight = $" font-weight=\"{labelWeight}\"";
+        }
+        string labelColour = st.Text;
+        if (lay.Below)
+        {
+            labelColour = emphasis.BelowLabelColour;
+        }
+        sb.Append($"<text x=\"{F(lay.TextX)}\" y=\"{F(lay.TextY)}\" font-size=\"13\"{weight} text-anchor=\"middle\" fill=\"{labelColour}\">");
+        for (int i = 0; i < lay.Lines.Count; i++)
+        {
+            string dy = "16";
+            if (i == 0)
+            {
+                dy = "0";
+            }
+            sb.Append($"<tspan x=\"{F(lay.TextX)}\" dy=\"{dy}\">{E(lay.Lines[i])}</tspan>");
+        }
+        sb.Append("</text>\n");
+        if (lay.Desc.Count > 0)
+        {
+            sb.Append($"<text x=\"{F(lay.DescX)}\" y=\"{F(lay.DescY)}\" font-size=\"{F(TextLayout.DescFontSize)}\" text-anchor=\"middle\" fill=\"#55606e\">");
+            for (int i = 0; i < lay.Desc.Count; i++)
+            {
+                string dy = F(TextLayout.DescLineHeight);
+                if (i == 0)
+                {
+                    dy = "0";
+                }
+                sb.Append($"<tspan x=\"{F(lay.DescX)}\" dy=\"{dy}\">{E(lay.Desc[i])}</tspan>");
+            }
+            sb.Append("</text>\n");
+        }
+        if (SvgShapes.HasLink(n))
+        {
+            sb.Append(SvgShapes.LinkBadgeSvg(n, st.Stroke)).Append('\n');
+        }
+        int? step = SvgShapes.ShownStep(d, n);
+        if (step is not null)
+        {
+            sb.Append(SvgShapes.StepBadgeSvg(n, step.Value, st.Stroke)).Append('\n');
+        }
+    }
+
     /// <summary>A text box: background, border, folded corner (comments) and wrapped lines.</summary>
-    string TextBoxSvg(TextBox t)
+    static string TextBoxSvg(TextBox t)
     {
         TextStyle st = TextStyle.For(t);
         StringBuilder sb = new StringBuilder("<g>");

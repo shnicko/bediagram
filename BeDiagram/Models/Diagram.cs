@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Models;
 
@@ -19,6 +20,25 @@ public class Diagram : IJsonOnDeserialized
     public Edge DefaultLook { get; set; } = new();
     /// <summary>Optional fixed page (paper size). Size "none" = open canvas.</summary>
     public PageSetup Page { get; set; } = new();
+    /// <summary>The diagram's title, separate from <see cref="Name"/> (which is the file name). Drawn at the top of the
+    /// page unless <see cref="HideHeader"/> is set, and used as the title of exported files. Null is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Title { get; set; }
+    /// <summary>A sentence or two under the title saying what the diagram shows. Null is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description { get; set; }
+    /// <summary>Don't draw the title and description at the top of the page (they are still kept and used by the
+    /// exports). Off by default, so a title shows as soon as it is typed. False is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool HideHeader { get; set; }
+    /// <summary>Look of the page title: a text box used only for its style (font, size, colours, border, alignment).
+    /// Its text, id and position are ignored — see <see cref="Text.PageHeader"/>. Null = the starting look
+    /// (<see cref="PageHeaderLooks"/>), and is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TextBox? TitleLook { get; set; }
+    /// <summary>Look of the page description, as <see cref="TitleLook"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TextBox? DescriptionLook { get; set; }
     /// <summary>Draw each shape's step number in a small badge. The order itself is always kept
     /// (<see cref="Node.Step"/>); this only decides whether it is shown. False is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -41,14 +61,48 @@ public class Diagram : IJsonOnDeserialized
 
     void IJsonOnDeserialized.OnDeserialized()
     {
-        if (Comments is null) return;
+        if (Comments is null)
+        {
+            return;
+        }
         foreach (LegacyComment c in Comments)
         {
             TextBox t = TextBox.NewComment();
-            t.Id = c.Id; t.Text = c.Text; t.X = c.X; t.Y = c.Y; t.W = c.W; t.H = c.H; t.GroupId = c.GroupId;
-            t.Fill = t.BorderColor = c.Color switch { "blue" => "sky", "green" => "mint", "pink" => "rose", _ => "yellow" };
+            t.Id = c.Id;
+            t.Text = c.Text;
+            t.X = c.X;
+            t.Y = c.Y;
+            t.W = c.W;
+            t.H = c.H;
+            t.GroupId = c.GroupId;
+            // Old comment colours map onto the text box palette.
+            string colour;
+            switch (c.Color)
+            {
+                case "blue":
+                    colour = "sky";
+                    break;
+                case "green":
+                    colour = "mint";
+                    break;
+                case "pink":
+                    colour = "rose";
+                    break;
+                default:
+                    colour = "yellow";
+                    break;
+            }
+            t.Fill = colour;
+            t.BorderColor = colour;
             TextBoxes.Add(t);
-            foreach (Edge e in Edges.Where(e => e.From == c.Id || e.To == c.Id)) TextBox.ApplyPinLook(e);
+            // Lines to the old comment get the dashed pin look.
+            foreach (Edge e in Edges)
+            {
+                if (e.From == c.Id || e.To == c.Id)
+                {
+                    TextBox.ApplyPinLook(e);
+                }
+            }
         }
         Comments = null;
     }

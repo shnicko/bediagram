@@ -1,6 +1,7 @@
 using BeDiagram.Editing.Lanes;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Layout;
 using BeDiagram.Models.Text;
 
 namespace BeDiagram.Editing;
@@ -266,25 +267,40 @@ public partial class DiagramEditor
     {
         Change();
         Diagram.Page.Size = pageSize;
-        if (Diagram.Page.Enabled) Diagram.Page.Orientation = orientation;
+        if (Diagram.Page.Enabled)
+        {
+            Diagram.Page.Orientation = orientation;
+        }
         Diagram.Flow = layout.Flow;
         Diagram.LockLanes = lockSize;
         count = Math.Clamp(count, 1, 20);
         gap = Math.Clamp(gap, 0, 400);
-        double flow = NewLaneLength, across = NewLaneWidth, x0 = 0, y0 = 0;
+        double flow = NewLaneLength;
+        double across = NewLaneWidth;
+        double x0 = 0;
+        double y0 = 0;
+        // On a page the lanes share the printable area (below the page title) between them.
         if (Diagram.Page.Enabled)
         {
-            double m = Diagram.Page.MarginPx;
-            (double pageFlow, double pageCross) = layout.ToLane(Diagram.Page.WidthPx - 2 * m, Diagram.Page.HeightPx - 2 * m);
+            Rect area = PageHeader.DrawingArea(Diagram);
+            (double pageFlow, double pageCross) = layout.ToLane(area.W, area.H);
             flow = pageFlow;
             across = Math.Max(Group.Header + 2 * Group.Pad, (pageCross - (count - 1) * gap) / count);
-            x0 = m; y0 = m;
+            x0 = area.X;
+            y0 = area.Y;
         }
         (double w, double h) = layout.FromLane(flow, across);
         for (int i = 0; i < count; i++)
         {
             (double x, double y) = layout.FromLane(0, i * (across + gap));
-            Diagram.Groups.Add(new Group { Title = $"Lane {i + 1}", Color = NextGroupColour(), X = x0 + x, Y = y0 + y, W = w, H = h });
+            Group lane = new Group();
+            lane.Title = $"Lane {i + 1}";
+            lane.Color = NextGroupColour();
+            lane.X = x0 + x;
+            lane.Y = y0 + y;
+            lane.W = w;
+            lane.H = h;
+            Diagram.Groups.Add(lane);
         }
         ClearSelection();
     }

@@ -15,10 +15,40 @@ public class PdfExportFormat : IExportFormat
         this.pdf = pdf;
     }
 
-    public string Name => "PDF";
-    public string Extension => ".pdf";
-    public bool UsesArea => true;
+    public string Name
+    {
+        get
+        {
+            return "PDF";
+        }
+    }
 
-    public Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options) =>
-        Task.FromResult(new ExportFile(pdf.FromSvg(writer.Write(d, view), d.Name)));
+    public string Extension
+    {
+        get
+        {
+            return ".pdf";
+        }
+    }
+
+    public bool UsesArea
+    {
+        get
+        {
+            return true;
+        }
+    }
+
+    public Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options)
+    {
+        string svg = writer.Write(d, view);
+        // The document title: the diagram's title when it has one, otherwise its name.
+        string title = d.Name;
+        if (!string.IsNullOrWhiteSpace(d.Title))
+        {
+            title = d.Title.Trim();
+        }
+        byte[] bytes = pdf.FromSvg(svg, title);
+        return Task.FromResult(new ExportFile(bytes));
+    }
 }
