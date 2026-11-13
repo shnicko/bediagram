@@ -42,7 +42,13 @@ public class PdfExportFormat : IExportFormat
     public Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options)
     {
         string svg = writer.Write(d, view);
-        byte[] bytes = pdf.FromSvg(svg, d.Name);
+        // The document title: the diagram's title when it has one, otherwise its name.
+        string title = d.Name;
+        if (!string.IsNullOrWhiteSpace(d.Title))
+        {
+            title = d.Title.Trim();
+        }
+        byte[] bytes = pdf.FromSvg(svg, title);
         return Task.FromResult(new ExportFile(bytes));
     }
 }

@@ -6,7 +6,7 @@ namespace BeDiagram.Components.Canvas;
 
 /// <summary>
 /// Base class of the canvas layers: one layer per kind of item, drawn in this order by the page so later layers sit on
-/// top (page sheet, groups, text boxes, connectors, shapes, connectors ending on a row, connector labels). A layer works
+/// top (page sheet, page title, groups, text boxes, connectors, shapes, connectors ending on a row, connector labels). A layer works
 /// out its own view records and hands pointer presses to the page through <see cref="Input"/>.
 /// </summary>
 public abstract class CanvasLayer : DesignerPart

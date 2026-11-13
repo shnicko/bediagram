@@ -9,6 +9,30 @@
 }
 <p class="muted">@DiagramSummary</p>
 
+<h4>Title <InfoTip>The diagram's title and a short description of what it shows. On a fixed page they sit at the top, full width inside the margins, and the drawing is kept below them (<em>Centre drawing on page</em> and export fitting use the space that's left). Exports also use the title as the file's title. The name above is the file name and can differ.</InfoTip></h4>
+<input value="@D.Title" placeholder="Title shown at the top of the page" @onchange="TitleChanged" />
+@if (ShowUseName)
+{
+    <div class="chips"><button class="chip" @onclick="UseNameAsTitle">Use name</button></div>
+}
+<label>Description</label>
+<textarea rows="3" value="@D.Description" placeholder="What the diagram shows" @onchange="DescriptionChanged"></textarea>
+<label class="check"><input type="checkbox" checked="@HeaderShown" @onchange="e => Editor.SetShowHeader(e.Value is true)" /> Show on the page</label>
+@if (!D.Page.Enabled)
+{
+    <p class="muted">Shown on a fixed page only — pick a paper size under <em>Page</em>.</p>
+}
+else if (PageHeader.Shown(D))
+{
+    <label>Style</label>
+    <div class="seg wide">
+        <button class="@(StylingDescription ? "" : "on")" @onclick="StyleTitle">Title</button>
+        <button class="@(StylingDescription ? "on" : "")" @onclick="StyleDescription">Description</button>
+    </div>
+    <TextBoxStyle Editor="Editor" Boxes="[StyledLook]" OnChanged="Redraw" />
+    <div class="chips"><button class="chip" @onclick="Editor.ResetHeaderLooks">Reset title style</button></div>
+}
+
 <h4>Steps <InfoTip>Every shape except outcomes has a step number, shown or not — new shapes go on the end. Reorder them all in <em>Step order…</em>, or change one shape's number (or tick <em>Runs in parallel</em>) in its panel. Deleting a shape closes the gap.</InfoTip></h4>
 <label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
 <button class="small" @onclick="Host.ShowStepOrder">Step order…</button>
@@ -54,7 +78,7 @@
     <label class="check"><input type="checkbox" checked="@D.Page.FitOnExport" @onchange="SetFitOnExport" /> Scale down to fit the margins on export</label>
     @if (OffPageCount > 0)
     {
-        <p class="warn">@OffPageCount item@(OffPageCount == 1 ? " is" : "s are") off the page. <button class="link" @onclick="Editor.SelectOutsidePage">Select</button></p>
+        <p class="warn">@OffPageCount item@(OffPageCount == 1 ? " is" : "s are") off the page@(PageHeader.Shown(D) ? " or under the title" : ""). <button class="link" @onclick="Editor.SelectOutsidePage">Select</button></p>
     }
     @if (Editor.ContentTooBigForPage())
     {

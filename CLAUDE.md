@@ -48,7 +48,7 @@ BeDiagram/
   Components/Pages/Gestures/   pointer drags — State
   Components/Pages/Commands/   editor actions and shortcuts — Command (CommandRegistry, CommandButtons)
   Components/Pages/Views/      view records the markup reads
-  Components/Canvas/      canvas layers, in drawing order: PageSheet, GroupLayer, TextBoxLayer, EdgeLayer, NodeLayer,
+  Components/Canvas/      canvas layers, in drawing order: PageSheet, PageHeaderLayer, GroupLayer, TextBoxLayer, EdgeLayer, NodeLayer,
                           EdgeLayer RowLayer=true, EdgeLabelLayer
   Components/Panels/      the side panel, one component per kind of selection
   Components/Bars/        toolbar and menus, shape palette, status bar
@@ -291,6 +291,11 @@ is already working:
   subgraph with a node per row.
 - **Connector labels** render in their own layer above shapes (canvas and export).
 - **Page mode** puts the sheet at world (0,0); sizes in mm convert at 96 px/inch (`PageSetup.PxPerMm`).
+- **Page title and description** (`Diagram.Title` / `Description` / `HideHeader`) are data on the diagram, not items:
+  `PageHeader` lays them out as text boxes made from `PageHeader.TitleLook(d)` / `DescriptionLook(d)` (looks only;
+  null on the diagram = the starting look, `Editor.HeaderLook` creates one for the style controls), so they are
+  never in `Diagram.TextBoxes` and selection, layout and export scaling leave them alone. Anything that places the
+  drawing on a page uses `PageHeader.DrawingArea(d)` (inside the margins, below the header), not the raw margins.
 
 ## Building and testing in Claude's cloud workspace
 

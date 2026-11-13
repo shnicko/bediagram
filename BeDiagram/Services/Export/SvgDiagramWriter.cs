@@ -133,18 +133,21 @@ public class SvgDiagramWriter
                 (double wmm, double hmm) = d.Page.Mm;
                 double W = d.Page.WidthPx;
                 double H = d.Page.HeightPx;
-                double m = d.Page.MarginPx;
-                double availW = Math.Max(1, W - 2 * m);
-                double availH = Math.Max(1, H - 2 * m);
+                // The window is fitted into the drawing area: inside the margins, below the page title.
+                Rect area = PageHeader.DrawingArea(d);
+                double availW = Math.Max(1, area.W);
+                double availH = Math.Max(1, area.H);
                 double scale = Math.Min(availW / view.W, availH / view.H);
-                double tx = m + (availW - view.W * scale) / 2 - view.X * scale;
-                double ty = m + (availH - view.H * scale) / 2 - view.Y * scale;
+                double tx = area.X + (availW - view.W * scale) / 2 - view.X * scale;
+                double ty = area.Y + (availH - view.H * scale) / 2 - view.Y * scale;
                 sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(wmm)}mm\" height=\"{F(hmm)}mm\" viewBox=\"0 0 {F(W)} {F(H)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+                sb.Append(MetadataSvg(d));
                 sb.Append(defs.Replace("</defs>", $"<clipPath id=\"view\"><rect x=\"{F(view.X)}\" y=\"{F(view.Y)}\" width=\"{F(view.W)}\" height=\"{F(view.H)}\"/></clipPath></defs>"));
                 if (background)
                 {
                     sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
                 }
+                sb.Append(HeaderSvg(d));
                 sb.Append($"<g transform=\"translate({F(tx)},{F(ty)}) scale({F(scale)})\"><g clip-path=\"url(#view)\">\n");
                 closeContent = "</g></g>\n";
             }
@@ -152,6 +155,7 @@ public class SvgDiagramWriter
             {
                 // Exactly the screen: the viewBox does the clipping.
                 sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{F(view.X)} {F(view.Y)} {F(view.W)} {F(view.H)}\" width=\"{F(view.ScreenW)}\" height=\"{F(view.ScreenH)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+                sb.Append(MetadataSvg(d));
                 sb.Append(defs);
                 if (background)
                 {
@@ -165,26 +169,30 @@ public class SvgDiagramWriter
             (double wmm, double hmm) = d.Page.Mm;
             double W = d.Page.WidthPx;
             double H = d.Page.HeightPx;
-            double m = d.Page.MarginPx;
             sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(wmm)}mm\" height=\"{F(hmm)}mm\" viewBox=\"0 0 {F(W)} {F(H)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+            sb.Append(MetadataSvg(d));
             sb.Append(defs);
             if (background)
             {
                 sb.Append($"<rect x=\"0\" y=\"0\" width=\"{F(W)}\" height=\"{F(H)}\" fill=\"#ffffff\"/>\n");
             }
+            // The page title is drawn at full size, outside the scaling below.
+            sb.Append(HeaderSvg(d));
             (double X, double Y, double W, double H)? bounds = Boxes.ContentBounds(d);
             if (bounds is not null && d.Page.FitOnExport)
             {
                 (double X, double Y, double W, double H) cb = bounds.Value;
-                double availW = W - 2 * m;
-                double availH = H - 2 * m;
-                bool fits = cb.X >= m - 0.5 && cb.Y >= m - 0.5 && cb.X + cb.W <= W - m + 0.5 && cb.Y + cb.H <= H - m + 0.5;
-                // Too big or outside the margins: scale down (never up) and centre inside the margins.
+                // The drawing area: inside the margins, below the page title.
+                Rect area = PageHeader.DrawingArea(d);
+                double availW = area.W;
+                double availH = area.H;
+                bool fits = cb.X >= area.X - 0.5 && cb.Y >= area.Y - 0.5 && cb.X + cb.W <= area.X + area.W + 0.5 && cb.Y + cb.H <= area.Y + area.H + 0.5;
+                // Too big or outside the drawing area: scale down (never up) and centre inside it.
                 if (!fits && availW > 0 && availH > 0)
                 {
                     double scale = Math.Min(1, Math.Min(availW / cb.W, availH / cb.H));
-                    double tx = m + (availW - cb.W * scale) / 2 - cb.X * scale;
-                    double ty = m + (availH - cb.H * scale) / 2 - cb.Y * scale;
+                    double tx = area.X + (availW - cb.W * scale) / 2 - cb.X * scale;
+                    double ty = area.Y + (availH - cb.H * scale) / 2 - cb.Y * scale;
                     sb.Append($"<g transform=\"translate({F(tx)},{F(ty)}) scale({F(scale)})\">\n");
                     closeContent = "</g>\n";
                 }
@@ -206,6 +214,7 @@ public class SvgDiagramWriter
                 maxY = cb.Y + cb.H + 40;
             }
             sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{F(minX)} {F(minY)} {F(maxX - minX)} {F(maxY - minY)}\" width=\"{F(maxX - minX)}\" height=\"{F(maxY - minY)}\" font-family=\"Segoe UI, Arial, sans-serif\">\n");
+            sb.Append(MetadataSvg(d));
             sb.Append(defs);
             if (background)
             {
@@ -213,6 +222,33 @@ public class SvgDiagramWriter
             }
         }
         return closeContent;
+    }
+
+    /// <summary>The diagram's title and description as SVG &lt;title&gt; and &lt;desc&gt; (read by screen readers, file
+    /// browsers and document tools; not drawn). Empty when neither is set.</summary>
+    static string MetadataSvg(Diagram d)
+    {
+        StringBuilder sb = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(d.Title))
+        {
+            sb.Append($"<title>{E(d.Title.Trim())}</title>\n");
+        }
+        if (!string.IsNullOrWhiteSpace(d.Description))
+        {
+            sb.Append($"<desc>{E(d.Description.Trim())}</desc>\n");
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>The page title and description, drawn as text boxes at the top of the page (see <see cref="PageHeader"/>).</summary>
+    static string HeaderSvg(Diagram d)
+    {
+        StringBuilder sb = new StringBuilder();
+        foreach (TextBox t in PageHeader.Boxes(d))
+        {
+            sb.Append(TextBoxSvg(t));
+        }
+        return sb.ToString();
     }
 
     /// <summary>A group: box, title band and title.</summary>

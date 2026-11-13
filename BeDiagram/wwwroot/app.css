@@ -297,6 +297,7 @@ kbd {
 .page { pointer-events: none; }
 .page-margin { fill: none; stroke: #9fb3d1; stroke-width: 1; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
 .page-caption { fill: #6b7480; font-weight: 500; }
+.page-header { pointer-events: none; }
 .page-select { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 .page-size { padding: 6px 0; font-size: 13px; color: var(--text); }
 .status-warn { color: #9a5b00; }

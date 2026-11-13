@@ -26,9 +26,34 @@ public class MermaidExportFormat : IExportFormat
 
     public Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options)
     {
-        string text = Write(d);
+        string text = Header(d) + Write(d);
         byte[] bytes = Encoding.UTF8.GetBytes(text);
         return Task.FromResult(new ExportFile(bytes));
+    }
+
+    /// <summary>
+    /// The diagram's title as Mermaid front matter (<c>title:</c>, drawn above the chart), and its description as
+    /// <c>%%</c> comment lines (Mermaid has nowhere to draw one). Empty when neither is set.
+    /// </summary>
+    static string Header(Diagram d)
+    {
+        StringBuilder sb = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(d.Title))
+        {
+            // One line, in double quotes, so YAML reads colons and hashes as text.
+            string title = d.Title.Replace("\r", "").Replace("\n", " ").Replace("\\", "\\\\").Replace("\"", "\\\"").Trim();
+            sb.Append("---\n");
+            sb.Append($"title: \"{title}\"\n");
+            sb.Append("---\n");
+        }
+        if (!string.IsNullOrWhiteSpace(d.Description))
+        {
+            foreach (string line in d.Description.Replace("\r", "").Trim().Split('\n'))
+            {
+                sb.Append($"%% {line}\n");
+            }
+        }
+        return sb.ToString();
     }
 
     /// <summary>Mermaid link syntax: dotted for any broken pattern, thick for heavy solid lines.</summary>
