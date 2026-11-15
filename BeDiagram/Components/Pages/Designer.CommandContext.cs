@@ -40,6 +40,17 @@ public partial class Designer : ICommandContext
     void ICommandContext.AutoLayout(ILaneLayout layout) => Editor.AutoLayout(layout);
     bool ICommandContext.HasConnectors => D.Edges.Count > 0;
     void ICommandContext.TidyConnectors() => Editor.TidyConnectors();
+    bool ICommandContext.HasOutsideText
+    {
+        get
+        {
+            return Editor.HasOutsideText;
+        }
+    }
+    void ICommandContext.PlaceTextClear()
+    {
+        Editor.PlaceTextClear();
+    }
     bool ICommandContext.HasLanes => Editor.HasLanes;
     void ICommandContext.ArrangeLanes(ILaneLayout layout) => Editor.ArrangeLanes(layout);
 

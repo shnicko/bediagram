@@ -51,6 +51,23 @@ public sealed class CommandButtons
         : editor.Selection.Count > 0 ? "Tidy the connectors on the selected items: re-route any that pass through a shape"
         : "Tidy connectors: re-route any that pass through a shape (select items first to tidy just theirs)";
 
+    /// <summary>Tooltip for Place text: what it will work on, given the selection.</summary>
+    public string PlaceTextTip
+    {
+        get
+        {
+            if (!CanRun(PlaceText))
+            {
+                return "No shape has text outside it yet (a label under a circle or outcome, or a description)";
+            }
+            if (editor.Selection.Count > 0)
+            {
+                return "Move the text of the selected shapes to the side (under, above, right or left) with the fewest connectors through it";
+            }
+            return "Move the text under shapes to the side (under, above, right or left) with the fewest connectors through it (select shapes first to do just theirs)";
+        }
+    }
+
     // The commands that have buttons.
     public IEditorCommand Save => registry.Get<SaveCommand>();
     public IEditorCommand SaveAs => registry.Get<SaveAsCommand>();
@@ -67,6 +84,13 @@ public sealed class CommandButtons
     public IEditorCommand LanesAcross => registry.Get<ArrangeLanesHorizontalCommand>();
     public IEditorCommand LanesDown => registry.Get<ArrangeLanesVerticalCommand>();
     public IEditorCommand Tidy => registry.Get<TidyConnectorsCommand>();
+    public IEditorCommand PlaceText
+    {
+        get
+        {
+            return registry.Get<PlaceTextCommand>();
+        }
+    }
     public IEditorCommand LayoutAcross => registry.Get<AutoLayoutHorizontalCommand>();
     public IEditorCommand LayoutDown => registry.Get<AutoLayoutVerticalCommand>();
     public IEditorCommand ZoomIn => registry.Get<ZoomInCommand>();

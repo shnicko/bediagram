@@ -3,6 +3,7 @@
 <DropMenu Title="Arrange" OpenMenu="@Host.OpenMenu" OpenMenuChanged="Host.SetOpenMenu">
     <button title="Put the steps in order: drag to reorder, or set steps to run in parallel" @onclick="Host.ShowStepOrder">Step order…</button>
     <button title="@Cmd.TidyTip" disabled="@(!CanRun(Cmd.Tidy))" @onclick="() => Run(Cmd.Tidy)">Tidy connectors</button>
+    <button title="@Cmd.PlaceTextTip" disabled="@(!CanRun(Cmd.PlaceText))" @onclick="() => Run(Cmd.PlaceText)">Place text clear of connectors</button>
     <hr class="menu-divider" />
     <div class="menu-heading">Auto-layout</div>
     <button title="@Cmd.LayoutTip(Cmd.LayoutAcross)" disabled="@(!CanRun(Cmd.LayoutAcross))" @onclick="() => Run(Cmd.LayoutAcross)">@IconSvg("arrow-right", 16) Left → right</button>

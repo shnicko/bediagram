@@ -23,6 +23,25 @@ public static class SvgShapes
 
 
     /// <summary>
+    /// The leader from text dragged away from its shape back to the shape: the same light, grey, dashed line as a
+    /// comment's pin (see <see cref="TextBox.ApplyPinLook"/>).
+    /// </summary>
+    public static string LeaderSvg(LeaderLine l)
+    {
+        double w = LineLook.Width(LineLook.Light);
+        string colour = LineLook.Colour("grey");
+        string? dash = LineLook.Dash(LineLook.Dashed, w);
+        StringBuilder sb = new StringBuilder();
+        sb.Append($"<path class=\"label-leader\" d=\"M{F(l.X1)},{F(l.Y1)} L{F(l.X2)},{F(l.Y2)}\" fill=\"none\" stroke=\"{colour}\" stroke-width=\"{F(w)}\"");
+        if (dash is not null)
+        {
+            sb.Append($" stroke-dasharray=\"{dash}\"");
+        }
+        sb.Append("/>");
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// The halo ring around a major step, or null for other steps: the shape's own outline drawn <see cref="Boxes.HaloGap"/>
     /// further out, as a thin line. Connectors stop on the outside of the ring (<see cref="HaloOut"/>), so their arrowheads stay visible.
     /// </summary>

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Components.Pages.Gestures;
+using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Components.Pages;
@@ -53,6 +54,35 @@ public partial class Designer
         Editor.SelectOnly(id);
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
         gesture = new ConnectGesture(this, x, y, id, itemId);
+    }
+
+    /// <summary>Pressing a shape's free text: selects the shape and drags just the text. With Shift / Ctrl it's the
+    /// same as pressing the shape (add to or take from the selection).</summary>
+    void OutsideTextDown(PointerEventArgs e, string id)
+    {
+        if (e.Button != 0)
+        {
+            StartPan(e);
+            return;
+        }
+        if (e.ShiftKey || e.CtrlKey)
+        {
+            ItemDown(e, id);
+            return;
+        }
+        if (Editor.FindBox(id) is not Node n || n.FreeLabel is null)
+        {
+            ItemDown(e, id);
+            return;
+        }
+        if (Editor.EditingId is not null && Editor.EditingId != id)
+        {
+            Editor.EndEdit();
+        }
+        Editor.SelectedEdgeId = null;
+        Editor.SelectOnly(id);
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        gesture = new FreeTextGesture(this, x, y, n);
     }
 
     void ResizeDown(PointerEventArgs e, string id)

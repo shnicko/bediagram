@@ -8,6 +8,24 @@
 <label>Text width <span class="muted">(px — @TextWidthHint(Node))</span></label>
 <input type="number" min="40" step="10" placeholder="@TextWidthPlaceholder(Node)" @bind="Node.TextWidth" @bind:after="() => Editor.OutsideTextChanged(Node)" @onfocus="Editor.Checkpoint" />
 <label class="check" title="Off: a white backing keeps text readable over lines. On: a tinted group shows through."><input type="checkbox" checked="@Node.ClearTextBack" @onchange="e => Editor.SetClearTextBack(Node, e.Value is true)" /> Transparent text background</label>
+@if (TextLayout.HasOutsideText(Node))
+{
+    <label>Text position <InfoTip>Where the text under the shape goes: under, above, right or left of it, or <em>Free</em> to drag it anywhere, with a dashed leader line back to the shape. <em>Auto</em> picks the side with the fewest connectors through it.</InfoTip></label>
+    <div class="seg wide text-place">
+        @foreach (TextPlace place in TextPlaces)
+        {
+            <button class="@PlaceClass(place)" title="@place.Tip" @onclick="() => PlacePicked(place)">@place.Name</button>
+        }
+        <button class="@FreeClass()" title="Drag the text anywhere: a dashed leader line joins it to the shape" @onclick="FreePicked">Free</button>
+    </div>
+    <div class="text-place-row">
+        <button class="small" title="@Cmd.PlaceTextTip" disabled="@(!CanRun(Cmd.PlaceText))" @onclick="() => Run(Cmd.PlaceText)">Auto</button>
+        @if (Node.FreeLabel is not null)
+        {
+            <span class="muted small-note">Drag the text to move it.</span>
+        }
+    </div>
+}
 @if (Node.Kind.IsStep)
 {
     <label>Step <InfoTip>The shape's place in the flow (1, 2, 3, …), kept whether or not the numbers are shown. Type a number to move it there, or tick <em>Runs in parallel</em> to share the number of the step before it.</InfoTip></label>

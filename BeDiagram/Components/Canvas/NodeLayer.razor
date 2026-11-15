@@ -33,7 +33,31 @@
                 @NodeIconMarkup(v.N)
             </g>
         }
-        @if (v.TextBack is { } back)
+        @if (v.N.FreeLabel is not null && v.OutsideText is { } outside)
+        {
+            @* Text dragged free of the shape: its own group, so it can be picked up and dragged on its own, with a leader line back to the shape. *@
+            <g class="node-outside free" @onpointerdown="e => OutsideDown(e, v)" @onpointerdown:stopPropagation="true">
+                @if (LeaderMarkup(v) is { } leader)
+                {
+                    <g class="leader">@leader</g>
+                }
+                @if (v.TextBack is { } freeBack)
+                {
+                    <rect class="label-bg" x="@F(freeBack.X)" y="@F(freeBack.Y)" width="@F(freeBack.W)" height="@F(freeBack.H)" rx="4" />
+                }
+                @* The whole block picks the text up, not only the letters. *@
+                <rect class="label-hit" x="@F(outside.X)" y="@F(outside.Y)" width="@F(outside.W)" height="@F(outside.H)" />
+                @if (v.Layout.Below && Editor.EditingId != v.N.Id)
+                {
+                    <SvgTextLines Class="node-label" X="v.Layout.TextX" Y="v.Layout.TextY" Fill="@LabelFill(v)" FontWeight="@Emphases.Of(v.N).LabelWeight(v.N)" Lines="LabelLines(v.Layout)" />
+                }
+                @if (v.Layout.Desc.Count > 0)
+                {
+                    <SvgTextLines Class="node-desc" X="v.Layout.DescX" Y="v.Layout.DescY" Lines="DescLines(v.Layout)" />
+                }
+            </g>
+        }
+        else if (v.TextBack is { } back)
         {
             <rect class="label-bg" x="@F(back.X)" y="@F(back.Y)" width="@F(back.W)" height="@F(back.H)" rx="4" />
         }
@@ -44,27 +68,13 @@
                           @onblur="Editor.EndEdit" @onkeydown="EditKey" @onpointerdown:stopPropagation="true"></textarea>
             </foreignObject>
         }
-        else
+        else if (v.N.FreeLabel is null || !v.Layout.Below)
         {
-            <g>
-                <text class="node-label" x="@F(v.Layout.TextX)" y="@F(v.Layout.TextY)" fill="@(v.Layout.Below ? Emphases.Of(v.N).BelowLabelColour : v.Style.Text)" font-weight="@Emphases.Of(v.N).LabelWeight(v.N)">
-                    @foreach ((string text, string dy) in LabelLines(v.Layout))
-                    {
-                        <tspan x="@F(v.Layout.TextX)" dy="@dy">@text</tspan>
-                    }
-                </text>
-            </g>
+            <SvgTextLines Class="node-label" X="v.Layout.TextX" Y="v.Layout.TextY" Fill="@LabelFill(v)" FontWeight="@Emphases.Of(v.N).LabelWeight(v.N)" Lines="LabelLines(v.Layout)" />
         }
-        @if (v.Layout.Desc.Count > 0)
+        @if (v.N.FreeLabel is null && v.Layout.Desc.Count > 0)
         {
-            <g>
-                <text class="node-desc" x="@F(v.Layout.DescX)" y="@F(v.Layout.DescY)">
-                    @foreach ((string text, string dy) in DescLines(v.Layout))
-                    {
-                        <tspan x="@F(v.Layout.DescX)" dy="@dy">@text</tspan>
-                    }
-                </text>
-            </g>
+            <SvgTextLines Class="node-desc" X="v.Layout.DescX" Y="v.Layout.DescY" Lines="DescLines(v.Layout)" />
         }
         @if (HasProperties(v.N))
         {

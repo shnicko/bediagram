@@ -21,6 +21,10 @@ public interface ICanvasInput
     /// drawing a connector.</summary>
     void PortDown(PointerEventArgs e, string id, string? itemId = null);
 
+    /// <summary>Pressed on the free text of a shape (<see cref="Models.Node.FreeLabel"/>): select the shape and drag the
+    /// text, leaving the shape where it is.</summary>
+    void OutsideTextDown(PointerEventArgs e, string id);
+
     /// <summary>Pressed on the resize handle of the one selected item.</summary>
     void ResizeDown(PointerEventArgs e, string id);
 

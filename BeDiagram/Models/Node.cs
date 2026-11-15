@@ -69,6 +69,17 @@ public class Node : IGroupable
     /// anything behind shows through. False (the default) is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool ClearTextBack { get; set; }
+    /// <summary>Which side of the shape the text outside it sits on (label below a circle or outcome, and the
+    /// description): top, right or left. Null (the default, left out of the file) = underneath.
+    /// Ignored while the text is dragged free (<see cref="FreeLabel"/>).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonConverter(typeof(OptionalEnumNameConverter<Side>))]
+    public Side? LabelSide { get; set; }
+    /// <summary>Text outside the shape that the user has dragged free: where the centre of the text block sits, from
+    /// the shape's centre, so it moves with the shape. A leader line joins it to the shape. Null (the default, left
+    /// out of the file) = attached on <see cref="LabelSide"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Offset? FreeLabel { get; set; }
     /// <summary>Name of another saved diagram (without extension) holding this step's more detailed flow. Shows a link badge.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Link { get; set; }

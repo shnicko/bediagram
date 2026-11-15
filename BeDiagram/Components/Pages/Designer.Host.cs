@@ -43,5 +43,9 @@ public partial class Designer : IDesignerHost, ICanvasInput
     void ICanvasInput.GroupBodyDown(PointerEventArgs e, string id) => GroupBodyDown(e, id);
     void ICanvasInput.PortDown(PointerEventArgs e, string id, string? itemId) => PortDown(e, id, itemId);
     void ICanvasInput.ResizeDown(PointerEventArgs e, string id) => ResizeDown(e, id);
+    void ICanvasInput.OutsideTextDown(PointerEventArgs e, string id)
+    {
+        OutsideTextDown(e, id);
+    }
     void ICanvasInput.EdgeDown(PointerEventArgs e, string id) => EdgeDown(e, id);
 }

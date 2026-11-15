@@ -290,6 +290,11 @@ is already working:
   inside their node and survive a copy. Connectors ending on a row draw above the shapes (`Edge.EndsOnRow`). Mermaid: a
   subgraph with a node per row.
 - **Connector labels** render in their own layer above shapes (canvas and export).
+- **Text outside a shape** (label under a circle / outcome, description) can sit on another side (`Node.LabelSide`)
+  or be dragged free (`Node.FreeLabel`, an offset of the text block's centre from the shape's centre, with a leader
+  line). `TextLayout.Layout(n)` applies both (`LabelLayout.ShiftX` / `ShiftY` / `Leader`), so anything reading the
+  layout or `OutsideTextBox` follows without knowing about it. *Place text clear of connectors* (`TextPlacer`) is on
+  request only, like Tidy connectors, and only sets `LabelSide`.
 - **Page mode** puts the sheet at world (0,0); sizes in mm convert at 96 px/inch (`PageSetup.PxPerMm`).
 - **Page title and description** (`Diagram.Title` / `Description` / `HideHeader`) are data on the diagram, not items:
   `PageHeader` lays them out as text boxes made from `PageHeader.TitleLook(d)` / `DescriptionLook(d)` (looks only;
