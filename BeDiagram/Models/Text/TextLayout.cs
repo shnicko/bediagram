@@ -20,28 +20,60 @@ public static class TextLayout
 
 
     /// <summary>The label shown for a node: its own label, or the type name when it has none.</summary>
-    public static string LabelText(Node n) => string.IsNullOrWhiteSpace(n.Label) ? NodeTypes.Get(n.Type).Display : n.Label;
+    public static string LabelText(Node n)
+    {
+        if (string.IsNullOrWhiteSpace(n.Label))
+        {
+            return NodeTypes.Get(n.Type).Display;
+        }
+        return n.Label;
+    }
 
     /// <summary>
     /// Wrap width for text drawn outside the shape (a label under a circle/outcome, and the description).
     /// The node's own <see cref="Node.TextWidth"/> when set, otherwise a little wider than the shape.
     /// </summary>
-    public static double TextWidth(Node n) =>
-        n.TextWidth is > 0 ? n.TextWidth.Value : DefaultTextWidth(n);
+    public static double TextWidth(Node n)
+    {
+        if (n.TextWidth is not null && n.TextWidth.Value > 0)
+        {
+            return n.TextWidth.Value;
+        }
+        return DefaultTextWidth(n);
+    }
 
-    public static double DefaultTextWidth(Node n) => n.Kind.LabelBelow(n) ? Math.Max(n.W * 1.7, 130) : Math.Max(n.W, 160);
+    public static double DefaultTextWidth(Node n)
+    {
+        if (n.Kind.LabelBelow(n))
+        {
+            return Math.Max(n.W * 1.7, 130);
+        }
+        return Math.Max(n.W, 160);
+    }
 
-    public static LabelLayout Layout(Node n) => Layout(n, LabelText(n));
+    public static LabelLayout Layout(Node n)
+    {
+        return Layout(n, LabelText(n));
+    }
 
     public static LabelLayout Layout(Node n, string label)
     {
         LabelLayout lay = n.Kind.LayoutLabel(n, label);
-        if (n.Description is not { } desc) return lay;
+        if (n.Description is null)
+        {
+            return lay;
+        }
         // Under the label when the label is below the shape; otherwise just under the shape.
-        List<string> lines = Wrap(desc, TextWidth(n), DescCharWidth);
-        double firstBaseline = lay.Below
-            ? lay.TextY + (lay.Lines.Count - 1) * LineHeight + 4 + DescLineHeight
-            : n.Y + n.H + Boxes.HaloOut(n) + 6 + DescLineHeight;
+        List<string> lines = Wrap(n.Description, TextWidth(n), DescCharWidth);
+        double firstBaseline;
+        if (lay.Below)
+        {
+            firstBaseline = lay.TextY + (lay.Lines.Count - 1) * LineHeight + 4 + DescLineHeight;
+        }
+        else
+        {
+            firstBaseline = n.Y + n.H + Boxes.HaloOut(n) + 6 + DescLineHeight;
+        }
         return lay with { Desc = lines, DescX = n.X + n.W / 2, DescY = firstBaseline };
     }
 
@@ -49,32 +81,69 @@ public static class TextLayout
     {
         double size = Math.Max(4, t.FontSize);
         double lh = size * TextLook.LineSpacing;
-        double charW = size * TextLook.CharWidth(t.Font) * (t.Bold ? 1.06 : 1);
+        double charW = size * TextLook.CharWidth(t.Font);
+        if (t.Bold)
+        {
+            charW = charW * 1.06;
+        }
         List<string> lines = Wrap(t.Text, Math.Max(10, t.W - 2 * TextLook.PadX), charW);
         double block = lines.Count * lh;
-        double top = t.VAlign switch
+
+        // Top of the text block, from the vertical alignment.
+        double top;
+        switch (t.VAlign)
         {
-            TextLook.Middle => t.Y + (t.H - block) / 2,
-            TextLook.Bottom => t.Y + t.H - TextLook.PadY - block,
-            _ => t.Y + TextLook.PadY,
-        };
-        (double x, string? anchor) = t.Align switch
+            case TextLook.Middle:
+                top = t.Y + (t.H - block) / 2;
+                break;
+            case TextLook.Bottom:
+                top = t.Y + t.H - TextLook.PadY - block;
+                break;
+            default:
+                top = t.Y + TextLook.PadY;
+                break;
+        }
+
+        // Where each line is anchored, from the horizontal alignment.
+        double x;
+        string? anchor;
+        switch (t.Align)
         {
-            TextLook.Center => (t.X + t.W / 2, "middle"),
-            TextLook.Right => (t.X + t.W - TextLook.PadX, "end"),
-            _ => (t.X + TextLook.PadX, "start"),
-        };
+            case TextLook.Center:
+                x = t.X + t.W / 2;
+                anchor = "middle";
+                break;
+            case TextLook.Right:
+                x = t.X + t.W - TextLook.PadX;
+                anchor = "end";
+                break;
+            default:
+                x = t.X + TextLook.PadX;
+                anchor = "start";
+                break;
+        }
+
         // Baseline sits roughly 0.8 em below the top of the line box.
         double first = top + (lh - size) / 2 + size * 0.8;
-        List<TextLine> placed = lines.Select((l, i) => new TextLine(l, x, first + i * lh)).ToList();
+        List<TextLine> placed = new List<TextLine>();
+        for (int i = 0; i < lines.Count; i++)
+        {
+            placed.Add(new TextLine(lines[i], x, first + i * lh));
+        }
         return new TextBoxLayout(placed, anchor, lh, block + 2 * TextLook.PadY);
     }
 
     /// <summary>The white backing to draw behind text outside the shape, or null when there is none or the node
     /// asks for a clear background (<see cref="Node.ClearTextBack"/>). Spacing and bounds still use
     /// <see cref="OutsideTextBox"/>, so a clear background doesn't move anything.</summary>
-    public static (double X, double Y, double W, double H)? DrawnTextBack(Node n, LabelLayout lay) =>
-        n.ClearTextBack ? null : OutsideTextBox(n, lay);
+    public static (double X, double Y, double W, double H)? DrawnTextBack(Node n, LabelLayout lay)
+    {
+        if (n.ClearTextBack)
+        {
+            return null;
+        }
+        return OutsideTextBox(n, lay);
+    }
 
     /// <summary>
     /// The white backing behind text drawn outside the shape (label below and/or description), or null when nothing
@@ -82,12 +151,17 @@ public static class TextLayout
     /// </summary>
     public static (double X, double Y, double W, double H)? OutsideTextBox(Node n, LabelLayout lay)
     {
-        if (!lay.Below && lay.Desc.Count == 0) return null;
+        if (!lay.Below && lay.Desc.Count == 0)
+        {
+            return null;
+        }
         double cx = n.X + n.W / 2;
-        double w = 0, top, bottom;
+        double w = 0;
+        double top;
+        double bottom;
         if (lay.Below)
         {
-            w = lay.Lines.Max(l => l.Length) * 7.2 + 14;
+            w = LongestLine(lay.Lines) * 7.2 + 14;
             top = lay.TextY - 14;
             bottom = top + lay.Lines.Count * LineHeight + 6;
         }
@@ -98,10 +172,24 @@ public static class TextLayout
         }
         if (lay.Desc.Count > 0)
         {
-            w = Math.Max(w, lay.Desc.Max(l => l.Length) * DescCharWidth + 14);
+            w = Math.Max(w, LongestLine(lay.Desc) * DescCharWidth + 14);
             bottom = lay.DescY + (lay.Desc.Count - 1) * DescLineHeight + 5;
         }
         return (cx - w / 2, top, w, bottom - top);
+    }
+
+    /// <summary>The number of characters in the longest line.</summary>
+    static int LongestLine(List<string> lines)
+    {
+        int longest = 0;
+        foreach (string line in lines)
+        {
+            if (line.Length > longest)
+            {
+                longest = line.Length;
+            }
+        }
+        return longest;
     }
 
     /// <summary>
@@ -110,10 +198,29 @@ public static class TextLayout
     /// </summary>
     public static double ExtraBelow(IBox b)
     {
-        if (b is Group g) return g.TitleBelowBox() ? Group.Header : 0;
-        if (b is not Node n || (!n.Kind.LabelBelow(n) && n.Description is null)) return 0;
+        if (b is Group g)
+        {
+            if (g.TitleBelowBox())
+            {
+                return Group.Header;
+            }
+            return 0;
+        }
+        if (b is not Node n)
+        {
+            return 0;
+        }
+        if (!n.Kind.LabelBelow(n) && n.Description is null)
+        {
+            return 0;
+        }
         LabelLayout lay = Layout(n);
-        return OutsideTextBox(n, lay) is { } r ? r.Y + r.H - (n.Y + n.H) + 8 : 0;
+        (double X, double Y, double W, double H)? box = OutsideTextBox(n, lay);
+        if (box is null)
+        {
+            return 0;
+        }
+        return box.Value.Y + box.Value.H - (n.Y + n.H) + 8;
     }
 
     /// <summary>Very simple word wrap for SVG text, based on an average character width.</summary>
@@ -131,7 +238,10 @@ public static class TextLayout
                     lines.Add(sb.ToString());
                     sb.Clear();
                 }
-                if (sb.Length > 0) sb.Append(' ');
+                if (sb.Length > 0)
+                {
+                    sb.Append(' ');
+                }
                 sb.Append(word);
             }
             lines.Add(sb.ToString());
