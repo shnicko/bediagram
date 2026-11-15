@@ -59,6 +59,9 @@ public static class Boxes
             }
             minX = Math.Min(minX, r.Value.X);
             maxX = Math.Max(maxX, r.Value.X + r.Value.W);
+            // Text moved above the shape (or dragged anywhere) can reach higher than any box.
+            minY = Math.Min(minY, r.Value.Y);
+            maxY = Math.Max(maxY, r.Value.Y + r.Value.H);
         }
         return (minX, minY, maxX - minX, maxY - minY);
     }
@@ -92,8 +95,34 @@ public static class Boxes
             minY = Math.Min(minY, b.Y);
             maxX = Math.Max(maxX, b.X + b.W);
             maxY = Math.Max(maxY, b.Y + b.H + TextLayout.ExtraBelow(b));
+            // Text moved to another side of a shape, or dragged free, stays inside the group too.
+            // (Text in its usual place underneath is covered by ExtraBelow, as before.)
+            if (b is Node n && MovedTextBox(n) is Rect moved)
+            {
+                minX = Math.Min(minX, moved.X);
+                minY = Math.Min(minY, moved.Y);
+                maxX = Math.Max(maxX, moved.X + moved.W);
+                maxY = Math.Max(maxY, moved.Y + moved.H);
+            }
         }
         return (minX - Group.Pad, minY - Group.Pad - insetTop, maxX - minX + Group.Pad * 2, maxY - minY + Group.Pad * 2 + insetTop + insetBottom);
+    }
+
+    /// <summary>The block of text outside a shape when it has been moved from underneath (to a side, or dragged
+    /// free), or null when it sits in its usual place or there is none.</summary>
+    static Rect? MovedTextBox(Node n)
+    {
+        LabelLayout lay = TextLayout.Layout(n);
+        if (lay.ShiftX == 0 && lay.ShiftY == 0)
+        {
+            return null;
+        }
+        (double X, double Y, double W, double H)? r = TextLayout.OutsideTextBox(n, lay);
+        if (r is null)
+        {
+            return null;
+        }
+        return new Rect(r.Value.X, r.Value.Y, r.Value.W, r.Value.H);
     }
 
     /// <summary>How far a box's outer edge sits beyond its outline: the halo ring's outside edge for a major step,

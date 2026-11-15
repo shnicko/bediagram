@@ -27,6 +27,53 @@ public partial class ShapePanel : DesignerPart
 
     static string TextWidthPlaceholder(Node n) => $"Auto ({F(TextLayout.DefaultTextWidth(n))})";
 
+    /// <summary>The side buttons under "Text position", in the order shown.</summary>
+    static readonly List<TextPlace> TextPlaces = new List<TextPlace>
+    {
+        new TextPlace(Side.Bottom, "Under", "Text under the shape (the usual place)"),
+        new TextPlace(Side.Top, "Above", "Text above the shape"),
+        new TextPlace(Side.Right, "Right", "Text to the right of the shape"),
+        new TextPlace(Side.Left, "Left", "Text to the left of the shape"),
+    };
+
+    /// <summary>A side button is lit when the text is attached on that side (no side stored = under).</summary>
+    string PlaceClass(TextPlace place)
+    {
+        if (Node.FreeLabel is not null)
+        {
+            return "";
+        }
+        Side current = Side.Bottom;
+        if (Node.LabelSide is not null)
+        {
+            current = Node.LabelSide.Value;
+        }
+        if (current == place.Side)
+        {
+            return "on";
+        }
+        return "";
+    }
+
+    string FreeClass()
+    {
+        if (Node.FreeLabel is not null)
+        {
+            return "on";
+        }
+        return "";
+    }
+
+    void PlacePicked(TextPlace place)
+    {
+        Editor.SetLabelSide(Node, place.Side);
+    }
+
+    void FreePicked()
+    {
+        Editor.FreeText(Node);
+    }
+
     /// <summary>Step number typed in the panel: a whole number makes the shape that step (others move down one).</summary>
     void StepTyped(Node n, ChangeEventArgs e)
     {

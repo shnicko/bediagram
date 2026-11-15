@@ -1,0 +1,8 @@
+<g>
+    <text class="@Class" x="@F(X)" y="@F(Y)" fill="@Fill" font-weight="@FontWeight">
+        @foreach ((string text, string dy) in Lines)
+        {
+            <tspan x="@F(X)" dy="@dy">@text</tspan>
+        }
+    </text>
+</g>

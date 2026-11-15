@@ -369,6 +369,10 @@ public class SvgDiagramWriter
         {
             sb.Append($"<g transform=\"translate({F(lay.IconX)},{F(lay.IconY)}) scale({F(lay.IconSize / 24)})\" fill=\"none\" stroke=\"{st.IconColor}\" stroke-width=\"{F(n.Kind.IconStroke)}\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(n.Kind.IconOf(n))}</g>\n");
         }
+        if (lay.Leader is not null)
+        {
+            sb.Append(SvgShapes.LeaderSvg(lay.Leader)).Append('\n');
+        }
         (double X, double Y, double W, double H)? textBack = TextLayout.DrawnTextBack(n, lay);
         if (textBack is not null)
         {

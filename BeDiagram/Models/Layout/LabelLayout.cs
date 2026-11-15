@@ -10,4 +10,10 @@ public record LabelLayout(List<string> Lines, double TextX, double TextY, bool B
     public double DescX { get; init; }
     /// <summary>Baseline of the first description line.</summary>
     public double DescY { get; init; }
+    /// <summary>How far the text outside the shape was moved from its usual place under the shape: to another side
+    /// (<see cref="Node.LabelSide"/>) or to where the user dragged it (<see cref="Node.FreeLabel"/>). 0 when it sits underneath.</summary>
+    public double ShiftX { get; init; }
+    public double ShiftY { get; init; }
+    /// <summary>The leader from dragged-away text back to the shape, or null when the text is attached or close to the shape.</summary>
+    public LeaderLine? Leader { get; init; }
 }

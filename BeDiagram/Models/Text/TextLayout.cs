@@ -3,6 +3,7 @@ using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Routing;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
 
@@ -59,6 +60,16 @@ public static class TextLayout
     public static LabelLayout Layout(Node n, string label)
     {
         LabelLayout lay = n.Kind.LayoutLabel(n, label);
+        if (n.Description is not null)
+        {
+            lay = WithDescription(n, lay);
+        }
+        return Place(n, lay);
+    }
+
+    /// <summary>Adds the description lines to a label layout, in the usual place under the shape.</summary>
+    static LabelLayout WithDescription(Node n, LabelLayout lay)
+    {
         if (n.Description is null)
         {
             return lay;
@@ -155,7 +166,8 @@ public static class TextLayout
         {
             return null;
         }
-        double cx = n.X + n.W / 2;
+        // The label lines and the description already carry the shift; the shape's centre and edge don't.
+        double cx = n.X + n.W / 2 + lay.ShiftX;
         double w = 0;
         double top;
         double bottom;
@@ -167,7 +179,7 @@ public static class TextLayout
         }
         else
         {
-            top = n.Y + n.H + Boxes.HaloOut(n) + 4;
+            top = n.Y + n.H + Boxes.HaloOut(n) + 4 + lay.ShiftY;
             bottom = top;
         }
         if (lay.Desc.Count > 0)
@@ -220,7 +232,144 @@ public static class TextLayout
         {
             return 0;
         }
-        return box.Value.Y + box.Value.H - (n.Y + n.H) + 8;
+        // Text moved to a side or above may end above the shape's bottom edge: then it takes no room below.
+        return Math.Max(0, box.Value.Y + box.Value.H - (n.Y + n.H) + 8);
+    }
+
+    // ───────────── Moving the text outside the shape ─────────────
+
+    /// <summary>Gap between the shape (or its halo) and the text block when it sits above (the same as underneath).</summary>
+    const double EndGap = 4;
+    /// <summary>Gap between the shape and the text block when it sits to the left or right.</summary>
+    const double SideGap = 8;
+    /// <summary>Text dragged closer to the shape than this gets no leader line (it plainly belongs to the shape).</summary>
+    const double LeaderMinGap = 10;
+
+    /// <summary>
+    /// Moves the text outside the shape (label below a circle or outcome, and the description) from its usual place
+    /// underneath to the side in <see cref="Node.LabelSide"/>, or to where it was dragged (<see cref="Node.FreeLabel"/>,
+    /// with a leader line). The icon and any label inside the shape stay where they are.
+    /// </summary>
+    static LabelLayout Place(Node n, LabelLayout lay)
+    {
+        bool free = n.FreeLabel is not null;
+        bool underneath = n.LabelSide is null || n.LabelSide.Value == Side.Bottom;
+        if (!free && underneath)
+        {
+            return lay;
+        }
+        (double X, double Y, double W, double H)? found = OutsideTextBox(n, lay);
+        if (found is null)
+        {
+            return lay;
+        }
+        (double X, double Y, double W, double H) box = found.Value;
+        (double targetX, double targetY) = BlockCentre(n, box.W, box.H);
+        double dx = targetX - (box.X + box.W / 2);
+        double dy = targetY - (box.Y + box.H / 2);
+
+        LabelLayout moved = lay with { ShiftX = dx, ShiftY = dy, DescX = lay.DescX + dx, DescY = lay.DescY + dy };
+        if (lay.Below)
+        {
+            moved = moved with { TextX = lay.TextX + dx, TextY = lay.TextY + dy };
+        }
+        if (free)
+        {
+            moved = moved with { Leader = LeaderFor(n, moved) };
+        }
+        return moved;
+    }
+
+    /// <summary>Where the centre of a text block of this size goes: where it was dragged, or beside the chosen side.</summary>
+    static (double X, double Y) BlockCentre(Node n, double w, double h)
+    {
+        double cx = n.X + n.W / 2;
+        double cy = n.Y + n.H / 2;
+        double halo = Boxes.HaloOut(n);
+        if (n.FreeLabel is not null)
+        {
+            return (cx + n.FreeLabel.X, cy + n.FreeLabel.Y);
+        }
+        Side side = Side.Bottom;
+        if (n.LabelSide is not null)
+        {
+            side = n.LabelSide.Value;
+        }
+        switch (side)
+        {
+            case Side.Top:
+                return (cx, n.Y - halo - EndGap - h / 2);
+            case Side.Right:
+                return (n.X + n.W + halo + SideGap + w / 2, cy);
+            case Side.Left:
+                return (n.X - halo - SideGap - w / 2, cy);
+            default:
+                return (cx, n.Y + n.H + halo + EndGap + h / 2);
+        }
+    }
+
+    /// <summary>
+    /// Where the text outside the shape sits now, as an offset of its centre from the shape's centre (what
+    /// <see cref="Node.FreeLabel"/> holds), or null when the shape has no text outside it. Freeing the text at this
+    /// offset leaves it exactly where it is.
+    /// </summary>
+    public static Offset? CurrentOffset(Node n)
+    {
+        (double X, double Y, double W, double H)? found = OutsideTextBox(n, Layout(n));
+        if (found is null)
+        {
+            return null;
+        }
+        (double X, double Y, double W, double H) box = found.Value;
+        double dx = box.X + box.W / 2 - (n.X + n.W / 2);
+        double dy = box.Y + box.H / 2 - (n.Y + n.H / 2);
+        return new Offset(Math.Round(dx), Math.Round(dy));
+    }
+
+    /// <summary>True when the shape has text drawn outside it (a label below, or a description) that can be moved.</summary>
+    public static bool HasOutsideText(Node n)
+    {
+        return n.Kind.LabelBelow(n) || n.Description is not null;
+    }
+
+    /// <summary>
+    /// The leader from dragged text back to its shape: from the edge of the text block, aimed at the shape's centre,
+    /// to the shape's outline (its halo ring for a major step). Null when the text is close to or over the shape.
+    /// </summary>
+    static LeaderLine? LeaderFor(Node n, LabelLayout lay)
+    {
+        (double X, double Y, double W, double H)? found = OutsideTextBox(n, lay);
+        if (found is null)
+        {
+            return null;
+        }
+        (double X, double Y, double W, double H) box = found.Value;
+        double pad = Boxes.HaloOut(n) + LeaderMinGap;
+        bool nearX = box.X < n.X + n.W + pad && box.X + box.W > n.X - pad;
+        bool nearY = box.Y < n.Y + n.H + pad && box.Y + box.H > n.Y - pad;
+        if (nearX && nearY)
+        {
+            return null;
+        }
+
+        // The end on the shape: where a line from the text's centre meets the outline.
+        double bx = box.X + box.W / 2;
+        double by = box.Y + box.H / 2;
+        (double ex, double ey) = EdgeRouter.ConnectBoundary(n, bx, by);
+
+        // The start: where that line leaves the text block.
+        double dx = ex - bx;
+        double dy = ey - by;
+        double t = 1;
+        if (Math.Abs(dx) > 1e-6)
+        {
+            t = Math.Min(t, box.W / 2 / Math.Abs(dx));
+        }
+        if (Math.Abs(dy) > 1e-6)
+        {
+            t = Math.Min(t, box.H / 2 / Math.Abs(dy));
+        }
+        return new LeaderLine(bx + dx * t, by + dy * t, ex, ey);
     }
 
     /// <summary>Very simple word wrap for SVG text, based on an average character width.</summary>

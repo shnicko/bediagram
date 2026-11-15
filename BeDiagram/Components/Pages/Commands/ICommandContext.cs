@@ -47,6 +47,11 @@ public interface ICommandContext
     /// <summary>Re-routes connectors that pass through shapes (selected connector, those on the selection, or all).</summary>
     void TidyConnectors();
 
+    /// <summary>Some shape has text outside it (a label under a circle or outcome, a description).</summary>
+    bool HasOutsideText { get; }
+    /// <summary>Moves the text outside shapes clear of connectors (the selected shapes, or all).</summary>
+    void PlaceTextClear();
+
     /// <summary>There is at least one top-level group to arrange as a swim lane.</summary>
     bool HasLanes { get; }
     /// <summary>Arranges the top-level groups (or the selected ones) as swim lanes.</summary>

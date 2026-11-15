@@ -253,6 +253,11 @@ kbd {
 
 /* ── Icons, labels under circles ── */
 .label-bg { fill: rgba(255, 255, 255, .92); stroke: none; pointer-events: none; }
+/* Text dragged away from its shape: a move cursor, and the whole block (not just the letters) picks it up. */
+.label-hit { fill: transparent; stroke: none; }
+.node-outside.free, .node-outside.free text { cursor: move; }
+.label-leader { pointer-events: none; }
+.text-place-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .node-icon { pointer-events: none; }
 
 .alignbar { display: flex; flex-wrap: wrap; gap: 2px; }
