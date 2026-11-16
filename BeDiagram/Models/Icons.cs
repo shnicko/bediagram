@@ -155,6 +155,7 @@ public static class Icons
         ["move-up-right"] = "<path d=\"M13 5H19V11\"/> <path d=\"M19 5L5 19\"/>",
         ["rectangle-vertical"] = "<rect width=\"12\" height=\"20\" x=\"6\" y=\"2\" rx=\"2\"/>",
         ["rectangle-horizontal"] = "<rect width=\"20\" height=\"12\" x=\"2\" y=\"6\" rx=\"2\"/>",
+        ["lock"] = "<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\"/> <path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/>",
         // Grid toolbar: an empty frame (Lucide "square") and a frame of dots; "grid-3x3" above is the line grid.
         ["grid-none"] = "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/>",
         ["grid-dots"] = "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/> <circle cx=\"9\" cy=\"9\" r=\"0.6\"/> <circle cx=\"15\" cy=\"9\" r=\"0.6\"/> <circle cx=\"9\" cy=\"15\" r=\"0.6\"/> <circle cx=\"15\" cy=\"15\" r=\"0.6\"/>",

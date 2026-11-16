@@ -19,20 +19,37 @@ public partial class Designer
 
     void ItemDown(PointerEventArgs e, string id)
     {
-        if (e.Button != 0) { StartPan(e); return; }
-        if (Editor.EditingId is not null && Editor.EditingId != id) Editor.EndEdit();
+        if (e.Button != 0)
+        {
+            StartPan(e);
+            return;
+        }
+        if (Editor.EditingId is not null && Editor.EditingId != id)
+        {
+            Editor.EndEdit();
+        }
         Editor.SelectedEdgeId = null;
         if (e.ShiftKey || e.CtrlKey)
         {
-            if (Editor.Selection.Contains(id)) { Editor.Selection.Remove(id); return; }
+            if (Editor.Selection.Contains(id))
+            {
+                Editor.Selection.Remove(id);
+                return;
+            }
             Editor.Selection.Add(id);
         }
         else if (!Editor.Selection.Contains(id))
         {
             Editor.SelectOnly(id);
         }
+        // Alt-drag moves group boxes without their contents; with shapes locked only group boxes move at all.
+        List<IBox> moving = Editor.DragSet(Editor.Selection, e.AltKey);
+        if (moving.Count == 0)
+        {
+            return;
+        }
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
-        gesture = new MoveGesture(this, x, y, Editor.WithMembers(Editor.Selection));
+        gesture = new MoveGesture(this, x, y, moving);
     }
 
     /// <summary>Pressing on a group's body: click selects the group, drag draws a selection box inside it.</summary>
@@ -70,7 +87,7 @@ public partial class Designer
             ItemDown(e, id);
             return;
         }
-        if (Editor.FindBox(id) is not Node n || n.FreeLabel is null)
+        if (Editor.FindBox(id) is not Node n || n.FreeLabel is null || Editor.ShapesLocked)
         {
             ItemDown(e, id);
             return;
@@ -89,6 +106,11 @@ public partial class Designer
     {
         IBox? box = Editor.FindBox(id);
         if (box is null)
+        {
+            return;
+        }
+        // Locked shapes and text boxes keep their size too; group boxes can still be resized.
+        if (Editor.ShapesLocked && box is not Group)
         {
             return;
         }

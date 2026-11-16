@@ -4,10 +4,23 @@ using BeDiagram.Services;
 
 namespace BeDiagram.Components.Bars;
 
-/// <summary>The bar along the bottom: storage folder, page size, items off the page and the latest message.</summary>
+/// <summary>The bar along the bottom: storage folder, page size, items off the page, the shape lock and the latest
+/// message.</summary>
 public partial class StatusBar : DesignerPart
 {
     [Inject] DiagramStore Store { get; set; } = default!;
 
-    int OffPageCount => Editor.OutsidePage().Count;
+    int OffPageCount
+    {
+        get
+        {
+            return Editor.OutsidePage().Count;
+        }
+    }
+
+    /// <summary>The Unlock link next to "Shapes locked in place".</summary>
+    void Unlock()
+    {
+        Editor.SetShapesLocked(false);
+    }
 }

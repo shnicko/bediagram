@@ -85,12 +85,44 @@ public partial class DiagramEditor
 
     public void Nudge(double dx, double dy)
     {
-        if (Selection.Count == 0) return;
+        if (Selection.Count == 0)
+        {
+            return;
+        }
+        List<IBox> moved = DragSet(Selection, false);
+        if (moved.Count == 0)
+        {
+            view.ShowToast("Shapes are locked in place (Arrange → Lock shapes in place)");
+            return;
+        }
         Change();
-        List<IBox> moved = WithMembers(Selection);
-        HashSet<string> movedIds = moved.Select(b => b.Id).ToHashSet();
-        foreach (IBox b in moved) { b.X += dx; b.Y += dy; }
-        foreach (Group g in Diagram.Groups.Where(g => !movedIds.Contains(g.Id) && Members(g).Any(m => movedIds.Contains(m.Id))).ToList())
+        HashSet<string> movedIds = new HashSet<string>();
+        foreach (IBox b in moved)
+        {
+            movedIds.Add(b.Id);
+            b.X += dx;
+            b.Y += dy;
+        }
+        // A group that stayed put but holds something that moved grows to fit it.
+        List<Group> toGrow = new List<Group>();
+        foreach (Group g in Diagram.Groups)
+        {
+            if (movedIds.Contains(g.Id))
+            {
+                continue;
+            }
+            foreach (IGroupable m in Members(g))
+            {
+                if (movedIds.Contains(m.Id))
+                {
+                    toGrow.Add(g);
+                    break;
+                }
+            }
+        }
+        foreach (Group g in toGrow)
+        {
             GrowGroup(g);
+        }
     }
 }

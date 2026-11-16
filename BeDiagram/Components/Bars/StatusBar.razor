@@ -7,6 +7,10 @@
     {
         <span class="status-warn">⚠ @OffPageCount item@(OffPageCount == 1 ? "" : "s") off the page</span>
     }
+    @if (Editor.ShapesLocked)
+    {
+        <span class="status-lock">@IconSvg("lock", 14) Shapes locked in place <button class="link" @onclick="Unlock">Unlock</button></span>
+    }
     @if (!string.IsNullOrEmpty(Host.Toast))
     {
         <span class="toast">@Host.Toast</span>
