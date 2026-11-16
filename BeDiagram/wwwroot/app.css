@@ -189,6 +189,10 @@ kbd {
 .panel textarea { resize: vertical; }
 .row { display: flex; gap: 8px; }
 .row > div { flex: 1; }
+/* Group panel: X / Y and W / H fields, two to a row */
+.row.bounds { margin-bottom: 6px; }
+.row.bounds > div { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.row.bounds input { width: 100%; min-width: 0; }
 .step-row { display: flex; gap: 12px; align-items: center; }
 .step-row input[type=number] { width: 72px; flex: none; }
 .step-row .check { margin: 0; }

@@ -8,6 +8,15 @@ namespace BeDiagram.Components.Bars;
 public partial class ArrangeMenu : DesignerPart
 {
 
+    /// <summary>Stack edge to edge needs two or more lanes.</summary>
+    bool CanStack
+    {
+        get
+        {
+            return Editor.TopLevelGroups().Count >= 2;
+        }
+    }
+
     void SetLockLanes(ChangeEventArgs e)
     {
         Editor.SetLockLanes(e.Value is true);
