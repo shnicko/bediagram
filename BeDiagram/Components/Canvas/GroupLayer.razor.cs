@@ -1,5 +1,6 @@
 using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Components.Pages.Views;
+using BeDiagram.Editing.Lanes;
 using BeDiagram.Models;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
@@ -7,7 +8,7 @@ using BeDiagram.Models.Text;
 
 namespace BeDiagram.Components.Canvas;
 
-/// <summary>Groups, the bottom layer, in paint order (a group inside another is drawn over it): box, title band and title (inline editor while renaming), ports and resize grips (all four corners, and each side).</summary>
+/// <summary>Groups, the bottom layer, in paint order (a group inside another is drawn over it): box, title band and title (inline editor while renaming), ports and resize grips (all four corners, and each side), and the shared edges of touching lanes.</summary>
 public partial class GroupLayer : CanvasLayer
 {
 
@@ -61,5 +62,27 @@ public partial class GroupLayer : CanvasLayer
             return new Rect(g.X + 8, y - 4, Math.Max(0, g.W - 16), 8);
         }
         return new Rect(x - 4, g.Y + 8, 8, Math.Max(0, g.H - 16));
+    }
+
+    /// <summary>The 8 px strips along the edges touching lanes share (<see cref="LaneDividers"/>), one per draggable
+    /// stretch.</summary>
+    List<(LaneDivider D, Rect R)> DividerStrips()
+    {
+        List<(LaneDivider D, Rect R)> result = new List<(LaneDivider D, Rect R)>();
+        foreach (LaneDivider d in LaneDividers.Find(Editor.TopLevelGroups()))
+        {
+            foreach ((double from, double to) in d.Spans)
+            {
+                if (d.Rows)
+                {
+                    result.Add((d, new Rect(from, d.At - 4, to - from, 8)));
+                }
+                else
+                {
+                    result.Add((d, new Rect(d.At - 4, from, 8, to - from)));
+                }
+            }
+        }
+        return result;
     }
 }

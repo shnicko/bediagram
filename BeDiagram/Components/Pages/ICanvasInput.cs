@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Components.Pages.Gestures;
+using BeDiagram.Editing.Lanes;
 
 namespace BeDiagram.Components.Pages;
 
@@ -29,6 +30,9 @@ public interface ICanvasInput
     /// <summary>Pressed on a resize handle of the one selected item: the bottom-right corner of a shape or text box,
     /// or any corner or side of a group (<paramref name="handle"/>).</summary>
     void ResizeDown(PointerEventArgs e, string id, ResizeHandle handle);
+
+    /// <summary>Pressed on the edge two touching lanes share: drag it to resize both lanes at once.</summary>
+    void DividerDown(PointerEventArgs e, LaneDivider d);
 
     /// <summary>Pressed on a connector or its label: select it.</summary>
     void EdgeDown(PointerEventArgs e, string id);

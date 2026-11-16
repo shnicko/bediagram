@@ -144,6 +144,11 @@ kbd {
 .grip-edge { fill: transparent; }
 .grip-edge.resize-ns { cursor: ns-resize; }
 .grip-edge.resize-ew { cursor: ew-resize; }
+/* The edge two touching lanes share (LaneDividers): drag to resize both */
+.lane-divider { fill: var(--accent); fill-opacity: 0; }
+.lane-divider.rows { cursor: row-resize; }
+.lane-divider.cols { cursor: col-resize; }
+.lane-divider:hover { fill-opacity: .35; }
 
 .inline-edit {
     width: 100%; height: 100%;
