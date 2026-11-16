@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Components.Pages.Commands;
 using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Editing;
+using BeDiagram.Editing.Lanes;
 using BeDiagram.Services.Export;
 
 namespace BeDiagram.Components.Pages;
@@ -43,6 +44,10 @@ public partial class Designer : IDesignerHost, ICanvasInput
     void ICanvasInput.ItemDown(PointerEventArgs e, string id) => ItemDown(e, id);
     void ICanvasInput.GroupBodyDown(PointerEventArgs e, string id) => GroupBodyDown(e, id);
     void ICanvasInput.PortDown(PointerEventArgs e, string id, string? itemId) => PortDown(e, id, itemId);
+    void ICanvasInput.DividerDown(PointerEventArgs e, LaneDivider d)
+    {
+        DividerDown(e, d);
+    }
     void ICanvasInput.ResizeDown(PointerEventArgs e, string id, ResizeHandle handle)
     {
         ResizeDown(e, id, handle);

@@ -1,5 +1,6 @@
 @inherits CanvasLayer
 @using BeDiagram.Components.Pages.Gestures
+@using BeDiagram.Editing.Lanes
 
 @foreach (GroupView v in GroupViews())
 {
@@ -57,4 +58,11 @@
             }
         }
     </g>
+}
+@* Edges shared by touching lanes, over every group: drag one to resize both lanes. Gaps are left around the ● ports
+   and the corners, so connecting and the corner grips still work there. *@
+@foreach ((LaneDivider d, Rect r) in DividerStrips())
+{
+    <rect class="lane-divider @(d.Rows ? "rows" : "cols")" x="@F(r.X)" y="@F(r.Y)" width="@F(r.W)" height="@F(r.H)"
+          @onpointerdown="e => Input.DividerDown(e, d)" @onpointerdown:stopPropagation="true" />
 }

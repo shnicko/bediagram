@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Components.Pages.Gestures;
+using BeDiagram.Editing.Lanes;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 
@@ -115,7 +116,20 @@ public partial class Designer
             return;
         }
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
-        gesture = new ResizeGesture(this, x, y, box, handle);
+        gesture = new ResizeGesture(this, x, y, box, handle, e.AltKey);
+    }
+
+    /// <summary>Pressing the edge two touching lanes share: drag it to resize both lanes.</summary>
+    void DividerDown(PointerEventArgs e, LaneDivider d)
+    {
+        if (e.Button != 0)
+        {
+            StartPan(e);
+            return;
+        }
+        Editor.EndEdit();
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        gesture = new LaneDividerGesture(this, x, y, d);
     }
 
     void EdgeDown(PointerEventArgs e, string id)
