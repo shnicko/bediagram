@@ -19,12 +19,23 @@ public partial class Designer
 
     void ItemDown(PointerEventArgs e, string id)
     {
-        if (e.Button != 0) { StartPan(e); return; }
-        if (Editor.EditingId is not null && Editor.EditingId != id) Editor.EndEdit();
+        if (e.Button != 0)
+        {
+            StartPan(e);
+            return;
+        }
+        if (Editor.EditingId is not null && Editor.EditingId != id)
+        {
+            Editor.EndEdit();
+        }
         Editor.SelectedEdgeId = null;
         if (e.ShiftKey || e.CtrlKey)
         {
-            if (Editor.Selection.Contains(id)) { Editor.Selection.Remove(id); return; }
+            if (Editor.Selection.Contains(id))
+            {
+                Editor.Selection.Remove(id);
+                return;
+            }
             Editor.Selection.Add(id);
         }
         else if (!Editor.Selection.Contains(id))

@@ -9,5 +9,11 @@ public partial class StatusBar : DesignerPart
 {
     [Inject] DiagramStore Store { get; set; } = default!;
 
-    int OffPageCount => Editor.OutsidePage().Count;
+    int OffPageCount
+    {
+        get
+        {
+            return Editor.OutsidePage().Count;
+        }
+    }
 }

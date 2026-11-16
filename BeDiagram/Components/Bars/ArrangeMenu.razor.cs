@@ -7,5 +7,8 @@ namespace BeDiagram.Components.Bars;
 public partial class ArrangeMenu : DesignerPart
 {
 
-    void SetLockLanes(ChangeEventArgs e) => Editor.SetLockLanes(e.Value is true);
+    void SetLockLanes(ChangeEventArgs e)
+    {
+        Editor.SetLockLanes(e.Value is true);
+    }
 }
