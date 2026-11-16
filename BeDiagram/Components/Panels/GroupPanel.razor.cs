@@ -9,8 +9,14 @@ public partial class GroupPanel : DesignerPart
 {
     [Parameter, EditorRequired] public Group Group { get; set; } = default!;
 
-    int MemberCount(Group g) => Editor.Members(g).Count();
+    int MemberCount(Group g)
+    {
+        return Editor.Members(g).Count();
+    }
 
     /// <summary>True for a group not inside another group (one that can be a swim lane).</summary>
-    bool IsTopLevel(Group g) => Editor.Tree.Parent(g) is null;
+    bool IsTopLevel(Group g)
+    {
+        return Editor.Tree.Parent(g) is null;
+    }
 }
