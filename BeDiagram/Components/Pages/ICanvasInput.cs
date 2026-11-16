@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Web;
+using BeDiagram.Components.Pages.Gestures;
 
 namespace BeDiagram.Components.Pages;
 
@@ -25,8 +26,9 @@ public interface ICanvasInput
     /// text, leaving the shape where it is.</summary>
     void OutsideTextDown(PointerEventArgs e, string id);
 
-    /// <summary>Pressed on the resize handle of the one selected item.</summary>
-    void ResizeDown(PointerEventArgs e, string id);
+    /// <summary>Pressed on a resize handle of the one selected item: the bottom-right corner of a shape or text box,
+    /// or any corner or side of a group (<paramref name="handle"/>).</summary>
+    void ResizeDown(PointerEventArgs e, string id, ResizeHandle handle);
 
     /// <summary>Pressed on a connector or its label: select it.</summary>
     void EdgeDown(PointerEventArgs e, string id);
