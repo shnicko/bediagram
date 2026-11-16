@@ -13,6 +13,7 @@
     <button title="@Cmd.LanesTip(Cmd.LanesDown)" disabled="@(!CanRun(Cmd.LanesDown))" @onclick="() => Run(Cmd.LanesDown)">@IconSvg("columns-3", 16) Top → down</button>
     <div class="menu-settings" @onclick:stopPropagation="true">
         <label title="Adding or moving shapes won't resize the lanes. Arrange, resizing a lane by hand and Fit to contents still do."><input type="checkbox" checked="@D.LockLanes" @onchange="SetLockLanes" /> Lock lane size</label>
+        <label title="Shapes and text boxes stay put: drag group boxes and their grips without moving what's inside. Alt+drag a group's title does this once. Not saved with the diagram."><input type="checkbox" checked="@Editor.ShapesLocked" @onchange="SetShapesLocked" /> Lock shapes in place</label>
     </div>
     <hr class="menu-divider" />
     <div class="menu-settings" @onclick:stopPropagation="true" title="Line style for new connectors">

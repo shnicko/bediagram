@@ -42,6 +42,58 @@ public partial class DiagramEditor
         if (Tree.Parent(item) is { } g) GrowGroup(g);
     }
 
+    // ───────────── Lock shapes in place ─────────────
+
+    /// <summary>
+    /// While on, shapes and text boxes stay where they are: they can't be dragged, nudged or resized, and dragging or
+    /// nudging a group moves only its box, not what's inside it. For tidying up group borders at the end of a flow.
+    /// Lasts until turned off (not saved with the diagram, no undo step). Explicit commands (align, arrange lanes,
+    /// auto-layout) still move shapes.
+    /// </summary>
+    public bool ShapesLocked { get; private set; }
+
+    /// <summary>Arrange menu / status bar: lock or unlock shapes in place (<see cref="ShapesLocked"/>).</summary>
+    public void SetShapesLocked(bool locked)
+    {
+        ShapesLocked = locked;
+        if (locked)
+        {
+            view.ShowToast("Shapes locked in place: drag group boxes and their grips without moving what's inside");
+        }
+    }
+
+    /// <summary>
+    /// What a drag or nudge of <paramref name="ids"/> moves. Normally the items and everything inside the groups among
+    /// them (<see cref="WithMembers"/>). With <paramref name="boxesOnly"/> (Alt held on a group's title) groups move
+    /// without their contents. While <see cref="ShapesLocked"/> only the group boxes move: shapes and text boxes stay.
+    /// </summary>
+    public List<IBox> DragSet(IEnumerable<string> ids, bool boxesOnly)
+    {
+        if (!ShapesLocked && !boxesOnly)
+        {
+            return WithMembers(ids);
+        }
+        List<IBox> result = new List<IBox>();
+        HashSet<string> seen = new HashSet<string>();
+        foreach (string id in ids)
+        {
+            IBox? b = FindBox(id);
+            if (b is null)
+            {
+                continue;
+            }
+            if (ShapesLocked && b is not Group)
+            {
+                continue;
+            }
+            if (seen.Add(b.Id))
+            {
+                result.Add(b);
+            }
+        }
+        return result;
+    }
+
     /// <summary>A swim lane (top-level group) whose size is locked (<see cref="Diagram.LockLanes"/>): it doesn't grow or
     /// shrink to fit its items; they stay members even when they hang over its edge.</summary>
     public bool SizeLocked(Group g) => Diagram.LockLanes && g.GroupId is null;

@@ -50,7 +50,7 @@
             <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
                     @onpointerdown="e => Input.PortDown(e, v.T.Id)" @onpointerdown:stopPropagation="true" />
         }
-        @if (v.Selected && Editor.Selection.Count == 1)
+        @if (v.Selected && Editor.Selection.Count == 1 && !Editor.ShapesLocked)
         {
             <rect class="resize" x="@F(v.T.X + v.T.W - 6)" y="@F(v.T.Y + v.T.H - 6)" width="12" height="12"
                   @onpointerdown="e => Input.ResizeDown(e, v.T.Id, ResizeHandle.BottomRight)" @onpointerdown:stopPropagation="true" />

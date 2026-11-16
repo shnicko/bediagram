@@ -89,8 +89,13 @@ public partial class DiagramEditor
         {
             return;
         }
+        List<IBox> moved = DragSet(Selection, false);
+        if (moved.Count == 0)
+        {
+            view.ShowToast("Shapes are locked in place (Arrange → Lock shapes in place)");
+            return;
+        }
         Change();
-        List<IBox> moved = WithMembers(Selection);
         HashSet<string> movedIds = new HashSet<string>();
         foreach (IBox b in moved)
         {
