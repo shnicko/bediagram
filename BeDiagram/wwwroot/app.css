@@ -139,6 +139,11 @@ kbd {
 .text-guide.empty, .textbox:hover .text-guide, .textbox.selected .text-guide { opacity: 1; }
 .no-hit { pointer-events: none; }
 .resize { fill: #fff; stroke: var(--accent); cursor: nwse-resize; }
+/* Groups: grips on all four corners, and an invisible strip along each side (ResizeHandle.CursorClass) */
+.resize.resize-nesw { cursor: nesw-resize; }
+.grip-edge { fill: transparent; }
+.grip-edge.resize-ns { cursor: ns-resize; }
+.grip-edge.resize-ew { cursor: ew-resize; }
 
 .inline-edit {
     width: 100%; height: 100%;

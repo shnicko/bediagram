@@ -85,11 +85,15 @@ public partial class Designer
         gesture = new FreeTextGesture(this, x, y, n);
     }
 
-    void ResizeDown(PointerEventArgs e, string id)
+    void ResizeDown(PointerEventArgs e, string id, ResizeHandle handle)
     {
-        if (Editor.FindBox(id) is not { } box) return;
+        IBox? box = Editor.FindBox(id);
+        if (box is null)
+        {
+            return;
+        }
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
-        gesture = new ResizeGesture(this, x, y, box);
+        gesture = new ResizeGesture(this, x, y, box, handle);
     }
 
     void EdgeDown(PointerEventArgs e, string id)

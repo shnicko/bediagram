@@ -1,3 +1,4 @@
+using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Components.Pages.Views;
 using BeDiagram.Models;
 using BeDiagram.Models.Layout;
@@ -6,7 +7,7 @@ using BeDiagram.Models.Text;
 
 namespace BeDiagram.Components.Canvas;
 
-/// <summary>Groups, the bottom layer, in paint order (a group inside another is drawn over it): box, title band and title (inline editor while renaming), ports and resize handle.</summary>
+/// <summary>Groups, the bottom layer, in paint order (a group inside another is drawn over it): box, title band and title (inline editor while renaming), ports and resize grips (all four corners, and each side).</summary>
 public partial class GroupLayer : CanvasLayer
 {
 
@@ -36,5 +37,29 @@ public partial class GroupLayer : CanvasLayer
     static Rect GroupTitleEditRect(GroupView v)
     {
         return new Rect(v.TitleArea.X + 8, v.TitleArea.Y + (v.TitleArea.H - 24) / 2, Math.Max(120, v.TitleArea.W - 16), 24);
+    }
+
+    /// <summary>Resize grips show on a group when it is the only thing selected.</summary>
+    bool ShowsGrips(GroupView v)
+    {
+        return v.Selected && Editor.Selection.Count == 1;
+    }
+
+    /// <summary>The visible 12 px grip on a corner of the group.</summary>
+    static Rect GripRect(Group g, ResizeHandle h)
+    {
+        (double x, double y) = h.On(g);
+        return new Rect(x - 6, y - 6, 12, 12);
+    }
+
+    /// <summary>The invisible 8 px strip along one side of the group, stopping short of the corner grips.</summary>
+    static Rect EdgeStripRect(Group g, ResizeHandle h)
+    {
+        (double x, double y) = h.On(g);
+        if (h.V != 0)
+        {
+            return new Rect(g.X + 8, y - 4, Math.Max(0, g.W - 16), 8);
+        }
+        return new Rect(x - 4, g.Y + 8, 8, Math.Max(0, g.H - 16));
     }
 }
