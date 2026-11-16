@@ -41,8 +41,30 @@ public partial class DiagramEditor
     /// <summary>Snap positions and sizes to a 10 px grid.</summary>
     public bool Snap { get; set; } = true;
 
-    /// <summary>Angle lock for moving items and placing joined steps (free, 90°, 45° or 30°). Not saved in the file.</summary>
-    public IAngleLock AngleLock { get; set; } = AngleLocks.Free;
+    IAngleLock angleLock = AngleLocks.Free;
+
+    /// <summary>
+    /// Angle lock for moving items and placing joined steps (free, 90°, 45° or 30°). Not saved in the file.
+    /// Picking a lock other than Free also makes it the one <see cref="ToggleAngleLock"/> switches back to.
+    /// </summary>
+    public IAngleLock AngleLock
+    {
+        get
+        {
+            return angleLock;
+        }
+        set
+        {
+            angleLock = value;
+            if (value != AngleLocks.Free)
+            {
+                LastAngleLock = value;
+            }
+        }
+    }
+
+    /// <summary>The last lock picked other than Free (90° until one is picked): what the toggle key turns back on.</summary>
+    public IAngleLock LastAngleLock { get; private set; } = AngleLocks.Right;
 
     /// <summary>Selected shapes, text boxes and groups, in the order they were picked (so "join" follows that order).</summary>
     public List<string> Selection { get; } = new();
@@ -159,6 +181,19 @@ public partial class DiagramEditor
         item is not Group ig || (container.Id != ig.Id && !tree.IsInside(container, ig));
 
     public double SnapV(double v) => Snap ? Math.Round(v / 10) * 10 : v;
+
+    /// <summary>Switches between Free and the last angle lock picked (<see cref="LastAngleLock"/>).</summary>
+    public void ToggleAngleLock()
+    {
+        if (AngleLock == AngleLocks.Free)
+        {
+            AngleLock = LastAngleLock;
+        }
+        else
+        {
+            AngleLock = AngleLocks.Free;
+        }
+    }
 
     /// <summary>A drag offset after the angle lock (see <see cref="LockedOffset"/> for which axes may still snap).</summary>
     public LockedOffset LockOffset(double dx, double dy) => AngleLock.Apply(dx, dy, Snap);

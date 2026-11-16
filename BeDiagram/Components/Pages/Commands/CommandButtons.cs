@@ -83,6 +83,13 @@ public sealed class CommandButtons
     public IEditorCommand AddComment => registry.Get<AddCommentCommand>();
     public IEditorCommand LanesAcross => registry.Get<ArrangeLanesHorizontalCommand>();
     public IEditorCommand LanesDown => registry.Get<ArrangeLanesVerticalCommand>();
+    public IEditorCommand AngleToggle
+    {
+        get
+        {
+            return registry.Get<ToggleAngleLockCommand>();
+        }
+    }
     public IEditorCommand Tidy => registry.Get<TidyConnectorsCommand>();
     public IEditorCommand PlaceText
     {

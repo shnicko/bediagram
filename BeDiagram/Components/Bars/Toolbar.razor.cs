@@ -1,10 +1,12 @@
 using BeDiagram.Components.Pages;
+using BeDiagram.Components.Pages.Commands;
 using BeDiagram.Components.Pages.Views;
+using BeDiagram.Editing.Angles;
 using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Components.Bars;
 
-/// <summary>The bar along the top: the menu bar (File, Edit, Arrange, View, Help), the linked-diagram breadcrumb, undo / redo, grid, zoom, flow direction and snap, and the diagram name.</summary>
+/// <summary>The bar along the top: the menu bar (File, Edit, Arrange, View, Help), the linked-diagram breadcrumb, undo / redo, grid, zoom, flow direction, snap and angle lock, and the diagram name.</summary>
 public partial class Toolbar : DesignerPart
 {
     void CloseMenus()
@@ -39,6 +41,31 @@ public partial class Toolbar : DesignerPart
     void ToggleSnap()
     {
         Editor.Snap = !Editor.Snap;
+    }
+
+    string AngleClass(IAngleLock a)
+    {
+        if (Editor.AngleLock == a)
+        {
+            return "on";
+        }
+        return "";
+    }
+
+    /// <summary>Tooltip for the angle lock buttons, naming the toggle key.</summary>
+    string AngleTip
+    {
+        get
+        {
+            return "Angle lock when moving items and placing joined steps — "
+                + CommandButtons.KeyText(Cmd.AngleToggle) + " switches between Free and the last lock";
+        }
+    }
+
+    /// <summary>Same setting as the Edit menu's angle lock: kept while the page is open, not saved in the file.</summary>
+    void SetAngleLock(IAngleLock a)
+    {
+        Editor.AngleLock = a;
     }
 
     string FlowClass(FlowDirection flow)

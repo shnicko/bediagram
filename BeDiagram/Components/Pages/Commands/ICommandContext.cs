@@ -36,6 +36,8 @@ public interface ICommandContext
     void QuickBranch();
     void Nudge(double dx, double dy);
     void ToggleSelectedConnectorStyle();
+    /// <summary>Switches the angle lock between Free and the last lock picked.</summary>
+    void ToggleAngleLock();
 
     /// <summary>The diagram has shapes or text boxes to lay out.</summary>
     bool HasShapes { get; }

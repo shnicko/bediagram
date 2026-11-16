@@ -68,6 +68,11 @@ public partial class Designer : ICommandContext
     void ICommandContext.QuickBranch() => Editor.QuickBranch();
     void ICommandContext.Nudge(double dx, double dy) => Editor.Nudge(dx, dy);
 
+    void ICommandContext.ToggleAngleLock()
+    {
+        Editor.ToggleAngleLock();
+    }
+
     void ICommandContext.ToggleSelectedConnectorStyle()
     {
         if (Editor.SelectedEdge is { } e) Editor.SetEdgeStyle(e, e.Style == EdgeStyle.Straight ? EdgeStyle.Elbow : EdgeStyle.Straight);
