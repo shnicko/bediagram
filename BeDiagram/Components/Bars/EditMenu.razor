@@ -16,7 +16,7 @@
     <div class="menu-settings" @onclick:stopPropagation="true">
         <label title="New items join to the selected item automatically"><input type="checkbox" @bind="Editor.AutoConnect" /> Auto-join new items</label>
         <label title="Snap to a 10px grid"><input type="checkbox" @bind="Editor.Snap" /> Snap to grid</label>
-        <span class="muted-label">Angle lock</span>
+        <span class="muted-label" title="@Tip(Cmd.AngleToggle)">Angle lock (@KeyText(Cmd.AngleToggle) toggles)</span>
         <div class="seg" title="Angle lock when moving items and placing joined steps">
             @foreach (IAngleLock a in AngleLocks.All)
             {

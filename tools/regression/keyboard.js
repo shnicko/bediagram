@@ -32,6 +32,7 @@ const [url, out] = process.argv.slice(2);
         toast: document.querySelector('.toast')?.textContent || null,
         panel: norm(document.querySelector('aside.panel, .panel')?.innerText || ''),
         toolbar: tb,
+        angle: document.querySelector('.toolbar .seg[title^="Angle"] button.on')?.textContent.trim() || null,
       };
     });
     log.push({ label, ...s });
@@ -88,6 +89,12 @@ const [url, out] = process.argv.slice(2);
   await click('text=+ Comment'); await key('Escape');
   await z.act(async () => p.mouse.click(...await node(0)));
   await click('.panel button.danger', 'panel Delete');
+  // Angle lock: toolbar buttons (builds before they were on the toolbar skip the clicks), then A toggles Free / last lock
+  const angle = '.toolbar .seg[title^="Angle"] button';
+  if (await p.$(angle)) { await click(`${angle}:text-is("45°")`, 'angle 45 button'); }
+  await key('a', 'a: angle lock off'); await key('a', 'a: angle lock back on');
+  if (await p.$(angle)) { await click(`${angle}:text-is("Free")`, 'angle Free button'); }
+  await key('a', 'a from Free: last lock');
   // Dialogs: Ctrl+S on an unsaved diagram opens Save as; Escape closes; Ctrl+Shift+S; save for real
   await key('Control+s'); await key('j', 'j while dialog open'); await key('Escape'); await key('Escape', 'Escape 2');
   await key('Control+Shift+s'); await key('Escape'); await key('Escape', 'Escape 2');
