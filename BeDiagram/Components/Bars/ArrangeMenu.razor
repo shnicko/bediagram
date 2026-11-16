@@ -11,6 +11,7 @@
     <div class="menu-heading">Swim lanes</div>
     <button title="@Cmd.LanesTip(Cmd.LanesAcross)" disabled="@(!CanRun(Cmd.LanesAcross))" @onclick="() => Run(Cmd.LanesAcross)">@IconSvg("rows-3", 16) Left → right</button>
     <button title="@Cmd.LanesTip(Cmd.LanesDown)" disabled="@(!CanRun(Cmd.LanesDown))" @onclick="() => Run(Cmd.LanesDown)">@IconSvg("columns-3", 16) Top → down</button>
+    <button title="Close the gaps and overlaps between the lanes (the selected ones when two or more are selected), keeping their size and order" disabled="@(!CanStack)" @onclick="Editor.StackLanes">Stack edge to edge</button>
     <div class="menu-settings" @onclick:stopPropagation="true">
         <label title="Adding or moving shapes won't resize the lanes. Arrange, resizing a lane by hand and Fit to contents still do."><input type="checkbox" checked="@D.LockLanes" @onchange="SetLockLanes" /> Lock lane size</label>
         <label title="Shapes and text boxes stay put: drag group boxes and their grips without moving what's inside. Alt+drag a group's title does this once. Not saved with the diagram."><input type="checkbox" checked="@Editor.ShapesLocked" @onchange="SetShapesLocked" /> Lock shapes in place</label>

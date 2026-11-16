@@ -31,22 +31,7 @@ public class ResizeGesture : UndoableDragGesture
             return true;
         }
         // A list / IPO node can't get shorter than its rows (they have a fixed height).
-        double minW = 80;
-        double minH = 40;
-        if (r is Group)
-        {
-            minW = 160;
-            minH = 100;
-        }
-        else if (r is TextBox)
-        {
-            minW = 40;
-            minH = 24;
-        }
-        else if (r is Node n)
-        {
-            (minW, minH) = n.Kind.MinSize(n);
-        }
+        (double minW, double minH) = BoxSizes.MinSize(r);
 
         // Across: the right edge follows the pointer, or the left edge does and the right edge stays put.
         if (handle.H == 1)

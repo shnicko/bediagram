@@ -7,6 +7,12 @@
     <button @onclick="() => Editor.AlignSelection(AlignOp.Row)">Row</button>
     <button @onclick="() => Editor.AlignSelection(AlignOp.Column)">Column</button>
 </div>
+<label>Same size as the first picked <InfoTip>Gives every selected item the width, height or both of the one you picked first. Shapes keep their centre; groups and text boxes keep their top-left corner. What's inside a group stays put.</InfoTip></label>
+<div class="seg wide">
+    <button title="Same width as the first item picked" @onclick="() => Editor.MatchSize(true, false)">Width</button>
+    <button title="Same height as the first item picked" @onclick="() => Editor.MatchSize(false, true)">Height</button>
+    <button title="Same width and height as the first item picked" @onclick="() => Editor.MatchSize(true, true)">Both</button>
+</div>
 <label>Connectors between selected items</label>
 <div class="seg wide">
     <button @onclick="() => Editor.SetStyleBetweenSelected(EdgeStyle.Elbow)">@IconSvg("corner-down-right", 16) Elbow</button>
@@ -57,5 +63,8 @@
     <div class="seg wide">
         <button title="@Cmd.LanesTip(Cmd.LanesAcross)" disabled="@(!CanRun(Cmd.LanesAcross))" @onclick="() => Run(Cmd.LanesAcross)">@IconSvg("rows-3", 16) Left → right</button>
         <button title="@Cmd.LanesTip(Cmd.LanesDown)" disabled="@(!CanRun(Cmd.LanesDown))" @onclick="() => Run(Cmd.LanesDown)">@IconSvg("columns-3", 16) Top → down</button>
+    </div>
+    <div class="actions">
+        <button title="Close the gaps and overlaps between the selected lanes, keeping their size and order" @onclick="Editor.StackLanes">Stack edge to edge</button>
     </div>
 }
