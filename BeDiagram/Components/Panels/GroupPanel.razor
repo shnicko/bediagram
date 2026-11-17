@@ -4,15 +4,7 @@
 <label>Title</label>
 <input @bind="Group.Title" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" />
 <GroupStyle Editor="Editor" Groups="[Group]" OnChanged="Redraw" />
-<label>Position and size <InfoTip>X and Y move the group with what's inside it (just the box while shapes are locked). W and H resize it from the top-left corner; what's inside stays put.</InfoTip></label>
-<div class="row bounds">
-    <div><span class="muted-label">X</span><input type="number" step="10" value="@Num(Group.X)" @onchange="SetX" /></div>
-    <div><span class="muted-label">Y</span><input type="number" step="10" value="@Num(Group.Y)" @onchange="SetY" /></div>
-</div>
-<div class="row bounds">
-    <div><span class="muted-label">W</span><input type="number" step="10" min="160" value="@Num(Group.W)" @onchange="SetW" /></div>
-    <div><span class="muted-label">H</span><input type="number" step="10" min="100" value="@Num(Group.H)" @onchange="SetH" /></div>
-</div>
+<BoundsFields Bounds="@GroupBounds" SetOutPoint="top-left" MinW="@BoxSizes.GroupMinW" MinH="@BoxSizes.GroupMinH" OnChange="SetBounds">X and Y are the top-left corner of the group; moving it carries what's inside (just the box while shapes are locked). W and H resize it from the top-left corner; what's inside stays put.</BoundsFields>
 <p class="muted">@MemberCount(Group) item@(MemberCount(Group) == 1 ? "" : "s") inside <InfoTip>Drag items in or out of the box to change what's in the group.</InfoTip></p>
 @if (Editor.FindGroup(Group.GroupId) is { } pg)
 {

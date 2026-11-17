@@ -54,11 +54,8 @@
         <option value="@t.Name">@t.Display</option>
     }
 </select>
-<div class="row">
-    <div><label>Width</label><input type="number" step="10" @bind="Node.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
-    <div><label>Height</label><input type="number" step="10" @bind="Node.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
-</div>
 <ShapeStyle Editor="Editor" Nodes="[Node]" OnChanged="Redraw" />
+<BoundsFields Bounds="@NodeBounds" SetOutPoint="centre" MinW="@NodeMinW" MinH="@NodeMinH" FixedHeight="@Node.Kind.IsPanel" FixedHeightTip="A list or IPO box is always as tall as its rows" OnChange="SetBounds">X and Y are the centre of the shape — the middle of the circle or symbol, not of the text under it. W and H resize it about that centre, so connectors stay straight.@HeightNote</BoundsFields>
 
 @if (Node.Kind.IsPanel)
 {

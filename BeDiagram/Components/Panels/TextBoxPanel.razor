@@ -12,10 +12,7 @@
 }
 
 <TextBoxStyle Editor="Editor" Boxes="[Box]" OnChanged="Redraw" />
-<div class="row">
-    <div><label>Width</label><input type="number" step="10" @bind="Box.W" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
-    <div><label>Height</label><input type="number" step="10" @bind="Box.H" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" /></div>
-</div>
+<BoundsFields Bounds="@BoxBounds" SetOutPoint="top-left" MinW="@BoxMinW" MinH="@BoxMinH" OnChange="SetBounds">X and Y are the top-left corner of the box, as for a group. W and H resize it from that corner.</BoundsFields>
 <div class="actions"><button @onclick="() => Editor.FitTextHeight(Box)">Fit height to text</button></div>
 
 @if (Editor.FindGroup(Box.GroupId) is { } tg)

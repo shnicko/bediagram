@@ -3,9 +3,8 @@ using BeDiagram.Models;
 
 namespace BeDiagram.Editing;
 
-/// <summary>Sizing by hand: match the size of the first picked item, a group's position and size fields, the size
-/// fields for several selected groups, and stacking
-/// lanes edge to edge.</summary>
+/// <summary>Sizing by hand: match the size of the first picked item, the position and size fields of a group, a shape
+/// and a text box, the size fields for several selected groups, and stacking lanes edge to edge.</summary>
 public partial class DiagramEditor
 {
     // ───────────── Match size ─────────────
@@ -109,6 +108,61 @@ public partial class DiagramEditor
         g.W = w;
         g.H = h;
         GrowAround(g);
+    }
+
+    // ───────────── A shape's position and size ─────────────
+
+    /// <summary>
+    /// The shape panel's X / Y / W / H fields. X and Y are the centre of the shape (the middle of a circle or symbol,
+    /// not of the text under it), so a new size grows or shrinks it about its centre and connectors stay straight, as
+    /// in <see cref="MatchSize"/>. Not smaller than <see cref="BoxSizes.MinSize"/>; a list or IPO box keeps the height
+    /// of its rows. Typed values apply even while <see cref="ShapesLocked"/>, like the other explicit commands. Groups
+    /// around it grow to fit. One undo step; none when nothing changes.
+    /// </summary>
+    public void SetNodeBounds(Node n, double centreX, double centreY, double w, double h)
+    {
+        (double minW, double minH) = BoxSizes.MinSize(n);
+        w = Math.Max(minW, w);
+        h = Math.Max(minH, h);
+        if (n.Kind.IsPanel)
+        {
+            h = n.H;
+        }
+        double x = centreX - w / 2;
+        double y = centreY - h / 2;
+        if (x == n.X && y == n.Y && w == n.W && h == n.H)
+        {
+            return;
+        }
+        Change();
+        n.X = x;
+        n.Y = y;
+        n.W = w;
+        n.H = h;
+        GrowAround(n);
+    }
+
+    // ───────────── A text box's position and size ─────────────
+
+    /// <summary>
+    /// The text box panel's X / Y / W / H fields. Like a group, X and Y are the top-left corner and a new size keeps
+    /// it. Not smaller than 40 × 24. Groups around it grow to fit. One undo step; none when nothing changes.
+    /// </summary>
+    public void SetTextBoxBounds(TextBox t, double x, double y, double w, double h)
+    {
+        (double minW, double minH) = BoxSizes.MinSize(t);
+        w = Math.Max(minW, w);
+        h = Math.Max(minH, h);
+        if (x == t.X && y == t.Y && w == t.W && h == t.H)
+        {
+            return;
+        }
+        Change();
+        t.X = x;
+        t.Y = y;
+        t.W = w;
+        t.H = h;
+        GrowAround(t);
     }
 
     // ───────────── Several groups' size at once ─────────────

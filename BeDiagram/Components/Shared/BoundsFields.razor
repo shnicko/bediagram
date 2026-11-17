@@ -1,0 +1,9 @@
+<label>Position and size <span class="muted">(X, Y = @SetOutPoint)</span> <InfoTip>@ChildContent</InfoTip></label>
+<div class="row bounds">
+    <div><span class="muted-label">X</span><input type="number" step="10" value="@Num(Bounds.X)" @onchange="SetX" /></div>
+    <div><span class="muted-label">Y</span><input type="number" step="10" value="@Num(Bounds.Y)" @onchange="SetY" /></div>
+</div>
+<div class="row bounds">
+    <div><span class="muted-label">W</span><input type="number" step="10" min="@Num(MinW)" value="@Num(Bounds.W)" @onchange="SetW" /></div>
+    <div title="@HeightTitle"><span class="muted-label">H</span><input type="number" step="10" min="@Num(MinH)" value="@Num(Bounds.H)" disabled="@FixedHeight" @onchange="SetH" /></div>
+</div>

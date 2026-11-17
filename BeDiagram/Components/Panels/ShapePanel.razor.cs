@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using BeDiagram.Components.Pages;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Layout;
 using BeDiagram.Models.Serialization;
 using BeDiagram.Models.Text;
 using static BeDiagram.Models.SvgNumbers;
@@ -154,6 +155,50 @@ public partial class ShapePanel : DesignerPart
             }
         }
         return result;
+    }
+
+    /// <summary>The position and size fields' values: X and Y are the centre of the shape (of the circle or symbol,
+    /// not the text under it).</summary>
+    Rect NodeBounds
+    {
+        get
+        {
+            return new Rect(Node.X + Node.W / 2, Node.Y + Node.H / 2, Node.W, Node.H);
+        }
+    }
+
+    double NodeMinW
+    {
+        get
+        {
+            return BoxSizes.MinSize(Node).W;
+        }
+    }
+
+    double NodeMinH
+    {
+        get
+        {
+            return BoxSizes.MinSize(Node).H;
+        }
+    }
+
+    /// <summary>The extra sentence in the info note for a list or IPO box, whose height can't be typed.</summary>
+    string HeightNote
+    {
+        get
+        {
+            if (Node.Kind.IsPanel)
+            {
+                return " The height follows the rows, so it can't be typed.";
+            }
+            return "";
+        }
+    }
+
+    void SetBounds(Rect r)
+    {
+        Editor.SetNodeBounds(Node, r.X, r.Y, r.W, r.H);
     }
 
     void SetPropValue(Node n, string key, ChangeEventArgs e)
