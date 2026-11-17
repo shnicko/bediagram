@@ -125,8 +125,14 @@ public partial class DiagramEditor
         n.Stacked = false;
         foreach (Edge e in Diagram.Edges)
         {
-            if (e.From == n.Id) e.FromItem = null;
-            if (e.To == n.Id) e.ToItem = null;
+            if (e.From == n.Id)
+            {
+                e.FromItem = null;
+            }
+            if (e.To == n.Id)
+            {
+                e.ToItem = null;
+            }
         }
     }
 }

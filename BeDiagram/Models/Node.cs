@@ -12,7 +12,13 @@ public class Node : IGroupable
     public NodeType Type { get; set; } = NodeType.Process;
     /// <summary>How this node behaves, from its type (Strategy pattern, see <see cref="INodeKind"/>). Not saved.</summary>
     [JsonIgnore]
-    public INodeKind Kind => NodeTypes.Get(Type).Kind;
+    public INodeKind Kind
+    {
+        get
+        {
+            return NodeTypes.Get(Type).Kind;
+        }
+    }
     public string Label { get; set; } = "";
     public double X { get; set; }
     public double Y { get; set; }
@@ -42,7 +48,7 @@ public class Node : IGroupable
     /// A look only — see <see cref="Emphases"/>. Normal is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public EmphasisLevel Emphasis { get; set; }
-    public Dictionary<string, string> Properties { get; set; } = new();
+    public Dictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
     /// <summary>List and IPO nodes: the rows, in order (IPO rows carry their <see cref="ListItem.Section"/>). Null for other shapes.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<ListItem>? Items { get; set; }
@@ -57,8 +63,14 @@ public class Node : IGroupable
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description
     {
-        get => description;
-        set => description = string.IsNullOrWhiteSpace(value) ? null : value;
+        get
+        {
+            return description;
+        }
+        set
+        {
+            description = string.IsNullOrWhiteSpace(value) ? null : value;
+        }
     }
     string? description;
     /// <summary>Wrap width (px) for text drawn outside the shape: a label under a circle or outcome, and the description.
@@ -86,17 +98,46 @@ public class Node : IGroupable
 
     /// <summary>The rows (<see cref="Items"/>), or none for a panel loaded without any or another shape. Not saved.</summary>
     [JsonIgnore]
-    public IReadOnlyList<ListItem> Rows => Items ?? (IReadOnlyList<ListItem>)Array.Empty<ListItem>();
+    public IReadOnlyList<ListItem> Rows
+    {
+        get
+        {
+            if (Items is null)
+            {
+                return Array.Empty<ListItem>();
+            }
+            return Items;
+        }
+    }
 
     /// <summary>IPO nodes: the rows in one section (<see cref="IpoSections"/>), in order.</summary>
-    public List<ListItem> RowsIn(IpoSection section) => Rows.Where(i => IpoSections.Of(i.Section) == section).ToList();
+    public List<ListItem> RowsIn(IpoSection section)
+    {
+        List<ListItem> result = new List<ListItem>();
+        foreach (ListItem item in Rows)
+        {
+            if (IpoSections.Of(item.Section) == section)
+            {
+                result.Add(item);
+            }
+        }
+        return result;
+    }
 
     /// <summary>IPO nodes: a section's title, the renamed one or the default.</summary>
     public string SectionTitle(IpoSection section)
     {
         int i = IpoSections.IndexOf(section);
-        string? t = SectionTitles is { } titles && i < titles.Count ? titles[i] : null;
-        return string.IsNullOrWhiteSpace(t) ? IpoSections.DefaultTitle(section) : t;
+        string? t = null;
+        if (SectionTitles is not null && i < SectionTitles.Count)
+        {
+            t = SectionTitles[i];
+        }
+        if (string.IsNullOrWhiteSpace(t))
+        {
+            return IpoSections.DefaultTitle(section);
+        }
+        return t;
     }
 
     /// <summary>A copy with a new id and its own <see cref="Properties"/> and rows (rows keep their ids); every other field (look, link, step, group) is kept.</summary>
@@ -105,10 +146,25 @@ public class Node : IGroupable
         Node c = (Node)MemberwiseClone();
         c.Id = NewId("n");
         c.Properties = new Dictionary<string, string>(Properties);
-        c.Items = Items?.Select(i => i.Copy()).ToList();
-        c.SectionTitles = SectionTitles is null ? null : new List<string>(SectionTitles);
+        c.Items = null;
+        if (Items is not null)
+        {
+            c.Items = new List<ListItem>();
+            foreach (ListItem item in Items)
+            {
+                c.Items.Add(item.Copy());
+            }
+        }
+        c.SectionTitles = null;
+        if (SectionTitles is not null)
+        {
+            c.SectionTitles = new List<string>(SectionTitles);
+        }
         return c;
     }
 
-    public static string NewId(string prefix) => $"{prefix}_{Guid.NewGuid().ToString("N")[..8]}";
+    public static string NewId(string prefix)
+    {
+        return $"{prefix}_{Guid.NewGuid().ToString("N")[..8]}";
+    }
 }
