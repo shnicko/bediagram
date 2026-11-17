@@ -89,4 +89,19 @@ public partial class SelectionPanel : DesignerPart
             return result;
         }
     }
+
+    /// <summary>The selected groups' ids in one string: the size fields start afresh when it changes, so a width typed
+    /// for one set of groups isn't applied to another.</summary>
+    string SelectedGroupKey
+    {
+        get
+        {
+            List<string> ids = new List<string>();
+            foreach (Group g in SelectedGroups)
+            {
+                ids.Add(g.Id);
+            }
+            return string.Join("|", ids);
+        }
+    }
 }

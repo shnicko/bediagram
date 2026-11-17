@@ -1,0 +1,8 @@
+<label>Size <InfoTip>Type a width, a height or both, then click <em>Apply</em> (or press Enter) to give every selected group that size. A blank field leaves each group's own. Groups keep their top-left corner and what's inside stays put. Not smaller than 160 × 100.</InfoTip></label>
+<div class="row bounds">
+    <div><span class="muted-label">W</span><input type="number" step="10" min="160" value="@WidthText" placeholder="@WidthHint" @oninput="TypeWidth" @onkeyup="KeyUp" /></div>
+    <div><span class="muted-label">H</span><input type="number" step="10" min="100" value="@HeightText" placeholder="@HeightHint" @oninput="TypeHeight" @onkeyup="KeyUp" /></div>
+</div>
+<div class="actions">
+    <button disabled="@(!CanApply)" title="Give every selected group the width and height typed above" @onclick="Apply">@ApplyText</button>
+</div>

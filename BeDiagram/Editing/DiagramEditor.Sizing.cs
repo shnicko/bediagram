@@ -3,7 +3,8 @@ using BeDiagram.Models;
 
 namespace BeDiagram.Editing;
 
-/// <summary>Sizing by hand: match the size of the first picked item, a group's position and size fields, and stacking
+/// <summary>Sizing by hand: match the size of the first picked item, a group's position and size fields, the size
+/// fields for several selected groups, and stacking
 /// lanes edge to edge.</summary>
 public partial class DiagramEditor
 {
@@ -108,6 +109,54 @@ public partial class DiagramEditor
         g.W = w;
         g.H = h;
         GrowAround(g);
+    }
+
+    // ───────────── Several groups' size at once ─────────────
+
+    /// <summary>
+    /// The W / H fields in the panel for several selected items: gives every group in <paramref name="groups"/> the
+    /// width and / or height typed (null = keep each group's own). Like <see cref="SetGroupBounds"/>, each keeps its
+    /// top-left corner, its contents stay put, nothing goes below 160 × 100 and groups around a changed one grow to fit.
+    /// One undo step; none when nothing changes.
+    /// </summary>
+    public void SetGroupsSize(IReadOnlyList<Group> groups, double? width, double? height)
+    {
+        // Work out the new sizes first, so the undo step is only taken when something changes.
+        List<Group> changing = new List<Group>();
+        List<(double w, double h)> sizes = new List<(double w, double h)>();
+        foreach (Group g in groups)
+        {
+            double w = g.W;
+            double h = g.H;
+            if (width is not null)
+            {
+                w = Math.Max(BoxSizes.GroupMinW, width.Value);
+            }
+            if (height is not null)
+            {
+                h = Math.Max(BoxSizes.GroupMinH, height.Value);
+            }
+            if (w != g.W || h != g.H)
+            {
+                changing.Add(g);
+                sizes.Add((w, h));
+            }
+        }
+        if (changing.Count == 0)
+        {
+            return;
+        }
+        Change();
+        for (int i = 0; i < changing.Count; i++)
+        {
+            changing[i].W = sizes[i].w;
+            changing[i].H = sizes[i].h;
+        }
+        foreach (Group g in changing)
+        {
+            GrowAround(g);
+        }
+        view.ShowToast($"{changing.Count} group{(changing.Count == 1 ? "" : "s")} resized");
     }
 
     // ───────────── Stack lanes edge to edge ─────────────
