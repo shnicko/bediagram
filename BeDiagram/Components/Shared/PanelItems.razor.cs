@@ -23,12 +23,22 @@ public partial class PanelItems
     /// <summary>The row whose icon picker is open, or null.</summary>
     string? iconFor;
 
-    bool IsIpo => Node.Kind is IpoKind;
+    bool IsIpo
+    {
+        get
+        {
+            return Node.Kind is IpoKind;
+        }
+    }
 
     string SectionValue(IpoSection section)
     {
         string t = Node.SectionTitle(section);
-        return t == IpoSections.DefaultTitle(section) ? "" : t;
+        if (t == IpoSections.DefaultTitle(section))
+        {
+            return "";
+        }
+        return t;
     }
 
     Task SectionTyped(IpoSection section, ChangeEventArgs e)
@@ -43,6 +53,12 @@ public partial class PanelItems
         return OnChanged.InvokeAsync();
     }
 
+    Task NumberRowsChanged(ChangeEventArgs e)
+    {
+        Editor.SetNumberRows(Node, e.Value is true);
+        return OnChanged.InvokeAsync();
+    }
+
     Task Add(IpoSection? section)
     {
         Editor.AddItem(Node, section);
@@ -50,7 +66,20 @@ public partial class PanelItems
         return OnChanged.InvokeAsync();
     }
 
-    void ToggleIcon(string itemId) => iconFor = iconFor == itemId ? null : itemId;
+    void ToggleIcon(string itemId)
+    {
+        if (iconFor == itemId)
+        {
+            iconFor = null;
+        }
+        else
+        {
+            iconFor = itemId;
+        }
+    }
 
-    Task Changed() => OnChanged.InvokeAsync();
+    Task Changed()
+    {
+        return OnChanged.InvokeAsync();
+    }
 }

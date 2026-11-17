@@ -33,7 +33,7 @@ public abstract class IpoLayout : PanelLayout
         for (int k = 0; k < IpoSections.All.Count; k++)
         {
             Rect area = SectionArea(n, k);
-            AddStack(rows, n.RowsIn(IpoSections.All[k]), area.X, area.Y + SectionHead, area.W);
+            AddStack(rows, n.RowsIn(IpoSections.All[k]), area.X, area.Y + SectionHead, area.W, n.NumberRows);
         }
         return rows;
     }
