@@ -323,8 +323,16 @@ The subclasses only answer what differs: `SetOut` / `TopLeftFor`, `MinSize`, `Fi
 
 Who uses it:
 - The *Position and size* fields (`BoundsFields` → `Editor.SetBounds`), *Same size*, changing a shape's type, the circle toggle, the resize grips, the lane divider, the multi-group size fields, *Stack lanes* and `MoveBox` (alignment, Fit to contents, …).
+- Nudging with the arrow keys (`MoveBy`, groups carry their contents) and dragging (`SnapTopLeft`).
 
-To add a new kind of item: write its placement class (usually derived from `CornerPlacement` or `ShapePlacement`), add an instance to `Placements`, and return it from the item's `Placement` property. Dragging still snaps every item's centre to the grid; that's left as it is for now.
+What a drag or nudge moves is worked out once, by `Editor.MoveSetFor` (a `MoveSet`):
+- `Items`: everything that ends up moving.
+- `Roots`: the items whose own group isn't moving with them. A nudge grows the groups around them, and a drop updates which group they're in.
+- `Carry`: false while shapes are locked, or when Alt is held on a group's title.
+
+Dragging snaps every item's **centre** to the grid (`Placement.SnapTopLeft`), and the members of a dragged group still snap on their own. Both are waiting for the review of drag snapping, which will change them in `SnapTopLeft` and the move gesture.
+
+To add a new kind of item: write its placement class (usually derived from `CornerPlacement` or `ShapePlacement`), add an instance to `Placements`, and return it from the item's `Placement` property.
 
 ### Editor commands and shortcuts: Command pattern
 

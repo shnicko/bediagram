@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Components.Pages.Gestures;
+using BeDiagram.Editing;
 using BeDiagram.Editing.Lanes;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
@@ -44,8 +45,8 @@ public partial class Designer
             Editor.SelectOnly(id);
         }
         // Alt-drag moves group boxes without their contents; with shapes locked only group boxes move at all.
-        List<IBox> moving = Editor.DragSet(Editor.Selection, e.AltKey);
-        if (moving.Count == 0)
+        MoveSet moving = Editor.MoveSetFor(Editor.Selection, e.AltKey);
+        if (moving.Items.Count == 0)
         {
             return;
         }

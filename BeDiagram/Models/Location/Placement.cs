@@ -6,7 +6,8 @@ namespace BeDiagram.Models.Location;
 /// The steps every item's placement shares (Template Method): <see cref="Plan"/>, <see cref="Apply"/>,
 /// <see cref="Resize"/> and <see cref="Fields"/> always run in the same order and call the parts that differ —
 /// <see cref="SetOut"/> / <see cref="TopLeftFor"/> (centre or corner), <see cref="MinSize"/>,
-/// <see cref="FixedHeight"/> and <see cref="MoveTo"/> (a group carries its contents).
+/// <see cref="FixedHeight"/> and <see cref="MoveTo"/> / <see cref="MoveBy"/> (a group carries its contents).
+/// Dragging snaps with <see cref="SnapTopLeft"/>.
 /// </summary>
 public abstract class Placement : IPlacement
 {
@@ -68,5 +69,29 @@ public abstract class Placement : IPlacement
     {
         b.X = x;
         b.Y = y;
+    }
+
+    public virtual void MoveBy(IBox b, double dx, double dy, GroupTree tree, bool carry)
+    {
+        b.X += dx;
+        b.Y += dy;
+    }
+
+    /// <summary>
+    /// Every item snaps its <em>centre</em> for now, whatever its set-out point, so shapes of different sizes line up
+    /// and connectors stay straight. The coming review of drag snapping may change this per placement (e.g. corners for
+    /// text boxes and groups) by overriding it.
+    /// </summary>
+    public virtual (double X, double Y) SnapTopLeft(IBox b, double x, double y, bool snapX, bool snapY, Func<double, double> snap)
+    {
+        if (snapX)
+        {
+            x = snap(x + b.W / 2) - b.W / 2;
+        }
+        if (snapY)
+        {
+            y = snap(y + b.H / 2) - b.H / 2;
+        }
+        return (x, y);
     }
 }

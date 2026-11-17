@@ -44,4 +44,15 @@ public interface IPlacement
     /// <summary>Moves the top-left corner to (<paramref name="x"/>, <paramref name="y"/>). A group also carries
     /// everything inside it when <paramref name="carry"/> is set.</summary>
     void MoveTo(IBox b, double x, double y, GroupTree tree, bool carry);
+
+    /// <summary>Moves the item by (<paramref name="dx"/>, <paramref name="dy"/>), as a nudge does. A group also
+    /// carries everything inside it when <paramref name="carry"/> is set.</summary>
+    void MoveBy(IBox b, double dx, double dy, GroupTree tree, bool carry);
+
+    /// <summary>
+    /// Where a dragged item's top-left corner goes when its unsnapped corner would be (<paramref name="x"/>,
+    /// <paramref name="y"/>): on each axis the angle lock lets snap (<paramref name="snapX"/> /
+    /// <paramref name="snapY"/>), the item's snap point goes onto the grid with <paramref name="snap"/>.
+    /// </summary>
+    (double X, double Y) SnapTopLeft(IBox b, double x, double y, bool snapX, bool snapY, Func<double, double> snap);
 }
