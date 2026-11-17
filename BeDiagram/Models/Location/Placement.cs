@@ -77,6 +77,12 @@ public abstract class Placement : IPlacement
         b.Y += dy;
     }
 
+    /// <summary>The centre, unless the placement says otherwise (a text box's top centre).</summary>
+    public virtual (double X, double Y) SnapPoint(IBox b, double x, double y)
+    {
+        return (x + b.W / 2, y + b.H / 2);
+    }
+
     /// <summary>
     /// Every item snaps its <em>centre</em> for now, whatever its set-out point, so shapes of different sizes line up
     /// and connectors stay straight. The coming review of drag snapping may change this per placement (e.g. corners for

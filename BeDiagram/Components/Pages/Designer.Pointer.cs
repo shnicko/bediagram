@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Editing;
+using BeDiagram.Editing.Guides;
 using BeDiagram.Editing.Lanes;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
@@ -51,7 +52,7 @@ public partial class Designer
             return;
         }
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
-        gesture = new MoveGesture(this, x, y, moving);
+        gesture = new MoveGesture(this, x, y, moving, id);
     }
 
     /// <summary>Pressing on a group's body: click selects the group, drag draws a selection box inside it.</summary>
@@ -197,6 +198,19 @@ public partial class Designer
 
     // What the canvas reads about the gesture in progress.
     MarqueeGesture? Marquee => gesture as MarqueeGesture;
+
+    /// <summary>The centre guides to draw while a drag lines the grabbed item up with other shapes.</summary>
+    List<GuideLine> DragGuides
+    {
+        get
+        {
+            if (gesture is MoveGesture move)
+            {
+                return move.Guides;
+            }
+            return new List<GuideLine>();
+        }
+    }
     string SurfaceClass => gesture switch
     {
         PanGesture => "surface panning",

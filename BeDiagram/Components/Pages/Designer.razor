@@ -1,5 +1,6 @@
 @page "/"
 @implements IAsyncDisposable
+@using BeDiagram.Editing.Guides
 
 <PageTitle>@(D.Name)@(Editor.Dirty ? " •" : "") — BeDiagram</PageTitle>
 
@@ -112,6 +113,10 @@
                 @if (Marquee is { } mq)
                 {
                     <rect class="marquee" x="@F(mq.X)" y="@F(mq.Y)" width="@F(mq.W)" height="@F(mq.H)" />
+                }
+                @foreach (GuideLine guide in DragGuides)
+                {
+                    <line class="centre-guide" x1="@F(guide.X1)" y1="@F(guide.Y1)" x2="@F(guide.X2)" y2="@F(guide.Y2)" />
                 }
             </g>
         </svg>
