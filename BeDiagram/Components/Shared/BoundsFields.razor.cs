@@ -46,7 +46,7 @@ public partial class BoundsFields
         }
     }
 
-    /// <summary>What X and Y measure, shown next to the heading: "centre" or "top-left".</summary>
+    /// <summary>What X and Y measure, shown next to the heading: "centre", "top centre" or "top-left".</summary>
     string SetOutPoint
     {
         get

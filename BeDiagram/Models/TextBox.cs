@@ -21,13 +21,13 @@ public class TextBox : IGroupable
     public double W { get; set; } = 200;
     public double H { get; set; } = 60;
     public string? GroupId { get; set; }
-    /// <summary>Placed by its top-left corner. Not saved.</summary>
+    /// <summary>Placed by its top centre. Not saved.</summary>
     [JsonIgnore]
     public IPlacement Placement
     {
         get
         {
-            return Placements.Corner;
+            return Placements.TextBox;
         }
     }
 
