@@ -14,6 +14,12 @@ public interface IEditorContext
     /// <summary>Selected ids, in the order they were picked.</summary>
     List<string> Selection { get; }
 
+    /// <summary>The group hierarchy, for moving a group with what's inside it.</summary>
+    GroupTree Tree { get; }
+
+    /// <summary>The canvas zoom (screen px per world px), for distances measured on screen.</summary>
+    double Zoom { get; }
+
     IBox? FindBox(string? id);
     Group? FindGroup(string? id);
 

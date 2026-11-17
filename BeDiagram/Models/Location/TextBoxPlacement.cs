@@ -30,6 +30,11 @@ public class TextBoxPlacement : Placement
         return (40, 24);
     }
 
+    public override (double X, double Y) SnapPoint(IBox b, double x, double y)
+    {
+        return (x + b.W / 2, y);
+    }
+
     /// <summary>Snaps the top centre: the middle across, the top line down.</summary>
     public override (double X, double Y) SnapTopLeft(IBox b, double x, double y, bool snapX, bool snapY, Func<double, double> snap)
     {

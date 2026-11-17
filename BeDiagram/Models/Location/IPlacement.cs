@@ -50,6 +50,10 @@ public interface IPlacement
     /// carries everything inside it when <paramref name="carry"/> is set.</summary>
     void MoveBy(IBox b, double dx, double dy, GroupTree tree, bool carry);
 
+    /// <summary>The point that snaps and lines up while the item is dragged, for a top-left corner at
+    /// (<paramref name="x"/>, <paramref name="y"/>): a shape's or group's centre, a text box's top centre.</summary>
+    (double X, double Y) SnapPoint(IBox b, double x, double y);
+
     /// <summary>
     /// Where a dragged item's top-left corner goes when its unsnapped corner would be (<paramref name="x"/>,
     /// <paramref name="y"/>): on each axis the angle lock lets snap (<paramref name="snapX"/> /

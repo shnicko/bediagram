@@ -41,6 +41,7 @@ BeDiagram/
   Editing/Lanes/          swim lanes and auto-layout — Strategy (horizontal / vertical)
   Editing/Routing/        Tidy connectors (ConnectorTidier → TidyPlan)
   Editing/Angles/         angle lock — Strategy (free / 90 / 45 / 30)
+  Editing/Guides/         centre guides while dragging (CentreGuides, GuideLine)
   Services/               DiagramStore (save / open / list / delete; a name is its `/`-separated path), ExportView
   Services/Export/        export — Strategy (IExportFormat × IExportArea, ExportService), SvgDiagramWriter, Mermaid
   Services/Export/Pdf/    PDF made from the SVG export, no libraries
@@ -246,8 +247,10 @@ is already working:
   Method in the `Placement` base. Don't write `X + W / 2 … X = cx - w / 2` by hand, test `b is Group` to move
   contents, or hard-code minimum sizes: ask the placement. Typed position and size goes through `Editor.SetBounds`.
   What a drag or nudge moves is `Editor.MoveSetFor` (a `MoveSet`: `Items`, `Roots`, `Carry`): nudges move the movers
-  with `MoveBy`, and drags snap with `SnapTopLeft` (the centre of shapes and groups, the top centre of text boxes;
-  members of a dragged group still snap on their own).
+  with `MoveBy`. In a drag the grabbed item leads: its `SnapPoint` (the centre of shapes and groups, the top centre
+  of text boxes) lines up with a shape centre within 8 screen px (`CentreGuides` in `Editing/Guides/`, drawn from
+  `MoveGesture.Guides`), else snaps to the grid with `SnapTopLeft`; everything else moves by the lead's move with
+  `MoveTo`, so groups carry their members. Guides come from shapes only and are centres only (no edges or spacing).
 - **Text boxes** replace the old comments (`LegacyComment` only reads old files): one `TextBox` class, `IsComment`
   flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in
   `TextLayout.Layout(TextBox)`, drawn with SVG text in both renderers.

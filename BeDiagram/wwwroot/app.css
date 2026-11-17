@@ -130,6 +130,8 @@ kbd {
 .bend-handle.ns { cursor: ns-resize; }
 .side-target { fill: rgba(37, 99, 235, .15); stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; pointer-events: none; }
 .side-target.on { fill: var(--accent); stroke-dasharray: none; }
+/* Centre guides while dragging: the grabbed item lines up with another shape's centre. Canvas only, never exported. */
+.centre-guide { stroke: #e5484d; stroke-width: 1; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; pointer-events: none; }
 .marquee { fill: rgba(37, 99, 235, .07); stroke: var(--accent); stroke-dasharray: 4 3; pointer-events: none; }
 
 .textbox { cursor: move; }

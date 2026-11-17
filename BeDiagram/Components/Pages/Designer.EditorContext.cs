@@ -26,6 +26,22 @@ public partial class Designer : IEditorContext
         }
     }
 
+    GroupTree IEditorContext.Tree
+    {
+        get
+        {
+            return Editor.Tree;
+        }
+    }
+
+    double IEditorContext.Zoom
+    {
+        get
+        {
+            return Zoom;
+        }
+    }
+
     IBox? IEditorContext.FindBox(string? id)
     {
         return Editor.FindBox(id);
