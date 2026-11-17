@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using BeDiagram.Models.Layout;
@@ -34,6 +35,12 @@ public abstract class PanelLayout : IPanelLayout
     const double EmptyRoom = 20;
     const double TitleCharWidth = 6.9;
     const double DescCharWidth = 6.1;
+    /// <summary>Width of the number gutter on the left of a numbered row: one digit, or two and more.</summary>
+    const double NumberGutter = 30;
+    const double NumberGutterWide = 38;
+    /// <summary>Space between a row's left edge (or the number divider) and its icon or text.</summary>
+    const double RowInset = 12;
+    const double AfterDivider = 10;
 
     static string E(string s)
     {
@@ -61,20 +68,34 @@ public abstract class PanelLayout : IPanelLayout
         return count * RowH + (count - 1) * RowGap;
     }
 
-    /// <summary>Rows <paramref name="items"/> one under another, from (<paramref name="x"/>, <paramref name="top"/>).</summary>
-    protected void AddStack(List<PanelRow> rows, IEnumerable<ListItem> items, double x, double top, double w)
+    /// <summary>Rows <paramref name="items"/> one under another, from (<paramref name="x"/>, <paramref name="top"/>).
+    /// When <paramref name="numbered"/>, each row shows its place in this stack, starting at 1.</summary>
+    protected void AddStack(List<PanelRow> rows, IReadOnlyList<ListItem> items, double x, double top, double w, bool numbered)
     {
-        foreach (ListItem item in items)
+        // Every row in a stack gets the same gutter, so the dividers line up once there are 10 or more rows.
+        double gutter = 0;
+        if (numbered)
         {
-            rows.Add(Row(item, x, top, w));
+            gutter = items.Count >= 10 ? NumberGutterWide : NumberGutter;
+        }
+        for (int i = 0; i < items.Count; i++)
+        {
+            string? number = numbered ? (i + 1).ToString(CultureInfo.InvariantCulture) : null;
+            rows.Add(Row(items[i], x, top, w, number, gutter));
             top += RowH + RowGap;
         }
     }
 
-    PanelRow Row(ListItem item, double x, double y, double w)
+    /// <summary>One row: number gutter (when <paramref name="number"/> is set), then the icon, then the title and description.</summary>
+    PanelRow Row(ListItem item, double x, double y, double w, string? number, double gutter)
     {
         bool icon = Icons.Exists(item.Icon);
-        double textX = icon ? x + 12 + IconSize + 8 : x + 12;
+        double contentX = x + RowInset;
+        if (number is not null)
+        {
+            contentX = x + gutter + AfterDivider;
+        }
+        double textX = icon ? contentX + IconSize + 8 : contentX;
         double room = x + w - 10 - textX;
         string label = string.IsNullOrWhiteSpace(item.Label) ? "Item" : item.Label.Replace("\n", " ");
         string title = Fit(label, room, TitleCharWidth);
@@ -85,7 +106,7 @@ public abstract class PanelLayout : IPanelLayout
         }
         double titleY = desc is null ? y + RowH / 2 + 4.5 : y + 18;
         return new PanelRow(item, new Rect(x, y, w, RowH), title, desc, textX, titleY, y + 33,
-                            icon, x + 12, y + (RowH - IconSize) / 2);
+                            icon, contentX, y + (RowH - IconSize) / 2, number, x + gutter / 2, x + gutter);
     }
 
     /// <summary>Cuts text to fit a width, ending in … when it had to be cut.</summary>
@@ -142,6 +163,12 @@ public abstract class PanelLayout : IPanelLayout
         foreach (PanelRow r in Rows(n))
         {
             sb.Append($"<rect x=\"{F(r.Box.X)}\" y=\"{F(r.Box.Y)}\" width=\"{F(r.Box.W)}\" height=\"{F(r.Box.H)}\" rx=\"8\" fill=\"#ffffff\" stroke=\"{st.Stroke}\" stroke-opacity=\"0.6\" stroke-width=\"1.2\"/>");
+            // Numbered rows: the number centred in a gutter on the left, with a faint divider after it.
+            if (r.Number is not null)
+            {
+                sb.Append($"<text x=\"{F(r.NumberX)}\" y=\"{F(r.Box.Y + RowH / 2 + 4.5)}\" font-size=\"{F(TitleFontSize)}\" font-weight=\"600\" text-anchor=\"middle\" fill=\"{st.Stroke}\">{r.Number}</text>");
+                sb.Append($"<line x1=\"{F(r.DividerX)}\" y1=\"{F(r.Box.Y + 8)}\" x2=\"{F(r.DividerX)}\" y2=\"{F(r.Box.Y + RowH - 8)}\" stroke=\"{st.Stroke}\" stroke-opacity=\"0.3\" stroke-width=\"1\"/>");
+            }
             if (r.HasIcon)
             {
                 sb.Append($"<g transform=\"translate({F(r.IconX)},{F(r.IconY)}) scale({F(IconSize / 24)})\" fill=\"none\" stroke=\"{st.Stroke}\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(r.Item.Icon)}</g>");

@@ -106,6 +106,17 @@ public partial class DiagramEditor
         FitPanel(n);
     }
 
+    /// <summary>Show 1, 2, 3, … on the left of a list's or IPO box's rows (display only). One undo step.</summary>
+    public void SetNumberRows(Node n, bool numbered)
+    {
+        if (n.NumberRows == numbered)
+        {
+            return;
+        }
+        Change();
+        n.NumberRows = numbered;
+    }
+
     /// <summary>The rows a row is ordered among: the whole list, or its IPO section.</summary>
     static List<ListItem> Peers(Node n, string itemId) =>
         n.Kind is PanelKind panel ? panel.Peers(n, itemId) : new List<ListItem>();
@@ -123,6 +134,7 @@ public partial class DiagramEditor
         n.Items = null;
         n.SectionTitles = null;
         n.Stacked = false;
+        n.NumberRows = false;
         foreach (Edge e in Diagram.Edges)
         {
             if (e.From == n.Id)

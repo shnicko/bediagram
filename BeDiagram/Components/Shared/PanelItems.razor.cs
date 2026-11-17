@@ -53,6 +53,12 @@ public partial class PanelItems
         return OnChanged.InvokeAsync();
     }
 
+    Task NumberRowsChanged(ChangeEventArgs e)
+    {
+        Editor.SetNumberRows(Node, e.Value is true);
+        return OnChanged.InvokeAsync();
+    }
+
     Task Add(IpoSection? section)
     {
         Editor.AddItem(Node, section);

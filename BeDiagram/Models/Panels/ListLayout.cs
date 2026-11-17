@@ -18,7 +18,7 @@ public class ListLayout : PanelLayout
     public override List<PanelRow> Rows(Node n)
     {
         List<PanelRow> rows = new List<PanelRow>();
-        AddStack(rows, n.Rows, n.X + Pad, n.Y + Header + Pad, n.W - 2 * Pad);
+        AddStack(rows, n.Rows, n.X + Pad, n.Y + Header + Pad, n.W - 2 * Pad, n.NumberRows);
         return rows;
     }
 }

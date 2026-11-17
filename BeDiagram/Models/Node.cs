@@ -58,6 +58,10 @@ public class Node : IGroupable
     /// <summary>IPO nodes: sections stacked top to bottom instead of side by side. False (the default) is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Stacked { get; set; }
+    /// <summary>List and IPO nodes: show 1, 2, 3, … on the left of each row (an IPO box counts each section from 1).
+    /// For display only: the numbers come from the row order and aren't saved. False (the default) is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool NumberRows { get; set; }
     /// <summary>Optional longer note drawn in smaller text under the label. For shapes with the label inside,
     /// it sits under the shape. A blank description is stored as null (left out of the file).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
