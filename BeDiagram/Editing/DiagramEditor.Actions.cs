@@ -83,46 +83,33 @@ public partial class DiagramEditor
         Selection.AddRange(newSel);
     }
 
+    /// <summary>
+    /// Moves the selection by (<paramref name="dx"/>, <paramref name="dy"/>) (arrow keys). What moves is
+    /// <see cref="MoveSetFor"/>; groups carry their contents through their placement (only the boxes move while
+    /// <see cref="ShapesLocked"/>). One undo step.
+    /// </summary>
     public void Nudge(double dx, double dy)
     {
         if (Selection.Count == 0)
         {
             return;
         }
-        List<IBox> moved = DragSet(Selection, false);
-        if (moved.Count == 0)
+        MoveSet set = MoveSetFor(Selection, false);
+        if (set.Items.Count == 0)
         {
             view.ShowToast("Shapes are locked in place (Arrange → Lock shapes in place)");
             return;
         }
         Change();
-        HashSet<string> movedIds = new HashSet<string>();
-        foreach (IBox b in moved)
+        // Each mover's placement moves it, and a group carries what's inside it unless only the boxes move.
+        foreach (IBox b in set.Movers)
         {
-            movedIds.Add(b.Id);
-            b.X += dx;
-            b.Y += dy;
+            b.Placement.MoveBy(b, dx, dy, Tree, set.Carry);
         }
         // A group that stayed put but holds something that moved grows to fit it.
-        List<Group> toGrow = new List<Group>();
-        foreach (Group g in Diagram.Groups)
+        foreach (IGroupable root in set.Roots)
         {
-            if (movedIds.Contains(g.Id))
-            {
-                continue;
-            }
-            foreach (IGroupable m in Members(g))
-            {
-                if (movedIds.Contains(m.Id))
-                {
-                    toGrow.Add(g);
-                    break;
-                }
-            }
-        }
-        foreach (Group g in toGrow)
-        {
-            GrowGroup(g);
+            GrowAround(root);
         }
     }
 }

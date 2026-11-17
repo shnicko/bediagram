@@ -64,35 +64,59 @@ public partial class DiagramEditor
     }
 
     /// <summary>
-    /// What a drag or nudge of <paramref name="ids"/> moves. Normally the items and everything inside the groups among
-    /// them (<see cref="WithMembers"/>). With <paramref name="boxesOnly"/> (Alt held on a group's title) groups move
-    /// without their contents. While <see cref="ShapesLocked"/> only the group boxes move: shapes and text boxes stay.
+    /// What a drag or nudge of <paramref name="ids"/> moves (<see cref="MoveSet"/>). Normally groups carry their
+    /// contents: the items are the selection plus everything inside the groups among it (<see cref="WithMembers"/>).
+    /// With <paramref name="boxesOnly"/> (Alt held on a group's title) groups move without their contents. While
+    /// <see cref="ShapesLocked"/> only the group boxes move: shapes and text boxes stay. The roots are the items whose
+    /// own group isn't moving with them.
     /// </summary>
-    public List<IBox> DragSet(IEnumerable<string> ids, bool boxesOnly)
+    public MoveSet MoveSetFor(IEnumerable<string> ids, bool boxesOnly)
     {
-        if (!ShapesLocked && !boxesOnly)
+        bool carry = !ShapesLocked && !boxesOnly;
+        List<IBox> items = new List<IBox>();
+        if (carry)
         {
-            return WithMembers(ids);
+            items = WithMembers(ids);
         }
-        List<IBox> result = new List<IBox>();
-        HashSet<string> seen = new HashSet<string>();
-        foreach (string id in ids)
+        else
         {
-            IBox? b = FindBox(id);
-            if (b is null)
+            HashSet<string> seen = new HashSet<string>();
+            foreach (string id in ids)
             {
-                continue;
-            }
-            if (ShapesLocked && b is not Group)
-            {
-                continue;
-            }
-            if (seen.Add(b.Id))
-            {
-                result.Add(b);
+                IBox? b = FindBox(id);
+                if (b is null)
+                {
+                    continue;
+                }
+                if (ShapesLocked && b is not Group)
+                {
+                    continue;
+                }
+                if (seen.Add(b.Id))
+                {
+                    items.Add(b);
+                }
             }
         }
-        return result;
+        // The roots: items whose own group isn't among the items (with carry, what's left once the contents of moving
+        // groups are taken out).
+        HashSet<string> moving = new HashSet<string>();
+        foreach (IBox b in items)
+        {
+            moving.Add(b.Id);
+        }
+        List<IGroupable> roots = new List<IGroupable>();
+        foreach (IBox b in items)
+        {
+            if (b is IGroupable item)
+            {
+                if (item.GroupId is null || !moving.Contains(item.GroupId))
+                {
+                    roots.Add(item);
+                }
+            }
+        }
+        return new MoveSet(items, roots, carry);
     }
 
     /// <summary>A swim lane (top-level group) whose size is locked (<see cref="Diagram.LockLanes"/>): it doesn't grow or

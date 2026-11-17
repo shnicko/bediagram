@@ -245,7 +245,9 @@ is already working:
   `b.Placement` (a node's comes from its kind). The shared steps (`Plan`, `Apply`, `Resize`, `Fields`) are a Template
   Method in the `Placement` base. Don't write `X + W / 2 … X = cx - w / 2` by hand, test `b is Group` to move
   contents, or hard-code minimum sizes: ask the placement. Typed position and size goes through `Editor.SetBounds`.
-  Drag snapping (the centre of every item) is not part of it yet.
+  What a drag or nudge moves is `Editor.MoveSetFor` (a `MoveSet`: `Items`, `Roots`, `Carry`): nudges move the movers
+  with `MoveBy`, and drags snap with `SnapTopLeft` (every item's centre for now, members of a dragged group snapping
+  on their own: both wait for the drag-snapping review).
 - **Text boxes** replace the old comments (`LegacyComment` only reads old files): one `TextBox` class, `IsComment`
   flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in
   `TextLayout.Layout(TextBox)`, drawn with SVG text in both renderers.

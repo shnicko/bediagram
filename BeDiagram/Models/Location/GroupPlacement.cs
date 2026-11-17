@@ -2,7 +2,7 @@ namespace BeDiagram.Models.Location;
 
 /// <summary>
 /// A group: placed by its top-left corner like a text box, not smaller than <see cref="MinW"/> × <see cref="MinH"/>,
-/// and moving it carries everything inside it at any depth (Composite, see <see cref="GroupTree"/>) unless only the box
+/// and moving it (<see cref="MoveTo"/>, <see cref="MoveBy"/>) carries everything inside it at any depth (Composite, see <see cref="GroupTree"/>) unless only the box
 /// should move (shapes locked in place).
 /// </summary>
 public class GroupPlacement : CornerPlacement
@@ -21,10 +21,25 @@ public class GroupPlacement : CornerPlacement
         double dy = y - b.Y;
         b.X = x;
         b.Y = y;
-        if (!carry)
+        if (carry)
         {
-            return;
+            CarryContents(b, dx, dy, tree);
         }
+    }
+
+    public override void MoveBy(IBox b, double dx, double dy, GroupTree tree, bool carry)
+    {
+        b.X += dx;
+        b.Y += dy;
+        if (carry)
+        {
+            CarryContents(b, dx, dy, tree);
+        }
+    }
+
+    /// <summary>Moves everything inside the group, at any depth, by (<paramref name="dx"/>, <paramref name="dy"/>).</summary>
+    void CarryContents(IBox b, double dx, double dy, GroupTree tree)
+    {
         // Only groups get this placement, so the box is a group and its members follow it.
         Group g = (Group)b;
         foreach (IGroupable m in tree.Descendants(g))
