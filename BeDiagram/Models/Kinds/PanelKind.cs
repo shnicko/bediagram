@@ -1,5 +1,6 @@
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Location;
 using BeDiagram.Models.Panels;
 using BeDiagram.Models.Styles;
 
@@ -18,6 +19,15 @@ public abstract class PanelKind : NodeKind
         get
         {
             return true;
+        }
+    }
+
+    /// <summary>Placed by its centre, always as tall as its rows.</summary>
+    public override IPlacement Placement
+    {
+        get
+        {
+            return Placements.Panel;
         }
     }
 

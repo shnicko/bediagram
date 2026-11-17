@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using BeDiagram.Models.Location;
 using BeDiagram.Models.Styles;
 using static BeDiagram.Models.SvgNumbers;
 
@@ -20,6 +21,15 @@ public class Group : IGroupable
     public double Y { get; set; }
     public double W { get; set; } = 360;
     public double H { get; set; } = 220;
+    /// <summary>Placed by its top-left corner, and moving it carries what's inside. Not saved.</summary>
+    [JsonIgnore]
+    public IPlacement Placement
+    {
+        get
+        {
+            return Placements.Group;
+        }
+    }
     /// <summary>The group this group sits inside (null at the top level). Left out of the file when null.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? GroupId { get; set; }

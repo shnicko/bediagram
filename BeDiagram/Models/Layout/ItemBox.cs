@@ -1,4 +1,5 @@
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Location;
 
 namespace BeDiagram.Models.Layout;
 
@@ -25,6 +26,15 @@ public class ItemBox : IBox
     public double Y { get; set; }
     public double W { get; set; }
     public double H { get; set; }
+
+    /// <summary>Placed by its top-left corner (it's never moved or sized by hand).</summary>
+    public IPlacement Placement
+    {
+        get
+        {
+            return Placements.Corner;
+        }
+    }
 
     /// <summary>A row only has ports on its left and right.</summary>
     public IReadOnlyList<Side> ConnectSides

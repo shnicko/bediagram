@@ -182,7 +182,7 @@ BeDiagram/                   the web app project
   Models/Text/TextLayout.cs    node labels, descriptions, text boxes, wrapping
   Models/Text/PageHeader.cs    the page title and description: their text boxes on the page and the drawing area below them
   Models/Boxes.cs              hit tests and bounds
-  Models/BoxSizes.cs           how small a box may be made by hand (resize grips, Same size, the group's size fields)
+  Models/Location/             where an item is measured from and how it moves and resizes (Strategy pattern, see below)
   Rendering/SvgShapes.cs       SVG markup shared by canvas + export (halo, shadow, badges)
   Models/Icons.cs              built-in icon set (Lucide, ISC licence — see LICENSE-lucide.txt)
   Models/Catalogue/            the fixed value sets as enums (NodeType, OutcomeType, Side, EdgeStyle, …) and the type tables (NodeTypes, Outcomes, …)
@@ -199,7 +199,7 @@ BeDiagram/                   the web app project
   Editing/DiagramEditor.cs     the diagram being edited: state, lookups and undo (no UI code); the editing actions are
                                in partial files by area: .Creating, .Groups, .Alignment, .Selection, .Actions, .Page,
                                .Connectors, .Styling, .StepOrder, .Layout, .Text, .Panels (list / IPO rows),
-                               .Sizing (Same size, a group's position and size, Stack lanes edge to edge)
+                               .Sizing (Same size, an item's position and size, Stack lanes edge to edge)
   Editing/IEditorView.cs       what the editor needs from the screen (toast, view centre, start text editing)
   Editing/Labels/              Place text clear of connectors: TextPlacer (picks the side for the text under each shape)
   Editing/Angles/              angle lock for moves and placed steps (Strategy pattern): IAngleLock, FreeAngle, StepAngle, AngleLocks
@@ -301,6 +301,30 @@ To add a shape: write a class (usually derived from `ShapeOutline`), add an inst
 ### Shape emphasis: Strategy pattern
 
 How strongly a shape is drawn sits behind **`IEmphasis`**, with one class per level in `Models/Emphasis/`: `MajorEmphasis`, `NormalEmphasis` (the default) and `MinorEmphasis`, all derived from the `NodeEmphasis` base (the normal look). Each says what differs: it adjusts the colours (`Adjust`, used by `NodeStyle.For`), and gives the outline width, the shadow opacity, whether a halo ring is drawn, and the label's weight and colour. `Emphases.Of(node)` finds the strategy from the node's `emphasis` field; the canvas and the SVG export ask it directly (`Emphases.Of(n).StrokeWidth`, `.ShadowOpacity`, `.LabelWeight(n)`, `.BelowLabelColour`) and through `SvgShapes.HaloSvg`, so they always match. To add a level: write a class derived from `NodeEmphasis` and add it to `Emphases.All` — the panel buttons come from that list.
+
+### Item placement: Strategy pattern
+
+Where an item is measured from, and how it moves and resizes, sits behind **`IPlacement`**, with the classes in `Models/Location/`. Every `IBox` hands out its own as `b.Placement`:
+
+| Placement | Used by | Set-out point (X / Y) | Extra |
+|---|---|---|---|
+| `ShapePlacement` | classic shapes, circles, outcomes (from the node's kind) | centre of the circle or symbol | smallest size from the kind |
+| `PanelPlacement` | lists and IPO boxes | centre | height fixed: it follows the rows |
+| `CornerPlacement` | text boxes (and the plain drawing boxes) | top-left corner | not smaller than 40 × 24 |
+| `GroupPlacement` | groups | top-left corner | not smaller than 160 × 100; moving it carries everything inside (Composite, `GroupTree`) unless shapes are locked |
+
+The abstract base class `Placement` holds the steps every item shares (Template Method), so they run in the same order for all of them:
+- `Plan`: clamp to the smallest size, keep a fixed height, work out the corner from the set-out point, and return nothing when the box doesn't change.
+- `Apply`: move, then size.
+- `Resize`: a new size that keeps the set-out point.
+- `Fields`: the set-out point and size the panel shows.
+
+The subclasses only answer what differs: `SetOut` / `TopLeftFor`, `MinSize`, `FixedHeight`, and `MoveTo`.
+
+Who uses it:
+- The *Position and size* fields (`BoundsFields` → `Editor.SetBounds`), *Same size*, changing a shape's type, the circle toggle, the resize grips, the lane divider, the multi-group size fields, *Stack lanes* and `MoveBox` (alignment, Fit to contents, …).
+
+To add a new kind of item: write its placement class (usually derived from `CornerPlacement` or `ShapePlacement`), add an instance to `Placements`, and return it from the item's `Placement` property. Dragging still snaps every item's centre to the grid; that's left as it is for now.
 
 ### Editor commands and shortcuts: Command pattern
 

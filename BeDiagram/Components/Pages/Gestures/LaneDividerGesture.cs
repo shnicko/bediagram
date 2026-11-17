@@ -42,11 +42,13 @@ public class LaneDividerGesture : UndoableDragGesture
             return true;
         }
         double move = dx;
-        double min = BoxSizes.GroupMinW;
+        // Neither lane may get smaller than a group's smallest size.
+        (double minW, double minH) = before.Placement.MinSize(before);
+        double min = minW;
         if (rows)
         {
             move = dy;
-            min = BoxSizes.GroupMinH;
+            min = minH;
         }
         if (!Moved && Math.Abs(move) < 2)
         {

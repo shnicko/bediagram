@@ -55,7 +55,7 @@
     }
 </select>
 <ShapeStyle Editor="Editor" Nodes="[Node]" OnChanged="Redraw" />
-<BoundsFields Bounds="@NodeBounds" SetOutPoint="centre" MinW="@NodeMinW" MinH="@NodeMinH" FixedHeight="@Node.Kind.IsPanel" FixedHeightTip="A list or IPO box is always as tall as its rows" OnChange="SetBounds">X and Y are the centre of the shape — the middle of the circle or symbol, not of the text under it. W and H resize it about that centre, so connectors stay straight.@HeightNote</BoundsFields>
+<BoundsFields Editor="Editor" Item="Node" FixedHeightTip="A list or IPO box is always as tall as its rows" OnChanged="Redraw">X and Y are the centre of the shape — the middle of the circle or symbol, not of the text under it. W and H resize it about that centre, so connectors stay straight.@HeightNote</BoundsFields>
 
 @if (Node.Kind.IsPanel)
 {

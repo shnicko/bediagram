@@ -1,5 +1,6 @@
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Location;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
 
@@ -27,6 +28,10 @@ public interface INodeKind
 
     /// <summary>A titled box holding rows (<see cref="Node.Items"/>): lists and IPO boxes.</summary>
     bool IsPanel { get; }
+
+    /// <summary>How a node of this kind is placed (<see cref="Node.Placement"/>): by its centre, with the height fixed
+    /// for lists and IPO boxes.</summary>
+    IPlacement Placement { get; }
 
     /// <summary>Carries an <see cref="Node.Outcome"/> (pass, fail, …) that sets its shape, glyph and colour.</summary>
     bool HasOutcome { get; }

@@ -1,5 +1,6 @@
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Layout;
+using BeDiagram.Models.Location;
 using BeDiagram.Models.Shapes;
 using BeDiagram.Models.Styles;
 using BeDiagram.Models.Text;
@@ -33,6 +34,14 @@ public abstract class NodeKind : INodeKind
         get
         {
             return false;
+        }
+    }
+
+    public virtual IPlacement Placement
+    {
+        get
+        {
+            return Placements.Shape;
         }
     }
 

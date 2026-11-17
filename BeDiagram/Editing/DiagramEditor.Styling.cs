@@ -21,8 +21,8 @@ public partial class DiagramEditor
         NodeTypeInfo t = NodeTypes.Get(type.Value);
         // A label still showing the old type's (or outcome's) name follows the new type.
         bool namedForType = n.Label == n.Kind.NameOf(n);
-        double cx = n.X + n.W / 2;
-        double cy = n.Y + n.H / 2;
+        // The set-out point (the centre) before the type changes; the new size goes around it, snapped.
+        (double cx, double cy) = n.Placement.SetOut(n);
         n.Type = t.Key;
         INodeKind kind = n.Kind;
         // A circle-drawn shape stays a circle when the new type can be one, and its type's icon follows the type.
@@ -45,10 +45,9 @@ public partial class DiagramEditor
             n.Label = kind.RetypeLabel(n);
         }
         (double w, double h) = t.SizeFor(round);
+        (n.X, n.Y) = n.Placement.TopLeftFor(SnapV(cx), SnapV(cy), w, h);
         n.W = w;
         n.H = h;
-        n.X = SnapV(cx) - w / 2;
-        n.Y = SnapV(cy) - h / 2;
         foreach ((string k, string v) in t.NewProperties())
         {
             n.Properties.TryAdd(k, v);
@@ -135,8 +134,6 @@ public partial class DiagramEditor
 
     void ApplyRound(Node n, bool round)
     {
-        double cx = n.X + n.W / 2;
-        double cy = n.Y + n.H / 2;
         NodeTypeInfo t = NodeTypes.Get(n.Type);
         n.Round = round;
         if (round)
@@ -150,11 +147,9 @@ public partial class DiagramEditor
         {
             n.Icon = t.Icon;
         }
+        // The new size keeps the shape's centre.
         (double w, double h) = t.SizeFor(round);
-        n.W = w;
-        n.H = h;
-        n.X = cx - n.W / 2;
-        n.Y = cy - n.H / 2;
+        n.Placement.Resize(n, w, h);
         GrowAround(n);
     }
 

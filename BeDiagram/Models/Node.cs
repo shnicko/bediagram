@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
 using BeDiagram.Models.Kinds;
+using BeDiagram.Models.Location;
 using BeDiagram.Models.Serialization;
 
 namespace BeDiagram.Models;
@@ -17,6 +18,16 @@ public class Node : IGroupable
         get
         {
             return NodeTypes.Get(Type).Kind;
+        }
+    }
+    /// <summary>Placed by its centre; the kind says which placement (a list or IPO box keeps the height of its rows).
+    /// Not saved.</summary>
+    [JsonIgnore]
+    public IPlacement Placement
+    {
+        get
+        {
+            return Kind.Placement;
         }
     }
     public string Label { get; set; } = "";
