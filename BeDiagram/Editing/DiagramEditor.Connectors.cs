@@ -11,6 +11,10 @@ public partial class DiagramEditor
 {
     // ───────────── Connector style & labels ─────────────
 
+    /// <summary>The label position slider's range, in percent along the line.</summary>
+    public const int LabelPosMinPercent = 5;
+    public const int LabelPosMaxPercent = 95;
+
     public void SetDefaultConnector(EdgeStyle style)
     {
         Diagram.DefaultConnector = style;
@@ -61,6 +65,21 @@ public partial class DiagramEditor
 
     public void SetLabelPos(Edge e, double pos)
     {
+        Change();
+        e.LabelPos = pos;
+    }
+
+    /// <summary>Moves a connector's label along the line by whole percent steps (the ‹ › buttons beside the slider).
+    /// Lands on a whole percent and stays within the slider's 5–95% range.</summary>
+    public void NudgeLabelPos(Edge e, int percent)
+    {
+        int now = (int)Math.Round(e.LabelPos * 100);
+        int next = Math.Clamp(now + percent, LabelPosMinPercent, LabelPosMaxPercent);
+        double pos = next / 100.0;
+        if (pos == e.LabelPos)
+        {
+            return;
+        }
         Change();
         e.LabelPos = pos;
     }

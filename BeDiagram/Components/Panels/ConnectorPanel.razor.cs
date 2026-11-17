@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using BeDiagram.Components.Pages;
+using BeDiagram.Editing;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 
@@ -21,5 +22,33 @@ public partial class ConnectorPanel : DesignerPart
             return "Inline sits on the line; above and below set the text beside it, as the text reads.";
         }
         return "Inline sits on the line; above and below set the text beside it. On up-down lines above = left, below = right.";
+    }
+
+    /// <summary>The label's position in whole percent, as the slider shows it.</summary>
+    int LabelPercent()
+    {
+        return (int)Math.Round(Edge.LabelPos * 100);
+    }
+
+    /// <summary>False when the label is already at the start end of the slider (greys out ‹).</summary>
+    bool CanNudgeBack()
+    {
+        return LabelPercent() > DiagramEditor.LabelPosMinPercent;
+    }
+
+    /// <summary>False when the label is already at the far end of the slider (greys out ›).</summary>
+    bool CanNudgeOn()
+    {
+        return LabelPercent() < DiagramEditor.LabelPosMaxPercent;
+    }
+
+    void NudgeBack()
+    {
+        Editor.NudgeLabelPos(Edge, -1);
+    }
+
+    void NudgeOn()
+    {
+        Editor.NudgeLabelPos(Edge, 1);
     }
 }
