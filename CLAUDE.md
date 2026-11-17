@@ -30,6 +30,7 @@ BeDiagram/
   Models/Shapes/          shape outlines — Strategy (one *Outline class each, ShapeOutlines holds the instances), Paths
   Models/Panels/          list / IPO layouts — Strategy
   Models/Emphasis/        major / normal / minor looks — Strategy
+  Models/Location/        item placement — Strategy (shape / panel by centre, text box / group by top-left)
   Models/Routing/         connector routes (EdgeRouter → ElbowRouting / StraightRouting — Strategy), EdgeLabels
   Models/Text/            TextLayout: labels, descriptions, text boxes, wrapping
   Models/Styles/          looks and colours
@@ -238,6 +239,13 @@ is already working:
   `Emphases.Of(n)` — via `NodeStyle.For`, `SvgShapes.HaloSvg` and directly (`Emphases.Of(n).StrokeWidth`,
   `.ShadowOpacity`, `.LabelWeight(n)`, `.BelowLabelColour`). Don't test `n.Emphasis == EmphasisLevel.Major` elsewhere.
   Emphasis is a look only: it never changes size or step.
+- **Placement uses the Strategy pattern.** Where an item is measured from (its set-out point: a shape's centre, a
+  text box's or group's top-left corner), its smallest size, whether its height is fixed, how a new size keeps the
+  set-out point and whether moving it carries contents all belong in its `IPlacement` (`Models/Location/`), reached as
+  `b.Placement` (a node's comes from its kind). The shared steps (`Plan`, `Apply`, `Resize`, `Fields`) are a Template
+  Method in the `Placement` base. Don't write `X + W / 2 … X = cx - w / 2` by hand, test `b is Group` to move
+  contents, or hard-code minimum sizes: ask the placement. Typed position and size goes through `Editor.SetBounds`.
+  Drag snapping (the centre of every item) is not part of it yet.
 - **Text boxes** replace the old comments (`LegacyComment` only reads old files): one `TextBox` class, `IsComment`
   flags annotations (comment preset = `ApplyCommentStyle`, pin lines = `ApplyPinLook`). Layout in
   `TextLayout.Layout(TextBox)`, drawn with SVG text in both renderers.

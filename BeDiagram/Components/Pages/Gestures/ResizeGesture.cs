@@ -91,7 +91,7 @@ public class ResizeGesture : UndoableDragGesture
     void Resize(IBox r, Start s, double dx, double dy)
     {
         // A list / IPO node can't get shorter than its rows (they have a fixed height).
-        (double minW, double minH) = BoxSizes.MinSize(r);
+        (double minW, double minH) = r.Placement.MinSize(r);
 
         // Across: the right edge follows the pointer, or the left edge does and the right edge stays put.
         if (handle.H == 1)

@@ -1,19 +1,23 @@
 using BeDiagram.Editing.Lanes;
 using BeDiagram.Models;
+using BeDiagram.Models.Layout;
+using BeDiagram.Models.Location;
 
 namespace BeDiagram.Editing;
 
-/// <summary>Sizing by hand: match the size of the first picked item, the position and size fields of a group, a shape
-/// and a text box, the size fields for several selected groups, and stacking lanes edge to edge.</summary>
+/// <summary>Sizing by hand: match the size of the first picked item, the position and size fields (any item), the size
+/// fields for several selected groups, and stacking lanes edge to edge. Where an item is measured from and what a new
+/// size keeps is the item's <see cref="IPlacement"/>.</summary>
 public partial class DiagramEditor
 {
     // ───────────── Match size ─────────────
 
     /// <summary>
     /// Gives every selected item the width and / or height of the one picked first (the selection keeps its pick order).
-    /// Shapes keep their centre, so connectors stay straight; groups and text boxes keep their top-left corner. Nothing
-    /// is made smaller than it may be (<see cref="BoxSizes.MinSize"/>), and a list or IPO box keeps the height of its
-    /// rows. Groups around a changed item grow to fit it. One undo step.
+    /// Each keeps its set-out point (<see cref="IPlacement.Resize"/>): shapes their centre, so connectors stay straight;
+    /// groups and text boxes their top-left corner. Nothing is made smaller than it may be
+    /// (<see cref="IPlacement.MinSize"/>), and a list or IPO box keeps the height of its rows. Groups around a changed
+    /// item grow to fit it. One undo step.
     /// </summary>
     public void MatchSize(bool width, bool height)
     {
@@ -35,26 +39,19 @@ public partial class DiagramEditor
             {
                 continue;
             }
-            (double minW, double minH) = BoxSizes.MinSize(b);
+            IPlacement p = b.Placement;
+            (double minW, double minH) = p.MinSize(b);
             double w = b.W;
             double h = b.H;
             if (width)
             {
                 w = Math.Max(minW, first.W);
             }
-            // A list / IPO box is always as tall as its rows.
-            bool fixedHeight = b is Node panel && panel.Kind.IsPanel;
-            if (height && !fixedHeight)
+            if (height && !p.FixedHeight(b))
             {
                 h = Math.Max(minH, first.H);
             }
-            if (b is Node)
-            {
-                b.X += (b.W - w) / 2;
-                b.Y += (b.H - h) / 2;
-            }
-            b.W = w;
-            b.H = h;
+            p.Resize(b, w, h);
             changed.Add(b);
         }
         foreach (IBox b in changed)
@@ -76,101 +73,37 @@ public partial class DiagramEditor
         view.ShowToast($"{changed.Count} item{(changed.Count == 1 ? "" : "s")} given the {what} of the first one picked");
     }
 
-    // ───────────── A group's position and size ─────────────
+    // ───────────── Any item's position and size ─────────────
 
     /// <summary>
-    /// The group panel's X / Y / W / H fields. A new position moves the group with its contents, like dragging its title
-    /// (only the box while <see cref="ShapesLocked"/>); a new size keeps the top-left corner and leaves the contents
-    /// where they are. Not smaller than 160 × 100. Groups around it grow to fit. One undo step; none when nothing
-    /// changes.
+    /// The X / Y / W / H fields in the panel for a shape, a text box or a group. <paramref name="fields"/> holds the
+    /// item's set-out point and size as typed (<see cref="IPlacement.Fields"/>): the centre of a shape (the middle of
+    /// the circle or symbol, not the text under it), the top-left corner of a text box or group. The item's placement
+    /// works out the box (<see cref="IPlacement.Plan"/>: not below its smallest size, a list or IPO box keeps the height
+    /// of its rows) and puts it there (<see cref="IPlacement.Apply"/>): a new size keeps the set-out point, and a group
+    /// carries its contents (only the box while <see cref="ShapesLocked"/>). Typed values apply even while shapes are
+    /// locked, like the other explicit commands. Groups around it grow to fit. One undo step; none when nothing changes.
     /// </summary>
-    public void SetGroupBounds(Group g, double x, double y, double w, double h)
+    public void SetBounds(IGroupable item, Rect fields)
     {
-        w = Math.Max(BoxSizes.GroupMinW, w);
-        h = Math.Max(BoxSizes.GroupMinH, h);
-        if (x == g.X && y == g.Y && w == g.W && h == g.H)
+        IPlacement p = item.Placement;
+        Rect? box = p.Plan(item, fields);
+        if (box is null)
         {
             return;
         }
         Change();
-        if (x != g.X || y != g.Y)
-        {
-            if (ShapesLocked)
-            {
-                g.X = x;
-                g.Y = y;
-            }
-            else
-            {
-                MoveBox(g, x, y);
-            }
-        }
-        g.W = w;
-        g.H = h;
-        GrowAround(g);
-    }
-
-    // ───────────── A shape's position and size ─────────────
-
-    /// <summary>
-    /// The shape panel's X / Y / W / H fields. X and Y are the centre of the shape (the middle of a circle or symbol,
-    /// not of the text under it), so a new size grows or shrinks it about its centre and connectors stay straight, as
-    /// in <see cref="MatchSize"/>. Not smaller than <see cref="BoxSizes.MinSize"/>; a list or IPO box keeps the height
-    /// of its rows. Typed values apply even while <see cref="ShapesLocked"/>, like the other explicit commands. Groups
-    /// around it grow to fit. One undo step; none when nothing changes.
-    /// </summary>
-    public void SetNodeBounds(Node n, double centreX, double centreY, double w, double h)
-    {
-        (double minW, double minH) = BoxSizes.MinSize(n);
-        w = Math.Max(minW, w);
-        h = Math.Max(minH, h);
-        if (n.Kind.IsPanel)
-        {
-            h = n.H;
-        }
-        double x = centreX - w / 2;
-        double y = centreY - h / 2;
-        if (x == n.X && y == n.Y && w == n.W && h == n.H)
-        {
-            return;
-        }
-        Change();
-        n.X = x;
-        n.Y = y;
-        n.W = w;
-        n.H = h;
-        GrowAround(n);
-    }
-
-    // ───────────── A text box's position and size ─────────────
-
-    /// <summary>
-    /// The text box panel's X / Y / W / H fields. Like a group, X and Y are the top-left corner and a new size keeps
-    /// it. Not smaller than 40 × 24. Groups around it grow to fit. One undo step; none when nothing changes.
-    /// </summary>
-    public void SetTextBoxBounds(TextBox t, double x, double y, double w, double h)
-    {
-        (double minW, double minH) = BoxSizes.MinSize(t);
-        w = Math.Max(minW, w);
-        h = Math.Max(minH, h);
-        if (x == t.X && y == t.Y && w == t.W && h == t.H)
-        {
-            return;
-        }
-        Change();
-        t.X = x;
-        t.Y = y;
-        t.W = w;
-        t.H = h;
-        GrowAround(t);
+        p.Apply(item, box, Tree, !ShapesLocked);
+        GrowAround(item);
     }
 
     // ───────────── Several groups' size at once ─────────────
 
     /// <summary>
     /// The W / H fields in the panel for several selected items: gives every group in <paramref name="groups"/> the
-    /// width and / or height typed (null = keep each group's own). Like <see cref="SetGroupBounds"/>, each keeps its
-    /// top-left corner, its contents stay put, nothing goes below 160 × 100 and groups around a changed one grow to fit.
+    /// width and / or height typed (null = keep each group's own). Like <see cref="SetBounds"/>, each keeps its
+    /// top-left corner (<see cref="IPlacement.Resize"/>), its contents stay put, nothing goes below its smallest size
+    /// (160 × 100) and groups around a changed one grow to fit.
     /// One undo step; none when nothing changes.
     /// </summary>
     public void SetGroupsSize(IReadOnlyList<Group> groups, double? width, double? height)
@@ -180,15 +113,16 @@ public partial class DiagramEditor
         List<(double w, double h)> sizes = new List<(double w, double h)>();
         foreach (Group g in groups)
         {
+            (double minW, double minH) = g.Placement.MinSize(g);
             double w = g.W;
             double h = g.H;
             if (width is not null)
             {
-                w = Math.Max(BoxSizes.GroupMinW, width.Value);
+                w = Math.Max(minW, width.Value);
             }
             if (height is not null)
             {
-                h = Math.Max(BoxSizes.GroupMinH, height.Value);
+                h = Math.Max(minH, height.Value);
             }
             if (w != g.W || h != g.H)
             {
@@ -203,8 +137,8 @@ public partial class DiagramEditor
         Change();
         for (int i = 0; i < changing.Count; i++)
         {
-            changing[i].W = sizes[i].w;
-            changing[i].H = sizes[i].h;
+            Group g = changing[i];
+            g.Placement.Resize(g, sizes[i].w, sizes[i].h);
         }
         foreach (Group g in changing)
         {
@@ -245,15 +179,7 @@ public partial class DiagramEditor
         Change();
         foreach (LanePlace place in plan)
         {
-            if (ShapesLocked)
-            {
-                place.Lane.X = place.X;
-                place.Lane.Y = place.Y;
-            }
-            else
-            {
-                MoveBox(place.Lane, place.X, place.Y);
-            }
+            place.Lane.Placement.MoveTo(place.Lane, place.X, place.Y, Tree, !ShapesLocked);
         }
         string way = "as columns";
         if (LaneStacker.LayoutOf(lanes) == LaneLayouts.Horizontal)

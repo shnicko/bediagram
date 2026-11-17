@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using BeDiagram.Models.Location;
 using BeDiagram.Models.Styles;
 using static BeDiagram.Models.SvgNumbers;
 
@@ -20,6 +21,15 @@ public class Group : IGroupable
     public double Y { get; set; }
     public double W { get; set; } = 360;
     public double H { get; set; } = 220;
+    /// <summary>Placed by its top-left corner, and moving it carries what's inside. Not saved.</summary>
+    [JsonIgnore]
+    public IPlacement Placement
+    {
+        get
+        {
+            return Placements.Group;
+        }
+    }
     /// <summary>The group this group sits inside (null at the top level). Left out of the file when null.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? GroupId { get; set; }
@@ -39,26 +49,54 @@ public class Group : IGroupable
     public string HeaderStyle { get; set; } = GroupLook.Band;
 
     /// <summary>A copy with a new id; every other field (title, colour, fill, border, title style, link, parent group) is kept.</summary>
-    public Group Copy() { Group c = (Group)MemberwiseClone(); c.Id = Node.NewId("g"); return c; }
+    public Group Copy()
+    {
+        Group c = (Group)MemberwiseClone();
+        c.Id = Node.NewId("g");
+        return c;
+    }
 
     // ───────────── Title geometry (top / bottom, band / plain text) ─────────────
 
 
     /// <summary>A plain-text title at the bottom sits under the box, outside it.</summary>
-    public bool TitleBelowBox() => HeaderPos == GroupLook.Bottom && HeaderStyle == GroupLook.Text;
+    public bool TitleBelowBox()
+    {
+        return HeaderPos == GroupLook.Bottom && HeaderStyle == GroupLook.Text;
+    }
 
     /// <summary>Space the title takes inside the top of the group.</summary>
-    public double InsetTop() => HeaderPos == GroupLook.Bottom ? 0 : Header;
+    public double InsetTop()
+    {
+        if (HeaderPos == GroupLook.Bottom)
+        {
+            return 0;
+        }
+        return Header;
+    }
 
     /// <summary>Space the title takes inside the bottom of the group (a band at the bottom).</summary>
-    public double InsetBottom() => HeaderPos == GroupLook.Bottom && HeaderStyle == GroupLook.Band ? Header : 0;
+    public double InsetBottom()
+    {
+        if (HeaderPos == GroupLook.Bottom && HeaderStyle == GroupLook.Band)
+        {
+            return Header;
+        }
+        return 0;
+    }
 
     /// <summary>The title area: the band (top or bottom), the top strip for a plain title, or the strip under the box.
     /// Used to draw the band, as the drag handle, and for the inline title editor.</summary>
     public (double X, double Y, double W, double H) TitleArea()
     {
-        if (TitleBelowBox()) return (X, Y + H + 2, W, Header - 4);
-        if (HeaderPos == GroupLook.Bottom) return (X, Y + H - Header, W, Header);
+        if (TitleBelowBox())
+        {
+            return (X, Y + H + 2, W, Header - 4);
+        }
+        if (HeaderPos == GroupLook.Bottom)
+        {
+            return (X, Y + H - Header, W, Header);
+        }
         return (X, Y, W, Header);
     }
 
@@ -66,17 +104,27 @@ public class Group : IGroupable
     public (double X, double Y, string Anchor) TitlePos()
     {
         (double x, double y, double w, double h) = TitleArea();
-        return TitleBelowBox() ? (x + w / 2, y + 17, "middle") : (x + 14, y + 21, "start");
+        if (TitleBelowBox())
+        {
+            return (x + w / 2, y + 17, "middle");
+        }
+        return (x + 14, y + 21, "start");
     }
 
     /// <summary>The tinted band behind the title (rounded on the outside corners), or null for a plain-text title.</summary>
     public string? BandPath()
     {
-        if (HeaderStyle != GroupLook.Band) return null;
-        double x = X, w = W, r = 10;
+        if (HeaderStyle != GroupLook.Band)
+        {
+            return null;
+        }
+        double x = X;
+        double w = W;
+        double r = 10;
         if (HeaderPos == GroupLook.Bottom)
         {
-            double y0 = Y + H - Header, y1 = Y + H;
+            double y0 = Y + H - Header;
+            double y1 = Y + H;
             return $"M{F(x)},{F(y0)} V{F(y1 - r)} Q{F(x)},{F(y1)} {F(x + r)},{F(y1)} H{F(x + w - r)} Q{F(x + w)},{F(y1)} {F(x + w)},{F(y1 - r)} V{F(y0)} Z";
         }
         double y = Y;
@@ -84,5 +132,12 @@ public class Group : IGroupable
     }
 
     /// <summary>Fill opacity of the group body (0 = no fill; the body stays clickable).</summary>
-    public double FillOpacity() => Filled ? 0.6 : 0;
+    public double FillOpacity()
+    {
+        if (Filled)
+        {
+            return 0.6;
+        }
+        return 0;
+    }
 }

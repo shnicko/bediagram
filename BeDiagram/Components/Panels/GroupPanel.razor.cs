@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using BeDiagram.Components.Pages;
 using BeDiagram.Models;
-using BeDiagram.Models.Layout;
 
 namespace BeDiagram.Components.Panels;
 
@@ -20,19 +19,5 @@ public partial class GroupPanel : DesignerPart
     bool IsTopLevel(Group g)
     {
         return Editor.Tree.Parent(g) is null;
-    }
-
-    /// <summary>The position and size fields' values: the top-left corner and the size.</summary>
-    Rect GroupBounds
-    {
-        get
-        {
-            return new Rect(Group.X, Group.Y, Group.W, Group.H);
-        }
-    }
-
-    void SetBounds(Rect r)
-    {
-        Editor.SetGroupBounds(Group, r.X, r.Y, r.W, r.H);
     }
 }

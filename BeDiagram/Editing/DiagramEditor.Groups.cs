@@ -1,4 +1,5 @@
 using BeDiagram.Models;
+using BeDiagram.Models.Location;
 using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Editing;
@@ -175,13 +176,11 @@ public partial class DiagramEditor
         if (outer is not null) GrowGroup(outer);
     }
 
-    /// <summary>Moves a box; a group carries everything inside it (at any depth) with it.</summary>
+    /// <summary>Moves a box's top-left corner to (<paramref name="x"/>, <paramref name="y"/>); a group carries
+    /// everything inside it (at any depth) with it (<see cref="IPlacement.MoveTo"/>).</summary>
     public void MoveBox(IBox b, double x, double y)
     {
-        double dx = x - b.X, dy = y - b.Y;
-        b.X = x; b.Y = y;
-        if (b is Group g)
-            foreach (IGroupable m in Tree.Descendants(g)) { m.X += dx; m.Y += dy; }
+        b.Placement.MoveTo(b, x, y, Tree, true);
     }
 
     /// <summary>Moving or restyling the title changes the room it takes inside a group, so each group grows if needed.</summary>

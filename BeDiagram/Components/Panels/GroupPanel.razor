@@ -4,7 +4,7 @@
 <label>Title</label>
 <input @bind="Group.Title" @bind:event="oninput" @bind:after="Editor.MarkDirty" @onfocus="Editor.Checkpoint" />
 <GroupStyle Editor="Editor" Groups="[Group]" OnChanged="Redraw" />
-<BoundsFields Bounds="@GroupBounds" SetOutPoint="top-left" MinW="@BoxSizes.GroupMinW" MinH="@BoxSizes.GroupMinH" OnChange="SetBounds">X and Y are the top-left corner of the group; moving it carries what's inside (just the box while shapes are locked). W and H resize it from the top-left corner; what's inside stays put.</BoundsFields>
+<BoundsFields Editor="Editor" Item="Group" OnChanged="Redraw">X and Y are the top-left corner of the group; moving it carries what's inside (just the box while shapes are locked). W and H resize it from the top-left corner; what's inside stays put.</BoundsFields>
 <p class="muted">@MemberCount(Group) item@(MemberCount(Group) == 1 ? "" : "s") inside <InfoTip>Drag items in or out of the box to change what's in the group.</InfoTip></p>
 @if (Editor.FindGroup(Group.GroupId) is { } pg)
 {

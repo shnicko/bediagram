@@ -1,4 +1,6 @@
+using System.Text.Json.Serialization;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Location;
 using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Models;
@@ -19,6 +21,15 @@ public class TextBox : IGroupable
     public double W { get; set; } = 200;
     public double H { get; set; } = 60;
     public string? GroupId { get; set; }
+    /// <summary>Placed by its top-left corner. Not saved.</summary>
+    [JsonIgnore]
+    public IPlacement Placement
+    {
+        get
+        {
+            return Placements.Corner;
+        }
+    }
 
     /// <summary>Background colour key from <see cref="TextPalette"/>; null = transparent.</summary>
     public string? Fill { get; set; }
