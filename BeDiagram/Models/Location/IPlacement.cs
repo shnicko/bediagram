@@ -5,13 +5,14 @@ namespace BeDiagram.Models.Location;
 /// <summary>
 /// Where an item is and how it moves and resizes (Strategy pattern). Every <see cref="IBox"/> has one, reached as
 /// <c>b.Placement</c>: shapes measure from their centre (<see cref="ShapePlacement"/>, <see cref="PanelPlacement"/>),
-/// text boxes and groups from their top-left corner (<see cref="CornerPlacement"/>, <see cref="GroupPlacement"/>).
+/// text boxes from their top centre (<see cref="TextBoxPlacement"/>), groups from their top-left corner
+/// (<see cref="GroupPlacement"/>, a <see cref="CornerPlacement"/>).
 /// The point X / Y are measured from is the item's <em>set-out point</em>; a new size keeps it where it is.
 /// <see cref="Placement"/> holds the steps every item shares; the classes override only what differs.
 /// </summary>
 public interface IPlacement
 {
-    /// <summary>What X and Y measure, for the panel heading: "centre" or "top-left".</summary>
+    /// <summary>What X and Y measure, for the panel heading: "centre", "top centre" or "top-left".</summary>
     string SetOutName { get; }
 
     /// <summary>The item's set-out point now.</summary>

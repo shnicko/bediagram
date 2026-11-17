@@ -12,7 +12,7 @@
 }
 
 <TextBoxStyle Editor="Editor" Boxes="[Box]" OnChanged="Redraw" />
-<BoundsFields Editor="Editor" Item="Box" OnChanged="Redraw">X and Y are the top-left corner of the box, as for a group. W and H resize it from that corner.</BoundsFields>
+<BoundsFields Editor="Editor" Item="Box" OnChanged="Redraw">X and Y are the top centre of the box, so it lines up with the shapes it sits under or over. W resizes it evenly about that point; H keeps the top line where it is.</BoundsFields>
 <div class="actions"><button @onclick="() => Editor.FitTextHeight(Box)">Fit height to text</button></div>
 
 @if (Editor.FindGroup(Box.GroupId) is { } tg)

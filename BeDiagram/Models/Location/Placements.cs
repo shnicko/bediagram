@@ -7,5 +7,6 @@ public static class Placements
     public static readonly IPlacement Shape = new ShapePlacement();
     public static readonly IPlacement Panel = new PanelPlacement();
     public static readonly IPlacement Corner = new CornerPlacement();
+    public static readonly IPlacement TextBox = new TextBoxPlacement();
     public static readonly IPlacement Group = new GroupPlacement();
 }
