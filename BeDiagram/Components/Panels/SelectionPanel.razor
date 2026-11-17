@@ -56,6 +56,7 @@
 {
     <h4 class="bulk">Groups · @SelectedGroups.Count</h4>
     <GroupStyle Editor="Editor" Groups="SelectedGroups" OnChanged="Redraw" />
+    <GroupSize @key="SelectedGroupKey" Editor="Editor" Groups="SelectedGroups" OnChanged="Redraw" />
 }
 @if (SelectedLaneCount >= 2)
 {
