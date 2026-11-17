@@ -310,6 +310,9 @@ kbd {
 .seg.wide { display: flex; }
 .seg.wide button { flex: 1; justify-content: center; font-size: 12.5px; }
 .panel input[type=range] { padding: 0; accent-color: var(--accent); }
+.nudge-range { display: flex; align-items: center; gap: 6px; }
+.nudge-range input[type=range] { flex: 1; min-width: 0; }
+.nudge-range .nudge { width: 24px; height: 24px; padding: 0; flex: none; font-size: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
 .edge-label-bg.sel { stroke: var(--accent); }
 
 .edge-label-wrap { cursor: pointer; }

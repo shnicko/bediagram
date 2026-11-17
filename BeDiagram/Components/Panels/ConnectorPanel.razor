@@ -69,9 +69,13 @@
     }
 </div>
 
-<label>Label position <span class="muted">@((int)Math.Round(Edge.LabelPos * 100))% along</span></label>
-<input type="range" min="0.05" max="0.95" step="0.05" value="@F(Edge.LabelPos)"
-       @onpointerdown="Editor.Checkpoint" @oninput="e => Editor.DragLabelPos(Edge, e.Value)" />
+<label>Label position <span class="muted">@LabelPercent()% along</span></label>
+<div class="nudge-range">
+    <button class="nudge" title="Move the label 1% towards the start" disabled="@(!CanNudgeBack())" @onclick="NudgeBack">‹</button>
+    <input type="range" min="0.05" max="0.95" step="0.01" value="@F(Edge.LabelPos)"
+           @onpointerdown="Editor.Checkpoint" @oninput="e => Editor.DragLabelPos(Edge, e.Value)" />
+    <button class="nudge" title="Move the label 1% towards the end" disabled="@(!CanNudgeOn())" @onclick="NudgeOn">›</button>
+</div>
 <div class="chips">
     <button class="chip" @onclick="() => Editor.SetLabelPos(Edge, 0.15)">Near start</button>
     <button class="chip" @onclick="() => Editor.SetLabelPos(Edge, 0.5)">Middle</button>
