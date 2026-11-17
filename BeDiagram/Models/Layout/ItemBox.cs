@@ -11,7 +11,12 @@ public class ItemBox : IBox
 {
     public ItemBox(string nodeId, string itemId, double x, double y, double w, double h)
     {
-        Id = nodeId; ItemId = itemId; X = x; Y = y; W = w; H = h;
+        Id = nodeId;
+        ItemId = itemId;
+        X = x;
+        Y = y;
+        W = w;
+        H = h;
     }
 
     public string Id { get; }
@@ -22,11 +27,26 @@ public class ItemBox : IBox
     public double H { get; set; }
 
     /// <summary>A row only has ports on its left and right.</summary>
-    public IReadOnlyList<Side> ConnectSides => Sides.LeftRight;
+    public IReadOnlyList<Side> ConnectSides
+    {
+        get
+        {
+            return Sides.LeftRight;
+        }
+    }
 
     /// <summary>The side a connector leaves this row from: a pinned left / right is kept, anything else becomes the
     /// side facing <paramref name="other"/>.</summary>
-    public Side SideFacing(IBox other, Side? side) =>
-        side is Side.Left or Side.Right ? side.Value
-        : other.X + other.W / 2 < X + W / 2 ? Side.Left : Side.Right;
+    public Side SideFacing(IBox other, Side? side)
+    {
+        if (side == Side.Left || side == Side.Right)
+        {
+            return side.Value;
+        }
+        if (other.X + other.W / 2 < X + W / 2)
+        {
+            return Side.Left;
+        }
+        return Side.Right;
+    }
 }

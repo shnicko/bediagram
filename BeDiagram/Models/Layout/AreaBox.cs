@@ -5,10 +5,20 @@ public class AreaBox : IBox
 {
     public AreaBox(double x, double y, double w, double h)
     {
-        X = x; Y = y; W = w; H = h;
+        X = x;
+        Y = y;
+        W = w;
+        H = h;
     }
 
-    public string Id => "";
+    public string Id
+    {
+        get
+        {
+            return "";
+        }
+    }
+
     public double X { get; set; }
     public double Y { get; set; }
     public double W { get; set; }
