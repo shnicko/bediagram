@@ -19,20 +19,87 @@ public partial class ShapeStyle
     /// <summary>Called after every change, so the page redraws the canvas (a click here only re-renders this component).</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
 
-    Task Set(Action<Node> change) { Editor.Restyle(Nodes, change); return OnChanged.InvokeAsync(); }
+    Task Set(Action<Node> change)
+    {
+        Editor.Restyle(Nodes, change);
+        return OnChanged.InvokeAsync();
+    }
 
-    Task SetEmphasis(EmphasisLevel level) { Editor.SetEmphasis(Nodes, level); return OnChanged.InvokeAsync(); }
+    Task SetEmphasis(EmphasisLevel level)
+    {
+        Editor.SetEmphasis(Nodes, level);
+        return OnChanged.InvokeAsync();
+    }
 
-    string On(Func<Node, bool> test) => Nodes.Count > 0 && Nodes.All(test) ? "on" : "";
+    /// <summary>"on" when there are shapes and every one passes <paramref name="test"/>.</summary>
+    string On(Func<Node, bool> test)
+    {
+        if (Nodes.Count == 0)
+        {
+            return "";
+        }
+        foreach (Node n in Nodes)
+        {
+            if (!test(n))
+            {
+                return "";
+            }
+        }
+        return "on";
+    }
 
-    static bool Forced(Node n) => Emphases.Of(n).ForcesSolidFill;
+    static bool Forced(Node n)
+    {
+        return Emphases.Of(n).ForcesSolidFill;
+    }
 
-    bool AllFilled => Nodes.All(n => n.Filled);
+    /// <summary>True when every shape passes <paramref name="test"/> (also when there are none).</summary>
+    bool Every(Func<Node, bool> test)
+    {
+        foreach (Node n in Nodes)
+        {
+            if (!test(n))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool AllFilled
+    {
+        get
+        {
+            return Every(n => n.Filled);
+        }
+    }
 
     /// <summary>Major steps always have a solid fill, so the box is ticked and greyed out when every shape is major.</summary>
-    bool FillForced => Nodes.All(Forced);
+    bool FillForced
+    {
+        get
+        {
+            return Every(Forced);
+        }
+    }
 
-    bool FillChecked => Nodes.All(n => n.Filled || Forced(n));
+    bool FillChecked
+    {
+        get
+        {
+            return Every(n => n.Filled || Forced(n));
+        }
+    }
 
-    string FillTitle => FillForced ? "Major steps always have a solid fill" : "";
+    string FillTitle
+    {
+        get
+        {
+            if (FillForced)
+            {
+                return "Major steps always have a solid fill";
+            }
+            return "";
+        }
+    }
 }
