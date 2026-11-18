@@ -20,6 +20,10 @@ public partial class Designer : IDesignerHost, ICanvasInput
 
     void IDesignerHost.ShowStepOrder() => ShowStepOrder();
     void IDesignerHost.ShowShortcuts() => ShowShortcuts();
+    void IDesignerHost.ShowJson()
+    {
+        ShowJson();
+    }
     void IDesignerHost.NewDiagram() => NewDiagram();
     void IDesignerHost.ShowOpen() => ShowOpen();
     Task IDesignerHost.Export(ExportChoice choice, ExportOptions options) => Export(choice, options);

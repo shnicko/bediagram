@@ -183,6 +183,10 @@ else if (dialog == Dialog.StepOrder)
 {
     <StepOrderDialog Editor="Editor" OnChanged="StateHasChanged" OnClose="CloseDialog" />
 }
+else if (dialog == Dialog.Json)
+{
+    <JsonDialog Editor="Editor" OnApplied="JsonApplied" OnClose="CloseDialog" />
+}
 else if (dialog == Dialog.ConfirmNew)
 {
     <ConfirmNewDialog DiagramName="@D.Name" OnDiscard="DiscardAndNew" OnCancel="CloseDialog" />

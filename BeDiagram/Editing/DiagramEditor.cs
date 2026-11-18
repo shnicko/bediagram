@@ -1,4 +1,3 @@
-using System.Text.Json;
 using BeDiagram.Editing.Angles;
 using BeDiagram.Editing.Lanes;
 using BeDiagram.Editing.Routing;
@@ -78,7 +77,6 @@ public partial class DiagramEditor
     readonly List<string> undo = new();
     readonly List<string> redo = new();
     const int MaxUndo = 100;
-    static readonly JsonSerializerOptions SnapshotJson = new();
 
     public bool CanUndo => undo.Count > 0;
     public bool CanRedo => redo.Count > 0;
@@ -226,9 +224,12 @@ public partial class DiagramEditor
         return result;
     }
 
-    // ───────────── Undo / redo (Memento: whole-diagram snapshots) ─────────────
+    // ───────────── Undo / redo (Memento: whole-diagram snapshots, in the file's JSON format) ─────────────
 
-    public string Snapshot() => JsonSerializer.Serialize(Diagram, SnapshotJson);
+    public string Snapshot()
+    {
+        return DiagramJson.Write(Diagram);
+    }
 
     public void PushUndo(string snap)
     {
@@ -247,10 +248,13 @@ public partial class DiagramEditor
     void Restore(string snap)
     {
         string name = Diagram.Name;
-        Diagram = JsonSerializer.Deserialize<Diagram>(snap, SnapshotJson) ?? new Diagram();
+        Diagram = DiagramJson.Read(snap);
         Diagram.Name = name;
         Selection.RemoveAll(id => FindBox(id) is null);
-        if (SelectedEdgeId is not null && SelectedEdge is null) SelectedEdgeId = null;
+        if (SelectedEdgeId is not null && SelectedEdge is null)
+        {
+            SelectedEdgeId = null;
+        }
         EditingId = null;
         Dirty = true;
     }

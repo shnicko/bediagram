@@ -1,0 +1,31 @@
+<div class="modal-bg">
+    <div class="modal json-dialog" @onclick:stopPropagation="true">
+        <h3>Edit as JSON <InfoTip>The whole diagram, exactly as it is saved. It all starts selected, so Ctrl+V replaces it and Ctrl+C copies it. Edit it or paste in new JSON, then <strong>Apply</strong> to redraw the diagram from it (Ctrl+Z undoes it). <strong>Cancel</strong> leaves the diagram as it was. The diagram's name stays the same.</InfoTip></h3>
+        <textarea id="json-text" class="json-text" spellcheck="false" wrap="off" @bind="text"></textarea>
+        @if (errors.Count > 0)
+        {
+            <div class="json-errors">
+                <strong>@ErrorHeading — nothing was changed</strong>
+                <ul>
+                    @foreach (string e in ShownErrors)
+                    {
+                        <li>@e</li>
+                    }
+                </ul>
+                @if (HiddenErrors > 0)
+                {
+                    <p class="muted">… and @HiddenErrors more.</p>
+                }
+            </div>
+        }
+        <div class="actions">
+            <button class="json-copy" @onclick="CopyAll" title="Copy all of the JSON in the box to the clipboard">Copy all</button>
+            @if (copyNote is not null)
+            {
+                <span class="muted-label">@copyNote</span>
+            }
+            <button @onclick="OnClose">Cancel</button>
+            <button class="primary" @onclick="Apply">Apply</button>
+        </div>
+    </div>
+</div>

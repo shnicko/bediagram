@@ -30,6 +30,9 @@ public interface IDesignerHost
     /// <summary>Opens the keyboard shortcuts pop-up.</summary>
     void ShowShortcuts();
 
+    /// <summary>Opens the JSON editor on the whole diagram (the canvas waits until it closes).</summary>
+    void ShowJson();
+
     /// <summary>Starts a new diagram (asking first when there are unsaved changes).</summary>
     void NewDiagram();
 
