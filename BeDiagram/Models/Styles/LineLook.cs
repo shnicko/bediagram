@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace BeDiagram.Models.Styles;
 
 /// <summary>Line weight, dash pattern, colour and arrowheads for connectors.</summary>
@@ -13,32 +15,82 @@ public static class LineLook
         { (Solid, "Solid"), (Dashed, "Dashed"), (Dotted, "Dotted"), (DashDot, "Dash-dot"), (LongDash, "Long dash") };
     public static readonly (string Key, string Name)[] ArrowModes = { (ArrowEnd, "End"), (ArrowBoth, "Both"), (ArrowNone, "None") };
 
-    public static double Width(string weight) => weight switch { Light => 1, Heavy => 3, _ => 2 };
-
-    public static string? Dash(string pattern, double w) => pattern switch
+    public static double Width(string weight)
     {
-        Dashed => $"{N(5 + 2 * w)} {N(3 + 1.5 * w)}",
-        Dotted => $"0 {N(2 + 2 * w)}",
-        DashDot => $"{N(7 + 2 * w)} {N(3 + 1.5 * w)} 0 {N(3 + 1.5 * w)}",
-        LongDash => $"{N(12 + 3 * w)} {N(4 + 2 * w)}",
-        _ => null,
-    };
+        switch (weight)
+        {
+            case Light:
+                return 1;
+            case Heavy:
+                return 3;
+            default:
+                return 2;
+        }
+    }
+
+    public static string? Dash(string pattern, double w)
+    {
+        switch (pattern)
+        {
+            case Dashed:
+                return $"{N(5 + 2 * w)} {N(3 + 1.5 * w)}";
+            case Dotted:
+                return $"0 {N(2 + 2 * w)}";
+            case DashDot:
+                return $"{N(7 + 2 * w)} {N(3 + 1.5 * w)} 0 {N(3 + 1.5 * w)}";
+            case LongDash:
+                return $"{N(12 + 3 * w)} {N(4 + 2 * w)}";
+            default:
+                return null;
+        }
+    }
 
     /// <summary>Round caps turn zero-length dashes into dots.</summary>
-    public static string Cap(string pattern) => pattern is Dotted or DashDot ? "round" : "butt";
+    public static string Cap(string pattern)
+    {
+        if (pattern == Dotted || pattern == DashDot)
+        {
+            return "round";
+        }
+        return "butt";
+    }
 
-    public static string Colour(string? key) =>
-        key is not null && Palette.All.TryGetValue(key, out Swatch? sw) ? sw.Stroke : TextPalette.StrokeOf(key, DefaultColor);
+    public static string Colour(string? key)
+    {
+        if (key is not null && Palette.All.TryGetValue(key, out Swatch? sw))
+        {
+            return sw.Stroke;
+        }
+        return TextPalette.StrokeOf(key, DefaultColor);
+    }
 
     /// <summary>Marker id for an arrowhead in a given colour and weight (one marker per combination).</summary>
-    public static string MarkerId(string colour, string weight) => $"arr-{colour.TrimStart('#')}-{weight}";
+    public static string MarkerId(string colour, string weight)
+    {
+        return $"arr-{colour.TrimStart('#')}-{weight}";
+    }
 
     /// <summary>Arrowhead marker sized in user units so heavy lines don't get giant arrows.</summary>
     public static string MarkerDef(string colour, string weight)
     {
-        int size = weight switch { Light => 9, Heavy => 14, _ => 12 };
+        int size;
+        switch (weight)
+        {
+            case Light:
+                size = 9;
+                break;
+            case Heavy:
+                size = 14;
+                break;
+            default:
+                size = 12;
+                break;
+        }
         return $"<marker id=\"{MarkerId(colour, weight)}\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"{size}\" markerHeight=\"{size}\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"{colour}\"/></marker>";
     }
 
-    static string N(double v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    static string N(double v)
+    {
+        return v.ToString("0.##", CultureInfo.InvariantCulture);
+    }
 }
