@@ -91,6 +91,12 @@ kbd {
 .palette .item:active { cursor: grabbing; }
 .palette .item span { flex: 1; }
 .palette .hint { margin: 16px 4px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+/* Saved styles: one row per style (preview + name) under the tiles. */
+.palette .presets { display: flex; flex-direction: column; gap: 2px; max-height: 40vh; overflow-y: auto; }
+.palette .item.preset { font-size: 12.5px; padding: 3px 6px; }
+.palette .item.preset span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette .item.preset svg { flex: none; }
+.palette .presets + .section { margin-top: 12px; }
 
 /* ── Canvas ── */
 .canvas { grid-area: canvas; position: relative; overflow: hidden; }
@@ -469,3 +475,8 @@ h4.bulk { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line)
 .panel-item-desc, .panel-item-section { width: 100%; margin-top: 4px; font-size: 12px; }
 
 .palette .tiles.four { grid-template-columns: repeat(4, 1fr); }
+
+/* Saved styles block in the panels (PresetPicker) */
+.preset-row { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; }
+.preset-row select, .preset-row input { flex: 1; min-width: 0; }
+.preset-text { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }

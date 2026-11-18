@@ -24,6 +24,8 @@ Change it in `appsettings.json`:
 "Storage": { "Folder": "D:\\Projects\\Diagrams" }
 ```
 
+**Saved styles** are kept in `styles.json` in the storage folder (not in the diagrams, so every diagram can use them). It's a list of `{ "id", "name", … }` with exactly one of `shape`, `group`, `textBox` or `connector` holding the look, using the same keys as in a diagram file (colour keys, `"dashed"`, `"elbow"`, …). Text (`label`, `description`, `title`, `text`) and a shape's `icon` are only there when saved. The app reads the file when it starts, so restart it after editing the file by hand; a file it can't read is left alone until the next save.
+
 **Subfolders:** diagrams can live in folders below the storage folder, as deep as you like.
 - *File → Open…* starts in the open diagram's folder. Click a folder to go into it, `..` or the path along the top to go back up. Folders are listed first (by name), then that folder's diagrams, newest first. *New folder* makes a folder inside the one you're in and goes into it; an empty folder shows a 🗑 to delete it (folders with anything in them — diagrams, exports, other files — can't be deleted from here). Type in the find box to search diagram names in every folder at once; each match shows the folder it's in.
 - *File → Save as…* has a *Folder* list (every folder, starting with the diagram's own) and a *Name*. Typing `Folder/Name` in the name saves into a new folder below the chosen one, made on save.
@@ -86,6 +88,13 @@ The PNG is drawn by your browser from the SVG export, so it matches the SVG and 
 - **Description:** every shape has an optional *Description* in the panel — smaller grey text under the label, for a short note on who does the step and how. On circles and outcomes it sits under the label; on boxes and other shapes (label inside) it sits under the shape. *Text width* sets how wide that text wraps (blank = automatic, a little wider than the shape) — it also sets the wrap width of a label drawn under a circle. *Transparent text background* drops the white backing behind text under the shape, so it sits cleanly on a tinted group (the backing is there by default to keep text readable where connectors pass behind it). Descriptions are included in SVG / PDF export, and in Mermaid export as a second line of the label.
 - **Moving the text under a shape:** when a label under a circle or outcome (or a description) gets in the way of a connector, *Text position* in the shape panel puts it *Under* (the usual place), *Above*, *Right* or *Left* of the shape, or *Free*: the text then stays where it is until you drag it, and anywhere you drop it a dashed grey leader line (the same look as a comment's pin) joins it back to the shape. Free text keeps its distance from the shape, so it moves with the shape. Pick a side again to attach it. *Auto* (or *Arrange → Place text clear of connectors*) moves the text to the side with the fewest connectors through it — the selected shapes, or all of them with nothing selected — trying under, above, right and left in that order, and leaving free text where you put it. Like *Tidy connectors* it only runs when you click it. Moved text and leaders are drawn the same in SVG / PDF / PNG export; Mermaid has no place for them.
 - **Colours:** shapes, groups, connectors and text boxes all pick from the same 24 colours, shown as three rows of eight: the original eight (blue, teal, green, amber, red, pink, purple, slate), eight more hues (orange, lime, cyan, indigo, magenta, brown, olive, navy), and the sticky-note colours and neutrals (yellow, sky, mint, rose, lavender, white, grey, ink). Hover a swatch for its name. With *Solid fill* the label and icon are white, or dark on the pale colours (amber, yellow, sky, mint, rose, lavender, white, grey) where white would be hard to read. Group titles on the pale colours use a darker shade of the colour. New groups and swim lanes take the 16 strong hues in turn.
+- **Saved styles:** save the look of a shape, text box, group or connector under a name and reuse it in any diagram. In the item's panel, under *Saved styles*: type a name, choose which text to keep with it (*Save text*: for a shape *None*, *Label*, *Description* or *Both*; for a text box, group or connector *None* or *Text* — its text, title or label), then *Save* (or press `Enter`). Saving with the name of an existing style of the same kind shows *Replace* and overwrites it. What's saved:
+  - **Shape:** type, circle or not, outcome, size, colour, solid fill, emphasis, transparent text background, and the icon if it has one.
+  - **Text box / comment:** background, border pattern / weight / colour, rounded corners, font, size, bold, text colour, alignment, size, and whether it's a comment.
+  - **Group:** colour, tint, border pattern / weight, title position and style, size.
+  - **Connector:** elbow or straight, weight, line type, colour, arrowheads, label direction and placement.
+  
+  To **apply** one, pick it in the *Saved styles* list of the panel and click *Apply*. It works on several selected items at once, in one undo step. Applying copies the look (plus the icon and any saved text) once; type, size and position stay as they are, and changing or deleting the style later doesn't change items that used it. To **place** a new item from a style, use the *Saved styles* list in the sidebar (shape, text box and group styles, each with a small preview). Click to add it like the matching tile does (a shape as the next step, joined to the selection when *Auto-join* is on), or drag it onto the canvas. A group style clicked with items selected wraps them in a group of that style, like `Ctrl+G`. The new item's label opens for typing. Connector styles need two ends, so they're only applied from the connector panel. To **delete** a style, pick it in a panel's list and click ✕, then *Delete?* to confirm.
 - **Restyle several items at once:** select shapes, text boxes and/or groups together (Shift+click, drag a box or `Ctrl+A`). Below the align buttons the panel shows a style section for each kind selected — *Shapes* (colour, solid fill, emphasis, transparent text background), *Text boxes* (font, size, bold, alignment, text colour, background, border pattern / weight / colour, rounded corners) and *Groups* (colour, tint, border pattern / weight, title position and style). A click changes every selected item of that kind in one undo step. A button shows as on only when every selected item already has that setting; mixed font sizes show `—`. The single-item panels use the same controls.
 - **Circle with icon (presentation style):** press `9` or drag *Circle*. Pick an icon from the built-in set (118 icons, searchable), a colour, and *Solid fill* for a bold look; the label sits under the circle. Circle labels are semibold (600), inside or under the circle, so they read well on slides. Any other shape can carry an icon too (shown beside its label), and every shape can take a colour.
 - **Outcomes (pass / fail / rework / conditional / hold):** the *Outcomes* section of the sidebar adds review results that differ by **shape**, not just colour, so an A3 sheet printed in greyscale or read by a colour-blind reviewer still reads correctly:
@@ -197,13 +206,16 @@ BeDiagram/                   the web app project
   Models/Kinds/                one class per kind of node: classic, circle, outcome, list, IPO (Strategy pattern, see below)
   Models/Panels/               layout of list / IPO nodes (Strategy pattern): list, IPO side by side, IPO stacked
   Models/ListItem.cs           one row of a list / IPO node
+  Models/Presets/              saved styles: StylePreset (name + one of ShapePreset, GroupPreset, TextBoxPreset, ConnectorPreset), PresetText
   Services/DiagramStore.cs     local folder save / open / list / delete, subfolders (names are paths like `Folder/Name`)
+  Services/StylePresetStore.cs the saved styles, shared by every diagram (`styles.json` in the storage folder)
   Services/Export/Pdf/         vector PDF made from the exported SVG (no third-party libraries): PdfWriter, PdfRenderer, …
   Services/Export/             export strategies (see below)
   Editing/DiagramEditor.cs     the diagram being edited: state, lookups and undo (no UI code); the editing actions are
                                in partial files by area: .Creating, .Groups, .Alignment, .Selection, .Actions, .Page,
                                .Connectors, .Styling, .StepOrder, .Layout, .Text, .Panels (list / IPO rows),
-                               .Sizing (Same size, an item's position and size, Stack lanes edge to edge)
+                               .Sizing (Same size, an item's position and size, Stack lanes edge to edge),
+                               .Presets (applying a saved style, placing a new item from one)
   Editing/IEditorView.cs       what the editor needs from the screen (toast, view centre, start text editing)
   Editing/Labels/              Place text clear of connectors: TextPlacer (picks the side for the text under each shape)
   Editing/Angles/              angle lock for moves and placed steps (Strategy pattern): IAngleLock, FreeAngle, StepAngle, AngleLocks
@@ -218,7 +230,9 @@ BeDiagram/                   the web app project
   Components/Pages/IDesignerHost.cs, DesignerPart.cs   how the page's child components reach it (Mediator, see below)
   Components/Panels/           the side panel, one component per kind of selection (shape, text box, connector, group,
                                several items, nothing selected)
-  Components/Bars/             toolbar and menus, shape palette, status bar
+  Components/Bars/             toolbar and menus, shape palette (with the Saved styles list), status bar
+  Components/Shared/PresetPicker.razor   the Saved styles block in the shape, text box, group and connector panels
+  Components/PresetPreview.cs  the small pictures in the sidebar's Saved styles list
   Components/Canvas/           the canvas layers: page sheet, page title, groups, text boxes, connectors, shapes, connector labels
   Components/Dialogs/          Open, Save as, the unsaved-changes questions, keyboard shortcuts, step order
   Components/Pages/Gestures/   mouse gestures (State pattern, see below)

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using BeDiagram.Editing;
 using BeDiagram.Models;
+using BeDiagram.Models.Presets;
 using BeDiagram.Models.Styles;
+using BeDiagram.Services;
 using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Components.Shared;
@@ -138,5 +140,47 @@ public partial class TextBoxStyle
             }
             return Boxes[0].BorderWeight;
         }
+    }
+
+    // ───────────── Saved styles ─────────────
+
+    [Inject] StylePresetStore Store { get; set; } = default!;
+
+    /// <summary>The saved text box styles.</summary>
+    List<StylePreset> SavedStyles
+    {
+        get
+        {
+            return Store.TextBoxes();
+        }
+    }
+
+    /// <summary>Saving needs exactly one text box; null hides the save row.</summary>
+    Func<PresetText, StylePreset>? Capture
+    {
+        get
+        {
+            if (Boxes.Count != 1)
+            {
+                return null;
+            }
+            return CaptureOne;
+        }
+    }
+
+    StylePreset CaptureOne(PresetText text)
+    {
+        StylePreset p = new StylePreset();
+        p.TextBox = TextBoxPreset.From(Boxes[0], text);
+        return p;
+    }
+
+    Task ApplyPreset(StylePreset p)
+    {
+        if (p.TextBox is not null)
+        {
+            Editor.ApplyPreset(Boxes, p.TextBox);
+        }
+        return OnChanged.InvokeAsync();
     }
 }

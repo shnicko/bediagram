@@ -3,6 +3,8 @@ using BeDiagram.Components.Pages;
 using BeDiagram.Editing;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Presets;
+using BeDiagram.Services;
 
 namespace BeDiagram.Components.Panels;
 
@@ -50,5 +52,33 @@ public partial class ConnectorPanel : DesignerPart
     void NudgeOn()
     {
         Editor.NudgeLabelPos(Edge, 1);
+    }
+
+    // ───────────── Saved styles ─────────────
+
+    [Inject] StylePresetStore Store { get; set; } = default!;
+
+    /// <summary>The saved connector styles.</summary>
+    List<StylePreset> SavedStyles
+    {
+        get
+        {
+            return Store.Connectors();
+        }
+    }
+
+    StylePreset CaptureOne(PresetText text)
+    {
+        StylePreset p = new StylePreset();
+        p.Connector = ConnectorPreset.From(Edge, text);
+        return p;
+    }
+
+    void ApplyPreset(StylePreset p)
+    {
+        if (p.Connector is not null)
+        {
+            Editor.ApplyPreset(Edge, p.Connector);
+        }
     }
 }

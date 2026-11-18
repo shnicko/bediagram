@@ -88,3 +88,4 @@
     </div>
 }
 <label class="check"><input type="checkbox" checked="@AllRounded" @onchange="e => Set(t => t.Rounded = e.Value is true)" /> Rounded corners</label>
+<PresetPicker Presets="SavedStyles" Capture="Capture" TextChoices="PresetTexts.ForOneText" OnApply="ApplyPreset" OnChanged="OnChanged" />

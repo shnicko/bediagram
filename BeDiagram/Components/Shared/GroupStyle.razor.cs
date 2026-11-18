@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using BeDiagram.Editing;
 using BeDiagram.Models;
+using BeDiagram.Models.Presets;
 using BeDiagram.Models.Styles;
+using BeDiagram.Services;
 
 namespace BeDiagram.Components.Shared;
 
@@ -90,5 +92,47 @@ public partial class GroupStyle
             return "Title on a tinted strip inside the group";
         }
         return "Plain bold title — inside at the top, or centred under the box when the title is at the bottom";
+    }
+
+    // ───────────── Saved styles ─────────────
+
+    [Inject] StylePresetStore Store { get; set; } = default!;
+
+    /// <summary>The saved group styles.</summary>
+    List<StylePreset> SavedStyles
+    {
+        get
+        {
+            return Store.Groups();
+        }
+    }
+
+    /// <summary>Saving needs exactly one group; null hides the save row.</summary>
+    Func<PresetText, StylePreset>? Capture
+    {
+        get
+        {
+            if (Groups.Count != 1)
+            {
+                return null;
+            }
+            return CaptureOne;
+        }
+    }
+
+    StylePreset CaptureOne(PresetText text)
+    {
+        StylePreset p = new StylePreset();
+        p.Group = GroupPreset.From(Groups[0], text);
+        return p;
+    }
+
+    Task ApplyPreset(StylePreset p)
+    {
+        if (p.Group is not null)
+        {
+            Editor.ApplyPreset(Groups, p.Group);
+        }
+        return OnChanged.InvokeAsync();
     }
 }

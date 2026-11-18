@@ -34,3 +34,4 @@
         <button class="@On(g => g.HeaderStyle == k)" title="@StyleTip(k)" @onclick="() => SetTitleLook(null, k)">@name</button>
     }
 </div>
+<PresetPicker Presets="SavedStyles" Capture="Capture" TextChoices="PresetTexts.ForOneText" OnApply="ApplyPreset" OnChanged="OnChanged" />

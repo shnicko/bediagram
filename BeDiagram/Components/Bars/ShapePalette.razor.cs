@@ -1,8 +1,11 @@
+using Microsoft.AspNetCore.Components;
 using BeDiagram.Components.Pages;
 using BeDiagram.Components.Pages.Views;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Presets;
 using BeDiagram.Rendering;
+using BeDiagram.Services;
 
 namespace BeDiagram.Components.Bars;
 
@@ -111,5 +114,110 @@ public partial class ShapePalette : DesignerPart
     void StartPaletteDrag(PaletteItem item)
     {
         Host.SetPaletteDrop((x, y) => Editor.AddNodeAt(item, x, y, join: Editor.AutoConnect, lockAngle: true));
+    }
+
+    // ───────────── Saved styles ─────────────
+    // Shape, text box and group styles can be placed from here; connector styles need two ends, so they are only
+    // applied from the connector panel.
+
+    [Inject] StylePresetStore Store { get; set; } = default!;
+
+    List<StylePreset> ShapeStyles
+    {
+        get
+        {
+            return Store.Shapes();
+        }
+    }
+
+    List<StylePreset> TextBoxStyles
+    {
+        get
+        {
+            return Store.TextBoxes();
+        }
+    }
+
+    List<StylePreset> GroupStyles
+    {
+        get
+        {
+            return Store.Groups();
+        }
+    }
+
+    bool HasSavedStyles
+    {
+        get
+        {
+            return ShapeStyles.Count > 0 || TextBoxStyles.Count > 0 || GroupStyles.Count > 0;
+        }
+    }
+
+    static MarkupString ShapePreview(StylePreset p)
+    {
+        return PresetPreview.Shape(p.Shape!);
+    }
+
+    static MarkupString TextBoxPreview(StylePreset p)
+    {
+        return PresetPreview.TextBox(p.TextBox!);
+    }
+
+    static MarkupString GroupPreview(StylePreset p)
+    {
+        return PresetPreview.Group(p.Group!);
+    }
+
+    static string ShapeTip(StylePreset p)
+    {
+        return $"{p.Name} ({NodeTypes.Get(p.Shape!.Type).Display}): click to add as the next step, or drag onto the canvas";
+    }
+
+    static string TextBoxTip(StylePreset p)
+    {
+        if (p.TextBox!.IsComment)
+        {
+            return $"{p.Name} (comment): click to add, or drag onto the canvas (onto a shape to pin it)";
+        }
+        return $"{p.Name} (text box): click to add, or drag onto the canvas";
+    }
+
+    static string GroupTip(StylePreset p)
+    {
+        return $"{p.Name} (group): click to wrap the selected items in it (or add an empty one), or drag onto the canvas";
+    }
+
+    void QuickAddShape(StylePreset p)
+    {
+        Editor.QuickAddPreset(p.Shape!);
+    }
+
+    void QuickAddTextBox(StylePreset p)
+    {
+        Editor.QuickAddPreset(p.TextBox!);
+    }
+
+    void QuickAddGroup(StylePreset p)
+    {
+        Editor.QuickAddPreset(p.Group!);
+    }
+
+    void StartShapePresetDrag(StylePreset p)
+    {
+        ShapePreset look = p.Shape!;
+        Host.SetPaletteDrop((x, y) => Editor.PlacePreset(look, x, y));
+    }
+
+    void StartTextBoxPresetDrag(StylePreset p)
+    {
+        TextBoxPreset look = p.TextBox!;
+        Host.SetPaletteDrop((x, y) => Editor.PlacePreset(look, x, y));
+    }
+
+    void StartGroupPresetDrag(StylePreset p)
+    {
+        GroupPreset look = p.Group!;
+        Host.SetPaletteDrop((x, y) => Editor.PlacePreset(look, x, y));
     }
 }
