@@ -23,26 +23,36 @@ public class ExportService
     public IReadOnlyList<IExportArea> Areas { get; }
 
     /// <summary>Every menu entry: each area for formats that use one, a single entry for those that don't.</summary>
-    public IEnumerable<ExportChoice> Choices()
+    public List<ExportChoice> Choices()
     {
+        List<ExportChoice> result = new List<ExportChoice>();
         foreach (IExportFormat f in Formats)
         {
             if (!f.UsesArea)
             {
-                yield return new ExportChoice(f, null);
+                result.Add(new ExportChoice(f, null));
                 continue;
             }
             foreach (IExportArea a in Areas)
-                yield return new ExportChoice(f, a);
+            {
+                result.Add(new ExportChoice(f, a));
+            }
         }
+        return result;
     }
 
     /// <summary>Renders the choice and saves it next to the diagram. Returns the saved path and any note.</summary>
     public async Task<(string Path, string? Note)> ExportAsync(ExportChoice c, Diagram d, ScreenView screen, ExportOptions options)
     {
-        ExportView? view = c.Area?.ViewFor(d, screen);
+        ExportView? view = null;
+        string suffix = "";
+        if (c.Area is not null)
+        {
+            view = c.Area.ViewFor(d, screen);
+            suffix = c.Area.FileSuffix;
+        }
         ExportFile file = await c.Format.RenderAsync(d, view, options);
-        string path = await store.SaveBytesAsync(d.Name, (c.Area?.FileSuffix ?? "") + c.Format.Extension, file.Content);
+        string path = await store.SaveBytesAsync(d.Name, suffix + c.Format.Extension, file.Content);
         return (path, file.Note);
     }
 }

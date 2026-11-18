@@ -6,8 +6,22 @@ namespace BeDiagram.Services.Export;
 public record ExportChoice(IExportFormat Format, IExportArea? Area)
 {
     /// <summary>The menu text: the format's name, plus the area (e.g. "PDF — page A4") when it uses one.</summary>
-    public string Label(Diagram d) => Area is null ? Format.Name : $"{Format.Name} — {Area.Label(d)}";
+    public string Label(Diagram d)
+    {
+        if (Area is null)
+        {
+            return Format.Name;
+        }
+        return $"{Format.Name} — {Area.Label(d)}";
+    }
 
     /// <summary>The menu tooltip: what the area covers, or nothing.</summary>
-    public string Tip(Diagram d) => Area?.Tip(d) ?? "";
+    public string Tip(Diagram d)
+    {
+        if (Area is null)
+        {
+            return "";
+        }
+        return Area.Tip(d);
+    }
 }

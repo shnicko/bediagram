@@ -11,13 +11,26 @@ public partial class FileMenu : DesignerPart
     [Inject] ExportService Exports { get; set; } = default!;
 
     /// <summary>The PNG settings in this menu, used by every export from it (kept while the page is open).</summary>
-    readonly ExportOptions exportOptions = new();
+    readonly ExportOptions exportOptions = new ExportOptions();
 
-    Task Export(ExportChoice choice) => Host.Export(choice, exportOptions);
+    Task Export(ExportChoice choice)
+    {
+        return Host.Export(choice, exportOptions);
+    }
 
-    void PageSizePicked(ChangeEventArgs e) => Host.SetPageSize(e.Value?.ToString());
+    void PageSizePicked(ChangeEventArgs e)
+    {
+        Host.SetPageSize(e.Value?.ToString());
+    }
 
-    string FlowClass(FlowDirection flow) => D.Flow == flow ? "on" : "";
+    string FlowClass(FlowDirection flow)
+    {
+        if (D.Flow == flow)
+        {
+            return "on";
+        }
+        return "";
+    }
 
     /// <summary>One Export menu entry, worked out for the markup. StartsGroup draws a divider before a new format.</summary>
     record ExportMenuItem(ExportChoice Choice, string Label, string Tip, bool StartsGroup);
@@ -29,16 +42,36 @@ public partial class FileMenu : DesignerPart
         IExportFormat? previous = null;
         foreach (ExportChoice c in Exports.Choices())
         {
-            items.Add(new ExportMenuItem(c, c.Label(D), c.Tip(D), previous is not null && previous != c.Format));
+            bool startsGroup = previous is not null && previous != c.Format;
+            items.Add(new ExportMenuItem(c, c.Label(D), c.Tip(D), startsGroup));
             previous = c.Format;
         }
         return items;
     }
 
-    IReadOnlyList<PngResolution> PngResolutions => PngExportFormat.Resolutions(D);
+    IReadOnlyList<PngResolution> PngResolutions
+    {
+        get
+        {
+            return PngExportFormat.Resolutions(D);
+        }
+    }
 
-    void SetPngResolution(ChangeEventArgs e) =>
-        exportOptions.PngResolution = int.TryParse(e.Value?.ToString(), out int i) ? i : 1;
+    void SetPngResolution(ChangeEventArgs e)
+    {
+        int i;
+        if (int.TryParse(e.Value?.ToString(), out i))
+        {
+            exportOptions.PngResolution = i;
+        }
+        else
+        {
+            exportOptions.PngResolution = 1;
+        }
+    }
 
-    void SetPngTransparent(ChangeEventArgs e) => exportOptions.PngTransparent = e.Value is true;
+    void SetPngTransparent(ChangeEventArgs e)
+    {
+        exportOptions.PngTransparent = e.Value is true;
+    }
 }

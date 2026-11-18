@@ -13,10 +13,33 @@ public class SvgExportFormat : IExportFormat
         this.writer = writer;
     }
 
-    public string Name => "SVG image";
-    public string Extension => ".svg";
-    public bool UsesArea => true;
+    public string Name
+    {
+        get
+        {
+            return "SVG image";
+        }
+    }
 
-    public Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options) =>
-        Task.FromResult(new ExportFile(Encoding.UTF8.GetBytes(writer.Write(d, view))));
+    public string Extension
+    {
+        get
+        {
+            return ".svg";
+        }
+    }
+
+    public bool UsesArea
+    {
+        get
+        {
+            return true;
+        }
+    }
+
+    public Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(writer.Write(d, view));
+        return Task.FromResult(new ExportFile(bytes));
+    }
 }

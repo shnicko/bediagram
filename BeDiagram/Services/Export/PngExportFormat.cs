@@ -25,17 +25,51 @@ public partial class PngExportFormat : IExportFormat
         this.writer = writer;
     }
 
-    public string Name => "PNG image";
-    public string Extension => ".png";
-    public bool UsesArea => true;
+    public string Name
+    {
+        get
+        {
+            return "PNG image";
+        }
+    }
+
+    public string Extension
+    {
+        get
+        {
+            return ".png";
+        }
+    }
+
+    public bool UsesArea
+    {
+        get
+        {
+            return true;
+        }
+    }
 
     /// <summary>
     /// Resolution choices. On a page they're print resolutions (dpi); on an open canvas, multiples of screen size.
     /// 96 dpi is screen size, as page sizes convert at 96 px per inch (<see cref="PageSetup.PxPerMm"/>).
     /// </summary>
-    public static IReadOnlyList<PngResolution> Resolutions(Diagram d) => d.Page.Enabled
-        ? [new PngResolution("96 dpi (screen)", 1), new PngResolution("150 dpi", 150 / 96.0), new PngResolution("300 dpi (print)", 300 / 96.0)]
-        : [new PngResolution("1× (screen size)", 1), new PngResolution("2×", 2), new PngResolution("3×", 3)];
+    public static IReadOnlyList<PngResolution> Resolutions(Diagram d)
+    {
+        List<PngResolution> result = new List<PngResolution>();
+        if (d.Page.Enabled)
+        {
+            result.Add(new PngResolution("96 dpi (screen)", 1));
+            result.Add(new PngResolution("150 dpi", 150 / 96.0));
+            result.Add(new PngResolution("300 dpi (print)", 300 / 96.0));
+        }
+        else
+        {
+            result.Add(new PngResolution("1× (screen size)", 1));
+            result.Add(new PngResolution("2×", 2));
+            result.Add(new PngResolution("3×", 3));
+        }
+        return result;
+    }
 
     public async Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options)
     {
@@ -45,6 +79,7 @@ public partial class PngExportFormat : IExportFormat
         IReadOnlyList<PngResolution> choices = Resolutions(d);
         double scale = choices[Math.Clamp(options.PngResolution, 0, choices.Count - 1)].Scale;
 
+        // Shrink the scale when the image would be bigger than the browser can draw.
         string? note = null;
         double limit = Math.Min(Math.Min(MaxSide / (svgW * scale), MaxSide / (svgH * scale)),
                                 Math.Sqrt(MaxPixels / (svgW * scale * svgH * scale)));
@@ -64,16 +99,27 @@ public partial class PngExportFormat : IExportFormat
     static (double W, double H) SvgSizePx(string svg)
     {
         Match root = SvgRoot().Match(svg);
-        string tag = root.Success ? root.Value : "";
+        string tag = "";
+        if (root.Success)
+        {
+            tag = root.Value;
+        }
         return (Length(tag, "width"), Length(tag, "height"));
     }
 
     static double Length(string tag, string name)
     {
         Match m = Regex.Match(tag, $"\\s{name}=\"([0-9.]+)(mm|px)?\"");
-        if (!m.Success) return 400;
+        if (!m.Success)
+        {
+            return 400;
+        }
         double v = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
-        return m.Groups[2].Value == "mm" ? v * PageSetup.PxPerMm : v;
+        if (m.Groups[2].Value == "mm")
+        {
+            return v * PageSetup.PxPerMm;
+        }
+        return v;
     }
 
     [GeneratedRegex("<svg\\b[^>]*>")]
@@ -83,7 +129,10 @@ public partial class PngExportFormat : IExportFormat
     static byte[] WithResolution(byte[] png, double dpi)
     {
         const int signature = 8;
-        if (png.Length < signature + 25) return png;
+        if (png.Length < signature + 25)
+        {
+            return png;
+        }
         int ihdrEnd = signature + 8 + (int)BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(signature)) + 4;
 
         List<byte> output = new List<byte>(png.Length + 21);
@@ -92,7 +141,10 @@ public partial class PngExportFormat : IExportFormat
         uint ppm = (uint)Math.Round(dpi / 0.0254);
         byte[] chunk = new byte[4 + 4 + 9 + 4];
         BinaryPrimitives.WriteUInt32BigEndian(chunk.AsSpan(0), 9);
-        chunk[4] = (byte)'p'; chunk[5] = (byte)'H'; chunk[6] = (byte)'Y'; chunk[7] = (byte)'s';
+        chunk[4] = (byte)'p';
+        chunk[5] = (byte)'H';
+        chunk[6] = (byte)'Y';
+        chunk[7] = (byte)'s';
         BinaryPrimitives.WriteUInt32BigEndian(chunk.AsSpan(8), ppm);
         BinaryPrimitives.WriteUInt32BigEndian(chunk.AsSpan(12), ppm);
         chunk[16] = 1; // unit: metre
@@ -105,9 +157,15 @@ public partial class PngExportFormat : IExportFormat
         {
             int len = (int)BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(pos));
             int total = 12 + len;
-            if (pos + total > png.Length) break;
+            if (pos + total > png.Length)
+            {
+                break;
+            }
             bool isPhys = png[pos + 4] == 'p' && png[pos + 5] == 'H' && png[pos + 6] == 'Y' && png[pos + 7] == 's';
-            if (!isPhys) output.AddRange(png.AsSpan(pos, total).ToArray());
+            if (!isPhys)
+            {
+                output.AddRange(png.AsSpan(pos, total).ToArray());
+            }
             pos += total;
         }
         return output.ToArray();
@@ -120,7 +178,16 @@ public partial class PngExportFormat : IExportFormat
         {
             crc ^= b;
             for (int k = 0; k < 8; k++)
-                crc = (crc & 1) != 0 ? 0xEDB88320 ^ (crc >> 1) : crc >> 1;
+            {
+                if ((crc & 1) != 0)
+                {
+                    crc = 0xEDB88320 ^ (crc >> 1);
+                }
+                else
+                {
+                    crc = crc >> 1;
+                }
+            }
         }
         return crc ^ 0xFFFFFFFF;
     }
