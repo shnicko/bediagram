@@ -22,3 +22,14 @@ export async function svgToPng(svg, width, height) {
         URL.revokeObjectURL(url);
     }
 }
+
+// Copy to clipboard: puts an exported file (a PNG) on the clipboard, for pasting into Word, PowerPoint, Teams…
+// Called from BrowserClipboard (Services/Export/BrowserClipboard.cs) with the bytes as a stream.
+// Browsers only allow this on https or localhost, and while the page has focus.
+export async function copyToClipboard(streamRef, type) {
+    if (!window.isSecureContext || !navigator.clipboard || typeof ClipboardItem === 'undefined') {
+        throw new Error('this browser only allows copying pictures when BeDiagram is opened on localhost or https');
+    }
+    const blob = new Blob([await streamRef.arrayBuffer()], { type });
+    await navigator.clipboard.write([new ClipboardItem({ [type]: blob })]);
+}

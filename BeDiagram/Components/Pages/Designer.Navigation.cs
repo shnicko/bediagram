@@ -105,18 +105,21 @@ public partial class Designer
         await Save();
     }
 
-    /// <summary>Exports next to the saved diagram; the current-view area uses what is on screen now.</summary>
+    /// <summary>
+    /// Runs an Export menu entry: saved next to the diagram or copied to the clipboard, depending on its destination.
+    /// The current-view area uses what is on screen now.
+    /// </summary>
     async Task Export(ExportChoice choice, ExportOptions options)
     {
         try
         {
             ScreenView screen = new ScreenView(PanX, PanY, Zoom, canvasW, canvasH);
-            (string path, string? note) = await Exports.ExportAsync(choice, D, screen, options);
-            ShowToast(note is null ? $"Exported {Path.GetFileName(path)}" : $"Exported {Path.GetFileName(path)} ({note})");
+            string message = await Exports.ExportAsync(choice, D, screen, options);
+            ShowToast(message);
         }
         catch (Exception ex)
         {
-            ShowToast($"{choice.Format.Name} export failed: {ex.Message}");
+            ShowToast($"{choice.Format.Name} {choice.Destination.Verb} failed: {ex.Message}");
         }
     }
 

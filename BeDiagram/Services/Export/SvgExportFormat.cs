@@ -29,6 +29,15 @@ public class SvgExportFormat : IExportFormat
         }
     }
 
+    /// <summary>The media (MIME) type of what this format makes.</summary>
+    public string MediaType
+    {
+        get
+        {
+            return "image/svg+xml";
+        }
+    }
+
     public bool UsesArea
     {
         get

@@ -32,18 +32,34 @@ public partial class FileMenu : DesignerPart
         return "";
     }
 
-    /// <summary>One Export menu entry, worked out for the markup. StartsGroup draws a divider before a new format.</summary>
-    record ExportMenuItem(ExportChoice Choice, string Label, string Tip, bool StartsGroup);
+    /// <summary>
+    /// One Export menu entry, worked out for the markup. Heading (with its note) is set on the first entry of each
+    /// destination ("Export", "Copy to clipboard"); StartsGroup draws a divider before a new format.
+    /// </summary>
+    record ExportMenuItem(ExportChoice Choice, string Label, string Tip, bool StartsGroup, string? Heading, string? HeadingNote);
 
-    /// <summary>The Export menu: every format × area combination the <see cref="ExportService"/> offers.</summary>
+    /// <summary>The Export menu: every destination × format × area combination the <see cref="ExportService"/> offers.</summary>
     IReadOnlyList<ExportMenuItem> ExportMenuItems()
     {
         List<ExportMenuItem> items = new List<ExportMenuItem>();
+        IExportDestination? previousDestination = null;
         IExportFormat? previous = null;
         foreach (ExportChoice c in Exports.Choices())
         {
-            bool startsGroup = previous is not null && previous != c.Format;
-            items.Add(new ExportMenuItem(c, c.Label(D), c.Tip(D), startsGroup));
+            string? heading = null;
+            string? headingNote = null;
+            bool startsGroup = false;
+            if (previousDestination != c.Destination)
+            {
+                heading = c.Destination.Heading;
+                headingNote = c.Destination.HeadingNote;
+            }
+            else if (previous is not null && previous != c.Format)
+            {
+                startsGroup = true;
+            }
+            items.Add(new ExportMenuItem(c, c.Label(D), c.Tip(D), startsGroup, heading, headingNote));
+            previousDestination = c.Destination;
             previous = c.Format;
         }
         return items;

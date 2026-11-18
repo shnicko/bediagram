@@ -41,6 +41,15 @@ public partial class PngExportFormat : IExportFormat
         }
     }
 
+    /// <summary>The media (MIME) type of what this format makes.</summary>
+    public string MediaType
+    {
+        get
+        {
+            return "image/png";
+        }
+    }
+
     public bool UsesArea
     {
         get
