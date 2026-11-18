@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using BeDiagram.Models;
+using BeDiagram.Models.Serialization;
 
 namespace BeDiagram.Services;
 
@@ -12,11 +13,6 @@ namespace BeDiagram.Services;
 public class DiagramStore
 {
     public const string Extension = ".diagram.json";
-    static readonly JsonSerializerOptions Json = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
 
     public string Folder { get; }
 
@@ -142,7 +138,7 @@ public class DiagramStore
     public async Task<Diagram> LoadAsync(string name)
     {
         await using FileStream s = File.OpenRead(PathFor(name, Extension));
-        Diagram d = await JsonSerializer.DeserializeAsync<Diagram>(s, Json) ?? new Diagram();
+        Diagram d = await JsonSerializer.DeserializeAsync<Diagram>(s, DiagramJson.Options) ?? new Diagram();
         d.Name = SafeName(name);
         return d;
     }
@@ -154,7 +150,7 @@ public class DiagramStore
         string path = PathFor(d.Name, Extension);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         string tmp = path + ".tmp";
-        await File.WriteAllTextAsync(tmp, JsonSerializer.Serialize(d, Json));
+        await File.WriteAllTextAsync(tmp, DiagramJson.Write(d));
         File.Move(tmp, path, overwrite: true);
         return path;
     }
