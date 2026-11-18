@@ -12,6 +12,7 @@ builder.Services.AddRazorComponents()
 
 // Diagrams are stored as JSON files in a local folder (see appsettings.json -> Storage:Folder).
 builder.Services.AddSingleton<DiagramStore>();
+builder.Services.AddSingleton<StylePresetStore>();   // saved styles, shared by every diagram (styles.json)
 
 // Export strategies (see Services/Export). The Export menu lists destinations, formats and areas in the order registered here.
 // Destinations: where it goes (a file next to the diagram, or the clipboard). Formats: what kind of file.

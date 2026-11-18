@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using BeDiagram.Editing;
 using BeDiagram.Models;
+using BeDiagram.Models.Presets;
 using BeDiagram.Models.Styles;
+using BeDiagram.Services;
 
 namespace BeDiagram.Components.Shared;
 
@@ -19,18 +21,118 @@ public partial class GroupStyle
     /// <summary>Called after every change, so the page redraws the canvas (a click here only re-renders this component).</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
 
-    Task Set(Action<Group> change) { Editor.Restyle(Groups, change); return OnChanged.InvokeAsync(); }
+    Task Set(Action<Group> change)
+    {
+        Editor.Restyle(Groups, change);
+        return OnChanged.InvokeAsync();
+    }
 
-    Task SetTitleLook(string? pos, string? style) { Editor.SetGroupTitleLook(Groups, pos, style); return OnChanged.InvokeAsync(); }
+    Task SetTitleLook(string? pos, string? style)
+    {
+        Editor.SetGroupTitleLook(Groups, pos, style);
+        return OnChanged.InvokeAsync();
+    }
 
-    string On(Func<Group, bool> test) => Groups.Count > 0 && Groups.All(test) ? "on" : "";
+    /// <summary>"on" when there are groups and every one passes <paramref name="test"/>.</summary>
+    string On(Func<Group, bool> test)
+    {
+        if (Groups.Count == 0)
+        {
+            return "";
+        }
+        foreach (Group g in Groups)
+        {
+            if (!test(g))
+            {
+                return "";
+            }
+        }
+        return "on";
+    }
 
-    bool AllFilled => Groups.All(g => g.Filled);
+    bool AllFilled
+    {
+        get
+        {
+            foreach (Group g in Groups)
+            {
+                if (!g.Filled)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
 
     /// <summary>Weight the border pattern samples are drawn at: the groups' own when they agree.</summary>
-    string SampleWeight => Groups.Select(g => g.BorderWeight).Distinct().Count() == 1 ? Groups[0].BorderWeight : LineLook.Regular;
+    string SampleWeight
+    {
+        get
+        {
+            if (Groups.Count == 0)
+            {
+                return LineLook.Regular;
+            }
+            foreach (Group g in Groups)
+            {
+                if (g.BorderWeight != Groups[0].BorderWeight)
+                {
+                    return LineLook.Regular;
+                }
+            }
+            return Groups[0].BorderWeight;
+        }
+    }
 
-    static string StyleTip(string style) => style == GroupLook.Band
-        ? "Title on a tinted strip inside the group"
-        : "Plain bold title — inside at the top, or centred under the box when the title is at the bottom";
+    static string StyleTip(string style)
+    {
+        if (style == GroupLook.Band)
+        {
+            return "Title on a tinted strip inside the group";
+        }
+        return "Plain bold title — inside at the top, or centred under the box when the title is at the bottom";
+    }
+
+    // ───────────── Saved styles ─────────────
+
+    [Inject] StylePresetStore Store { get; set; } = default!;
+
+    /// <summary>The saved group styles.</summary>
+    List<StylePreset> SavedStyles
+    {
+        get
+        {
+            return Store.Groups();
+        }
+    }
+
+    /// <summary>Saving needs exactly one group; null hides the save row.</summary>
+    Func<PresetText, StylePreset>? Capture
+    {
+        get
+        {
+            if (Groups.Count != 1)
+            {
+                return null;
+            }
+            return CaptureOne;
+        }
+    }
+
+    StylePreset CaptureOne(PresetText text)
+    {
+        StylePreset p = new StylePreset();
+        p.Group = GroupPreset.From(Groups[0], text);
+        return p;
+    }
+
+    Task ApplyPreset(StylePreset p)
+    {
+        if (p.Group is not null)
+        {
+            Editor.ApplyPreset(Groups, p.Group);
+        }
+        return OnChanged.InvokeAsync();
+    }
 }

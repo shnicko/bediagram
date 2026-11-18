@@ -76,5 +76,36 @@
             <kbd>G</kbd>
         </div>
     </div>
+    <div class="section">Saved styles <InfoTip>Click a style to add it next to the selection, or drag it onto the canvas. A group style clicked with items selected wraps them in a group of that style. Save a style from the panel of a shape, text box, group or connector (connector styles are applied from the connector panel).</InfoTip></div>
+    @if (!HasSavedStyles)
+    {
+        <p class="hint">None yet. Select a shape, text box or group and save its look under <em>Saved styles</em> in the panel.</p>
+    }
+    <div class="presets">
+        @foreach (StylePreset p in ShapeStyles)
+        {
+            <div class="item preset" draggable="true" data-palette="preset" title="@ShapeTip(p)" aria-label="@p.Name"
+                 @ondragstart="() => StartShapePresetDrag(p)"
+                 @onclick="() => QuickAddShape(p)">
+                @ShapePreview(p)<span>@p.Name</span>
+            </div>
+        }
+        @foreach (StylePreset p in TextBoxStyles)
+        {
+            <div class="item preset" draggable="true" data-palette="preset" title="@TextBoxTip(p)" aria-label="@p.Name"
+                 @ondragstart="() => StartTextBoxPresetDrag(p)"
+                 @onclick="() => QuickAddTextBox(p)">
+                @TextBoxPreview(p)<span>@p.Name</span>
+            </div>
+        }
+        @foreach (StylePreset p in GroupStyles)
+        {
+            <div class="item preset" draggable="true" data-palette="preset" title="@GroupTip(p)" aria-label="@p.Name"
+                 @ondragstart="() => StartGroupPresetDrag(p)"
+                 @onclick="() => QuickAddGroup(p)">
+                @GroupPreview(p)<span>@p.Name</span>
+            </div>
+        }
+    </div>
     <div class="section">Quick add <InfoTip>Hover a tile to see what it is. Select an item, then press a number to add the next step below it (joined to it when Auto-join is on).</InfoTip></div>
 </aside>

@@ -17,3 +17,4 @@
         <button class="@On(n => Emphases.Of(n) == em)" title="@em.Hint" @onclick="() => SetEmphasis(em.Level)">@em.Name</button>
     }
 </div>
+<PresetPicker Presets="SavedStyles" Capture="Capture" TextChoices="PresetTexts.ForShape" OnApply="ApplyPreset" OnChanged="OnChanged" />

@@ -1,0 +1,39 @@
+<label>Saved styles <InfoTip>Save this item's look under a name, then apply it to other items or place new ones from the <em>Saved styles</em> list in the sidebar. Saved styles are kept for every diagram. Applying copies the look once: changing or deleting the style later doesn't change items that used it.</InfoTip></label>
+@if (Presets.Count > 0)
+{
+    <div class="preset-row">
+        <select @bind="ChosenId" @bind:after="Disarm">
+            <option value="">Choose a style…</option>
+            @foreach (StylePreset p in Presets)
+            {
+                <option value="@p.Id">@p.Name</option>
+            }
+        </select>
+        <button class="small" disabled="@(Chosen is null)" title="@ApplyTitle" @onclick="Apply">Apply</button>
+        <button class="small @DeleteClass" disabled="@(Chosen is null)" title="@DeleteTitle" @onclick="DeleteClicked">@DeleteText</button>
+    </div>
+}
+@if (Capture is not null)
+{
+    <div class="preset-row">
+        <input placeholder="Name for this style" @bind="NewName" @bind:event="oninput" @onkeydown="NameKey" />
+        <button class="small" disabled="@(!HasName)" @onclick="Save">@SaveText</button>
+    </div>
+    <div class="preset-text">
+        <span class="muted-label">Save text</span>
+        <div class="seg">
+            @foreach ((PresetText k, string name) in TextChoices)
+            {
+                <button class="@TextClass(k)" @onclick="() => TextPicked(k)">@name</button>
+            }
+        </div>
+    </div>
+    @if (Replacing is not null)
+    {
+        <p class="muted small-note">Saving replaces the style “@Replacing.Name”.</p>
+    }
+}
+else
+{
+    <p class="muted small-note">Select a single item to save its style.</p>
+}

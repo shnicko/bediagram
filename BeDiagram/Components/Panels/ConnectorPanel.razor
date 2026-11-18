@@ -84,6 +84,8 @@
     <button class="chip" @onclick="() => Editor.SetLabelPos(Edge, 0.85)">Near end</button>
 </div>
 
+<PresetPicker Presets="SavedStyles" Capture="CaptureOne" TextChoices="PresetTexts.ForOneText" OnApply="ApplyPreset" OnChanged="Redraw" />
+
 <div class="actions">
     <button @onclick="() => Editor.ReverseEdge(Edge)">Reverse</button>
     <button @onclick="() => Editor.MakeDefaultLook(Edge)" title="New connectors will look like this one">Use as default</button>
