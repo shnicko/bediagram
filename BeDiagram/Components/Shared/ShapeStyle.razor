@@ -1,11 +1,13 @@
 <label>Colour</label>
-<div class="swatches">
+<div class="swatch-picker">
     <button class="swatch default @On(n => n.Color is null)" title="Type default" @onclick="() => Set(n => n.Color = null)">∅</button>
-    @foreach ((string k, Swatch swc) in Palette.All)
-    {
-        <button class="swatch @On(n => n.Color == k)" style="background:@(AllFilled ? swc.Solid : swc.Light);border-color:@swc.Stroke" title="@k"
-                @onclick="() => Set(n => n.Color = k)"></button>
-    }
+    <div class="swatch-grid">
+        @foreach (string k in Palette.Keys)
+        {
+            <button class="swatch @On(n => n.Color == k)" style="background:@(AllFilled ? Palette.Get(k).Solid : Palette.Get(k).Light);border-color:@Palette.Get(k).Stroke" title="@k"
+                    @onclick="() => Set(n => n.Color = k)"></button>
+        }
+    </div>
 </div>
 <label class="check" title="@FillTitle"><input type="checkbox" checked="@FillChecked" disabled="@FillForced" @onchange="e => Set(n => n.Filled = e.Value is true)" /> Solid fill (presentation style)</label>
 <label>Emphasis</label>

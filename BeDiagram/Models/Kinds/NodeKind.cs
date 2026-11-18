@@ -142,7 +142,7 @@ public abstract class NodeKind : INodeKind
             stroke = sw.Stroke;
             if (filled)
             {
-                return new NodeStyle(sw.Solid, sw.Solid, "#ffffff", "#ffffff");
+                return new NodeStyle(sw.Solid, sw.Solid, sw.OnSolid, sw.OnSolid);
             }
         }
         else if (filled)

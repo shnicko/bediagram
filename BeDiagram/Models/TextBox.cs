@@ -31,13 +31,13 @@ public class TextBox : IGroupable
         }
     }
 
-    /// <summary>Background colour key from <see cref="TextPalette"/>; null = transparent.</summary>
+    /// <summary>Background colour key from <see cref="Palette"/>; null = transparent.</summary>
     public string? Fill { get; set; }
     /// <summary>"none" or a line pattern from <see cref="LineLook"/> (solid, dashed, dotted, dashdot, longdash).</summary>
     public string Border { get; set; } = TextLook.NoBorder;
     /// <summary>"light", "regular" or "heavy".</summary>
     public string BorderWeight { get; set; } = LineLook.Regular;
-    /// <summary>Border colour key from <see cref="TextPalette"/>; null = default grey.</summary>
+    /// <summary>Border colour key from <see cref="Palette"/>; null = default grey.</summary>
     public string? BorderColor { get; set; }
     public bool Rounded { get; set; } = true;
 
@@ -45,7 +45,7 @@ public class TextBox : IGroupable
     public string Font { get; set; } = TextLook.Sans;
     public double FontSize { get; set; } = 14;
     public bool Bold { get; set; }
-    /// <summary>Text colour key from <see cref="TextPalette"/>; null = default dark.</summary>
+    /// <summary>Text colour key from <see cref="Palette"/>; null = default dark.</summary>
     public string? TextColor { get; set; }
     /// <summary>"left", "center" or "right".</summary>
     public string Align { get; set; } = TextLook.Left;
