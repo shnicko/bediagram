@@ -8,7 +8,10 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents()
+    // The browser may send a whole diagram at once (JSON pasted into Edit as JSON). SignalR's default limit of 32 KB
+    // would drop the connection for anything but a small diagram; this is a local app, so allow up to 16 MB.
+    .AddHubOptions(options => options.MaximumReceiveMessageSize = 16 * 1024 * 1024);
 
 // Diagrams are stored as JSON files in a local folder (see appsettings.json -> Storage:Folder).
 builder.Services.AddSingleton<DiagramStore>();

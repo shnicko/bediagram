@@ -446,6 +446,18 @@ kbd {
 .menu-backdrop { position: fixed; inset: 0; z-index: 15; }
 .modal.shortcuts { max-width: 520px; max-height: 85vh; overflow-y: auto; }
 .modal.shortcuts .keys td:first-child { white-space: nowrap; padding-right: 14px; }
+
+/* Edit as JSON (Components/Dialogs/JsonDialog) */
+.modal.json-dialog { width: min(960px, 92vw); max-height: 90vh; display: flex; flex-direction: column; }
+.modal.json-dialog .json-text { width: 100%; height: 62vh; box-sizing: border-box; resize: vertical; padding: 8px 10px;
+    font: 12px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre; overflow: auto; tab-size: 2;
+    border: 1px solid #cfd5dc; border-radius: 6px; color: var(--text); background: #fbfcfd; }
+.modal.json-dialog .json-text:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.modal.json-dialog .json-errors { margin-top: 10px; padding: 8px 12px; border-radius: 6px; background: #fdecec; color: #8a1c1c;
+    font-size: 12px; max-height: 22vh; overflow: auto; }
+.modal.json-dialog .json-errors ul { margin: 6px 0 0; padding-left: 18px; }
+.modal.json-dialog .actions { align-items: center; margin-top: 12px; }
+.modal.json-dialog .actions .json-copy { margin-right: auto; }
 h4.bulk { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line); }
 
 /* Lane creator on a blank canvas */

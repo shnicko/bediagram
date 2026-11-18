@@ -36,6 +36,21 @@ public partial class Designer
 
     void ShowShortcuts() => dialog = Dialog.Shortcuts;
 
+    /// <summary>Opens the JSON editor (Components/Dialogs/JsonDialog) on the whole diagram.</summary>
+    void ShowJson()
+    {
+        CloseMenus();
+        dialog = Dialog.Json;
+        FocusAfterRender("json-text");
+    }
+
+    /// <summary>The JSON editor replaced the diagram: close it and say how to get the old one back.</summary>
+    void JsonApplied()
+    {
+        CloseDialog();
+        ShowToast("Diagram updated from JSON (Ctrl+Z to undo)");
+    }
+
     void CloseDialog() { dialog = Dialog.None; openMenu = null; }
 
     /// <summary>Open from the Open dialog: a fresh start, so the linked-diagram trail is cleared.</summary>

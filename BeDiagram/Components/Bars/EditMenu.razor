@@ -13,6 +13,8 @@
     <button disabled="@(!CanRun(Cmd.Group))" @onclick="() => Run(Cmd.Group)">Group<span class="menu-key">@KeyText(Cmd.Group)</span></button>
     <button disabled="@(!CanRun(Cmd.Ungroup))" @onclick="() => Run(Cmd.Ungroup)">Ungroup<span class="menu-key">@KeyText(Cmd.Ungroup)</span></button>
     <hr class="menu-divider" />
+    <button @onclick="Host.ShowJson" title="See the whole diagram as JSON, copy it, or paste in JSON and apply it">Edit as JSON…</button>
+    <hr class="menu-divider" />
     <div class="menu-settings" @onclick:stopPropagation="true">
         <label title="New items join to the selected item automatically"><input type="checkbox" @bind="Editor.AutoConnect" /> Auto-join new items</label>
         <label title="Snap to a 10px grid"><input type="checkbox" @bind="Editor.Snap" /> Snap to grid</label>

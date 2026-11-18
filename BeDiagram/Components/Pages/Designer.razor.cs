@@ -20,7 +20,7 @@ public partial class Designer
     [Inject] ExportService Exports { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
-    enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave, StepOrder, Shortcuts }
+    enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave, StepOrder, Shortcuts, Json }
 
     /// <summary>
     /// The diagram and everything done to it (selection, undo, editing actions) live in the editor; this page shows
