@@ -30,12 +30,14 @@
     }
 </div>
 <label>Colour</label>
-<div class="swatches">
+<div class="swatch-picker">
     <button class="swatch line @(Edge.Color is null ? "on" : "")" title="Default grey" @onclick="() => Editor.SetEdgeLook(Edge, x => x.Color = null)"><span style="background:@LineLook.DefaultColor"></span></button>
-    @foreach ((string k, Swatch swc) in Palette.All)
-    {
-        <button class="swatch line @(Edge.Color == k ? "on" : "")" title="@k" @onclick="() => Editor.SetEdgeLook(Edge, x => x.Color = k)"><span style="background:@swc.Stroke"></span></button>
-    }
+    <div class="swatch-grid">
+        @foreach (string k in Palette.Keys)
+        {
+            <button class="swatch line @(Edge.Color == k ? "on" : "")" title="@k" @onclick="() => Editor.SetEdgeLook(Edge, x => x.Color = k)"><span style="background:@Palette.Get(k).Stroke"></span></button>
+        }
+    </div>
 </div>
 <label>Arrowheads</label>
 <div class="seg wide stacked">

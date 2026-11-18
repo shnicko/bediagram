@@ -1,8 +1,8 @@
 <label>Colour</label>
-<div class="swatches">
-    @foreach ((string k, Swatch swc) in Palette.All)
+<div class="swatch-grid">
+    @foreach (string k in Palette.Keys)
     {
-        <button class="swatch @On(g => g.Color == k)" style="background:@swc.Light;border-color:@swc.Stroke" title="@k"
+        <button class="swatch @On(g => g.Color == k)" style="background:@Palette.Get(k).Light;border-color:@Palette.Get(k).Stroke" title="@k"
                 @onclick="() => Set(g => g.Color = k)"></button>
     }
 </div>

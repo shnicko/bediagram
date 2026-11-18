@@ -57,11 +57,7 @@ public static class LineLook
 
     public static string Colour(string? key)
     {
-        if (key is not null && Palette.All.TryGetValue(key, out Swatch? sw))
-        {
-            return sw.Stroke;
-        }
-        return TextPalette.StrokeOf(key, DefaultColor);
+        return Palette.StrokeOf(key, DefaultColor);
     }
 
     /// <summary>Marker id for an arrowhead in a given colour and weight (one marker per combination).</summary>

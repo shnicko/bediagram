@@ -38,22 +38,26 @@
     }
 </div>
 <label>Text colour</label>
-<div class="swatches">
+<div class="swatch-picker">
     <button class="swatch line @On(t => t.TextColor is null)" title="Default" @onclick="() => Set(t => t.TextColor = null)"><span style="background:@TextStyle.DefaultText"></span></button>
-    @foreach (string k in TextPalette.Strokes)
-    {
-        <button class="swatch line @On(t => t.TextColor == k)" title="@k" @onclick="() => Set(t => t.TextColor = k)"><span style="background:@TextPalette.StrokeOf(k, TextStyle.DefaultText)"></span></button>
-    }
+    <div class="swatch-grid">
+        @foreach (string k in Palette.Keys)
+        {
+            <button class="swatch line @On(t => t.TextColor == k)" title="@k" @onclick="() => Set(t => t.TextColor = k)"><span style="background:@Palette.Get(k).Stroke"></span></button>
+        }
+    </div>
 </div>
 
 <h4>Box</h4>
 <label>Background</label>
-<div class="swatches">
+<div class="swatch-picker">
     <button class="swatch default @On(t => t.Fill is null)" title="None (transparent)" @onclick="() => Set(t => t.Fill = null)">∅</button>
-    @foreach (string k in TextPalette.Fills)
-    {
-        <button class="swatch @On(t => t.Fill == k)" style="background:@TextPalette.All[k].Fill;border-color:@TextPalette.All[k].Stroke" title="@k" @onclick="() => Set(t => t.Fill = k)"></button>
-    }
+    <div class="swatch-grid">
+        @foreach (string k in Palette.Keys)
+        {
+            <button class="swatch @On(t => t.Fill == k)" style="background:@Palette.Get(k).Light;border-color:@Palette.Get(k).Stroke" title="@k" @onclick="() => Set(t => t.Fill = k)"></button>
+        }
+    </div>
 </div>
 <label>Border</label>
 <div class="seg wide patterns">
@@ -73,12 +77,14 @@
         }
     </div>
     <label>Border colour</label>
-    <div class="swatches">
+    <div class="swatch-picker">
         <button class="swatch line @On(t => t.BorderColor is null)" title="Default grey" @onclick="() => Set(t => t.BorderColor = null)"><span style="background:@TextStyle.DefaultBorder"></span></button>
-        @foreach (string k in TextPalette.Strokes)
-        {
-            <button class="swatch line @On(t => t.BorderColor == k)" title="@k" @onclick="() => Set(t => t.BorderColor = k)"><span style="background:@TextPalette.StrokeOf(k, TextStyle.DefaultBorder)"></span></button>
-        }
+        <div class="swatch-grid">
+            @foreach (string k in Palette.Keys)
+            {
+                <button class="swatch line @On(t => t.BorderColor == k)" title="@k" @onclick="() => Set(t => t.BorderColor = k)"><span style="background:@Palette.Get(k).Stroke"></span></button>
+            }
+        </div>
     </div>
 }
 <label class="check"><input type="checkbox" checked="@AllRounded" @onchange="e => Set(t => t.Rounded = e.Value is true)" /> Rounded corners</label>

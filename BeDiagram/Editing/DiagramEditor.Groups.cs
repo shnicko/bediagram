@@ -147,10 +147,23 @@ public partial class DiagramEditor
         foreach (Group outer in Tree.Ancestors(g)) GrowOne(outer);
     }
 
+    /// <summary>The first colour of <see cref="Palette.GroupOrder"/> no group uses yet; once they are all taken,
+    /// the colours repeat in turn.</summary>
     string NextGroupColour()
     {
-        HashSet<string> used = Diagram.Groups.Select(g => g.Color).ToHashSet();
-        return Palette.All.Keys.FirstOrDefault(k => !used.Contains(k)) ?? Palette.All.Keys.ElementAt(Diagram.Groups.Count % Palette.All.Count);
+        HashSet<string> used = new HashSet<string>();
+        foreach (Group g in Diagram.Groups)
+        {
+            used.Add(g.Color);
+        }
+        foreach (string key in Palette.GroupOrder)
+        {
+            if (!used.Contains(key))
+            {
+                return key;
+            }
+        }
+        return Palette.GroupOrder[Diagram.Groups.Count % Palette.GroupOrder.Count];
     }
 
     /// <summary>
