@@ -5,19 +5,22 @@
     <button @onclick="Host.ShowOpen" title="Open a saved diagram">Open…</button>
     <button @onclick="() => Run(Cmd.Save)" title="@Tip(Cmd.Save)">Save<span class="menu-key">@KeyText(Cmd.Save)</span></button>
     <button @onclick="() => Run(Cmd.SaveAs)" title="@Tip(Cmd.SaveAs)">Save as…<span class="menu-key">@KeyText(Cmd.SaveAs)</span></button>
-    <hr class="menu-divider" />
-    <div class="menu-heading">Export <span class="muted-label">next to the saved diagram</span></div>
     @foreach (ExportMenuItem item in ExportMenuItems())
     {
-        if (item.StartsGroup)
+        if (item.Heading is not null)
+        {
+            <hr class="menu-divider" />
+            <div class="menu-heading">@item.Heading <span class="muted-label">@item.HeadingNote</span></div>
+        }
+        else if (item.StartsGroup)
         {
             <hr class="menu-divider" />
         }
         <button @onclick="() => Export(item.Choice)" title="@item.Tip">@item.Label</button>
     }
     <div class="menu-settings" @onclick:stopPropagation="true">
-        <span class="muted-label">PNG settings</span>
-        <label title="Size of the PNG in pixels">
+        <span class="muted-label">PNG and clipboard settings</span>
+        <label title="Size of the PNG (saved or copied) in pixels">
             Resolution
             <select value="@exportOptions.PngResolution" @onchange="SetPngResolution">
                 @for (int i = 0; i < PngResolutions.Count; i++)

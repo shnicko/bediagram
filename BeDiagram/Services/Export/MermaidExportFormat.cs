@@ -24,6 +24,15 @@ public class MermaidExportFormat : IExportFormat
     public string Extension => ".mmd";
     public bool UsesArea => false;
 
+    /// <summary>The media (MIME) type of what this format makes.</summary>
+    public string MediaType
+    {
+        get
+        {
+            return "text/plain";
+        }
+    }
+
     public Task<ExportFile> RenderAsync(Diagram d, ExportView? view, ExportOptions options)
     {
         string text = Header(d) + Write(d);

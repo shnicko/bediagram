@@ -50,9 +50,11 @@ Each diagram can produce these files, side by side:
 
 The PNG is drawn by your browser from the SVG export, so it matches the SVG and the screen exactly.
 
+**Copy to clipboard** (under the export entries): *PNG image — page* (or *drawing extents*) and *PNG image — current view* put the picture straight on the clipboard instead of saving a file — a quick screenshot of the sheet or of what's on screen, ready to paste into Word, PowerPoint, Teams or an email. The *PNG and clipboard settings* apply, so pick *300 dpi (print)* (page) or *3×* (open canvas) for a sharp copy; the message says the size copied (A4 at 300 dpi = 3508 × 2480 px). The clipboard keeps only the pixels, not the dpi, so Word and PowerPoint may paste a 300 dpi image larger than the paper size — they shrink it to fit the page or slide, or resize it after pasting. Browsers only allow copying while BeDiagram is open on `localhost` (or https), and the browser tab has focus.
+
 ## Using it
 
-- **Menu bar:** *File* (New, Open, Save, Save as, every export with the PNG settings, the flow direction and the page size), *Edit* (Undo / Redo, Select all, Duplicate, Delete, Join, Group / Ungroup, plus *Auto-join*, *Snap to grid* and the angle lock), *Arrange* (Step order, Tidy connectors, Place text clear of connectors, Auto-layout, Swim lanes with *Stack edge to edge*, *Lock lane size* and *Lock shapes in place*, and the line style for new connectors), *View* (step numbers, zoom) and *Help → Keyboard shortcuts* (built from the editor's commands, so it always matches what the keys do). Undo / redo, the grid, zoom / fit, the flow direction (→ / ↓), *Snap to grid* (magnet) and the angle lock (*Free* / *90°* / *45°* / *30°*) stay on the bar for quick access. `Esc` or a click elsewhere closes a menu.
+- **Menu bar:** *File* (New, Open, Save, Save as, every export and copy to clipboard with the PNG settings, the flow direction and the page size), *Edit* (Undo / Redo, Select all, Duplicate, Delete, Join, Group / Ungroup, plus *Auto-join*, *Snap to grid* and the angle lock), *Arrange* (Step order, Tidy connectors, Place text clear of connectors, Auto-layout, Swim lanes with *Stack edge to edge*, *Lock lane size* and *Lock shapes in place*, and the line style for new connectors), *View* (step numbers, zoom) and *Help → Keyboard shortcuts* (built from the editor's commands, so it always matches what the keys do). Undo / redo, the grid, zoom / fit, the flow direction (→ / ↓), *Snap to grid* (magnet) and the angle lock (*Free* / *90°* / *45°* / *30°*) stay on the bar for quick access. `Esc` or a click elsewhere closes a menu.
 - **Add shapes:** drag from the sidebar, click a sidebar item, or press `1`–`9`. A new shape's label opens for editing straight away with the default text selected, so just type its name and press `Enter`. Shapes added by a sidebar click, a number key or *+ Next step* also pan the view (zoom unchanged) so the new shape sits in the middle of the screen; dragged or double-click-placed shapes are already under the pointer, so the view stays put.
 - **Flow direction:** the → / ↓ buttons on the toolbar, or *File → Flow direction* — *Left → right* or *Top → down* (default) — decides where the next step goes when you add one from the sidebar, a number key or *+ Next step*. It's saved with the diagram, and *Start with swim lanes* sets it to match the lanes (rows → left to right, columns → top to down). One undo step to change. The sidebar shows icons only — shapes in a 3 × 3 grid (each with its number key) followed by the List and IPO tiles (no number key), the eight circle versions in two rows of four, the five outcomes in one row, then text box, comment and group; hover a tile to see its name.
 - **Help notes:** the panels keep their explanations behind small *i* buttons. Click one to show the note under that line; click again to hide it.
@@ -222,7 +224,7 @@ BeDiagram/                   the web app project
   Components/Pages/Commands/   editor commands and keyboard shortcuts (Command pattern, see below)
   Components/Pages/Views/      view records the Designer markup reads (NodeView, EdgeView, GroupView, …)
   wwwroot/js/designer.js       keyboard shortcuts, wheel zoom, canvas size, focus
-  wwwroot/js/export.js         draws the SVG export onto a canvas for PNG export
+  wwwroot/js/export.js         draws the SVG export onto a canvas for PNG export; copies a PNG to the clipboard
   wwwroot/app.css              styling
 tools/Check-OneTypePerFile.ps1   checks the one-type-per-file rule (see below)
 tools/regression/                side-by-side regression tests: master vs your changes (see its README)
@@ -236,15 +238,16 @@ powershell -ExecutionPolicy Bypass -File tools\Check-OneTypePerFile.ps1
 
 ### Export: strategy pattern
 
-Export is split into two families of strategies, put together by one context class:
+Export is split into three families of strategies, put together by one context class:
 
 - **`IExportFormat`** — *what kind of file*: `SvgExportFormat`, `PngExportFormat`, `PdfExportFormat`, `MermaidExportFormat`. Each turns a diagram (plus an optional view window) into bytes. SVG, PNG and PDF all start from the same SVG, written by **`SvgDiagramWriter`** (registered once and given to those three formats); the Mermaid writer lives in `MermaidExportFormat` itself.
 - **`IExportArea`** — *which part of the drawing*: `WholeDrawingArea` (page or extents) and `CurrentViewArea` (what's on screen, saved with a `.view` suffix).
-- **`ExportService`** — the context. It gets every registered format and area from dependency injection, lists the combinations for the Export menu (`Choices()`), and runs one (`ExportAsync`: area → view window, format → bytes, then save next to the diagram).
+- **`IExportDestination`** — *where it goes*: `FileDestination` (saved next to the diagram) and `ClipboardDestination` (copied as a picture; takes only formats whose `MediaType` is `image/png`, written by `IClipboard` → `BrowserClipboard` in `wwwroot/js/export.js`). Each destination is a heading in the Export menu.
+- **`ExportService`** — the context. It gets every registered destination, format and area from dependency injection, lists the combinations for the Export menu (`Choices()`: destination × the formats it accepts × area), and runs one (`ExportAsync`: area → view window, format → bytes, destination → file or clipboard).
 
 `PngExportFormat` uses one more small strategy, `IPngRasterizer`, for turning SVG into pixels; `BrowserPngRasterizer` does it in the browser (`wwwroot/js/export.js`). A server-side rasteriser could be swapped in without touching the format.
 
-To add an export format or area: write a class implementing the interface and register it in `Program.cs` — the menu picks it up; the Designer doesn't change. Menu order = registration order.
+To add an export destination, format or area: write a class implementing the interface and register it in `Program.cs` — the menu picks it up; the Designer doesn't change. Menu order = registration order.
 
 ### Editor and page: DiagramEditor
 

@@ -18,6 +18,12 @@ public interface IExportFormat
     string Extension { get; }
 
     /// <summary>
+    /// The media (MIME) type of the content, e.g. "image/png". An <see cref="IExportDestination"/> uses it to say
+    /// which formats it takes, and the clipboard is told what it is holding.
+    /// </summary>
+    string MediaType { get; }
+
+    /// <summary>
     /// True when the format can export a chosen area (whole page / current view).
     /// False for formats that describe the structure rather than a picture (Mermaid), which get one menu entry.
     /// </summary>

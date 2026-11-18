@@ -31,6 +31,15 @@ public class PdfExportFormat : IExportFormat
         }
     }
 
+    /// <summary>The media (MIME) type of what this format makes.</summary>
+    public string MediaType
+    {
+        get
+        {
+            return "application/pdf";
+        }
+    }
+
     public bool UsesArea
     {
         get

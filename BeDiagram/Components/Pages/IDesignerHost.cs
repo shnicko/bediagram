@@ -36,7 +36,7 @@ public interface IDesignerHost
     /// <summary>Shows the Open dialog.</summary>
     void ShowOpen();
 
-    /// <summary>Exports next to the saved diagram; the current-view area uses what is on screen now.</summary>
+    /// <summary>Runs an Export menu entry (saved next to the diagram or copied to the clipboard); the current-view area uses what is on screen now.</summary>
     Task Export(ExportChoice choice, ExportOptions options);
 
     // ───────────── Linked diagrams ─────────────

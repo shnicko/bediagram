@@ -43,7 +43,8 @@ BeDiagram/
   Editing/Angles/         angle lock — Strategy (free / 90 / 45 / 30)
   Editing/Guides/         centre guides while dragging (CentreGuides, GuideLine)
   Services/               DiagramStore (save / open / list / delete; a name is its `/`-separated path), ExportView
-  Services/Export/        export — Strategy (IExportFormat × IExportArea, ExportService), SvgDiagramWriter, Mermaid
+  Services/Export/        export — Strategy (IExportDestination × IExportFormat × IExportArea, ExportService),
+                          SvgDiagramWriter, Mermaid, clipboard (IClipboard → BrowserClipboard)
   Services/Export/Pdf/    PDF made from the SVG export, no libraries
   Components/Pages/       Designer.razor (markup) + Designer.<Area>.cs partials; IDesignerHost / DesignerPart
                           (Mediator); ICanvasInput
@@ -198,6 +199,8 @@ is already working:
   `ShapePath`) as well.
 - **Export uses the Strategy pattern** (Nick knows it well). A new format or area is a new class implementing
   `IExportFormat` / `IExportArea`, registered in `Program.cs`; don't add format-specific export methods to the Designer.
+  Where the result goes (a file next to the diagram, the clipboard) is an `IExportDestination`; a destination picks
+  the formats it takes by `IExportFormat.MediaType`, not by testing the format's class.
 - **Connector routing uses the Strategy pattern.** `EdgeRouter.Route` keeps row ends on their left / right side and
   hands the rest to the `IConnectorRouting` for the connector's style (`ElbowRouting`, `StraightRouting`). A new
   connector style is a new routing class (and an `EdgeStyle` member), not a branch in `EdgeRouter`.

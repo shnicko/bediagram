@@ -3,46 +3,68 @@ using BeDiagram.Models;
 namespace BeDiagram.Services.Export;
 
 /// <summary>
-/// The context of the strategy pattern: holds every registered <see cref="IExportFormat"/> and <see cref="IExportArea"/>,
-/// lists the combinations for the menu, and runs a chosen one (render with the format, then save next to the diagram).
-/// The Designer only talks to this class, so adding a format or area is a new class + one line in Program.cs.
+/// The context of the strategy pattern: holds every registered <see cref="IExportDestination"/>,
+/// <see cref="IExportFormat"/> and <see cref="IExportArea"/>, lists the combinations for the menu, and runs a chosen
+/// one (area → view window, format → bytes, destination → saved file or clipboard).
+/// The Designer only talks to this class, so adding a destination, format or area is a new class + one line in Program.cs.
 /// </summary>
 public class ExportService
 {
-    readonly DiagramStore store;
-
-    public ExportService(IEnumerable<IExportFormat> formats, IEnumerable<IExportArea> areas, DiagramStore store)
+    public ExportService(IEnumerable<IExportDestination> destinations, IEnumerable<IExportFormat> formats, IEnumerable<IExportArea> areas)
     {
         // Menu order = registration order in Program.cs.
+        Destinations = destinations.ToList();
         Formats = formats.ToList();
         Areas = areas.ToList();
-        this.store = store;
     }
 
+    public IReadOnlyList<IExportDestination> Destinations { get; }
     public IReadOnlyList<IExportFormat> Formats { get; }
     public IReadOnlyList<IExportArea> Areas { get; }
 
-    /// <summary>Every menu entry: each area for formats that use one, a single entry for those that don't.</summary>
-    public IEnumerable<ExportChoice> Choices()
+    /// <summary>
+    /// Every menu entry, grouped by destination: for each format the destination takes,
+    /// each area for formats that use one, a single entry for those that don't.
+    /// </summary>
+    public List<ExportChoice> Choices()
     {
-        foreach (IExportFormat f in Formats)
+        List<ExportChoice> result = new List<ExportChoice>();
+        foreach (IExportDestination dest in Destinations)
         {
-            if (!f.UsesArea)
+            foreach (IExportFormat f in Formats)
             {
-                yield return new ExportChoice(f, null);
-                continue;
+                if (!dest.Accepts(f))
+                {
+                    continue;
+                }
+                if (!f.UsesArea)
+                {
+                    result.Add(new ExportChoice(f, null, dest));
+                    continue;
+                }
+                foreach (IExportArea a in Areas)
+                {
+                    result.Add(new ExportChoice(f, a, dest));
+                }
             }
-            foreach (IExportArea a in Areas)
-                yield return new ExportChoice(f, a);
         }
+        return result;
     }
 
-    /// <summary>Renders the choice and saves it next to the diagram. Returns the saved path and any note.</summary>
-    public async Task<(string Path, string? Note)> ExportAsync(ExportChoice c, Diagram d, ScreenView screen, ExportOptions options)
+    /// <summary>Renders the choice and hands it to its destination. Returns the message for the toast.</summary>
+    public async Task<string> ExportAsync(ExportChoice c, Diagram d, ScreenView screen, ExportOptions options)
     {
-        ExportView? view = c.Area?.ViewFor(d, screen);
+        ExportView? view = null;
+        if (c.Area is not null)
+        {
+            view = c.Area.ViewFor(d, screen);
+        }
         ExportFile file = await c.Format.RenderAsync(d, view, options);
-        string path = await store.SaveBytesAsync(d.Name, (c.Area?.FileSuffix ?? "") + c.Format.Extension, file.Content);
-        return (path, file.Note);
+        string message = await c.Destination.DeliverAsync(d, c, file);
+        if (file.Note is not null)
+        {
+            message = $"{message} ({file.Note})";
+        }
+        return message;
     }
 }

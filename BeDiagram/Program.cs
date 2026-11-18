@@ -13,8 +13,12 @@ builder.Services.AddRazorComponents()
 // Diagrams are stored as JSON files in a local folder (see appsettings.json -> Storage:Folder).
 builder.Services.AddSingleton<DiagramStore>();
 
-// Export strategies (see Services/Export). The Export menu lists formats and areas in the order registered here.
-// Formats: what kind of file. Areas: which part of the drawing (whole page / extents, or the current view).
+// Export strategies (see Services/Export). The Export menu lists destinations, formats and areas in the order registered here.
+// Destinations: where it goes (a file next to the diagram, or the clipboard). Formats: what kind of file.
+// Areas: which part of the drawing (whole page / extents, or the current view).
+builder.Services.AddSingleton<IExportDestination, FileDestination>();
+builder.Services.AddScoped<IExportDestination, ClipboardDestination>();   // scoped: this user's browser clipboard
+builder.Services.AddScoped<IClipboard, BrowserClipboard>();
 builder.Services.AddSingleton<SvgDiagramWriter>();   // the shared SVG renderer behind SVG, PNG and PDF
 builder.Services.AddSingleton<PdfWriter>();          // SVG → PDF
 builder.Services.AddSingleton<IExportFormat, SvgExportFormat>();
