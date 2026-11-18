@@ -228,7 +228,10 @@ public partial class DiagramEditor
 
     // ───────────── Undo / redo (Memento: whole-diagram snapshots) ─────────────
 
-    public string Snapshot() => JsonSerializer.Serialize(Diagram, SnapshotJson);
+    public string Snapshot()
+    {
+        return JsonSerializer.Serialize(Diagram, SnapshotJson);
+    }
 
     public void PushUndo(string snap)
     {
@@ -247,10 +250,18 @@ public partial class DiagramEditor
     void Restore(string snap)
     {
         string name = Diagram.Name;
-        Diagram = JsonSerializer.Deserialize<Diagram>(snap, SnapshotJson) ?? new Diagram();
+        Diagram? restored = JsonSerializer.Deserialize<Diagram>(snap, SnapshotJson);
+        if (restored is null)
+        {
+            restored = new Diagram();
+        }
+        Diagram = restored;
         Diagram.Name = name;
         Selection.RemoveAll(id => FindBox(id) is null);
-        if (SelectedEdgeId is not null && SelectedEdge is null) SelectedEdgeId = null;
+        if (SelectedEdgeId is not null && SelectedEdge is null)
+        {
+            SelectedEdgeId = null;
+        }
         EditingId = null;
         Dirty = true;
     }
