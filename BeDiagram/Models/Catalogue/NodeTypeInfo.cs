@@ -19,7 +19,7 @@ public record NodeTypeInfo(NodeType Key, string Display, IShapeOutline Outline, 
         }
     }
 
-    /// <summary>How nodes of this type behave: classic shape, circle, outcome, list or IPO box.</summary>
+    /// <summary>How nodes of this type behave: classic shape, circle, outcome, list, IPO box, class or entity.</summary>
     public required INodeKind Kind { get; init; }
 
     /// <summary>The icon a new node starts with: start ▶ and end 🏁 so the two ends of a flow read as a pair (End is
@@ -28,6 +28,10 @@ public record NodeTypeInfo(NodeType Key, string Display, IShapeOutline Outline, 
 
     /// <summary>The icon when drawn as a circle (<see cref="Node.Round"/>), so every circle of a type looks the same.</summary>
     public string RoundIcon { get; init; } = "settings";
+
+    /// <summary>A structural model element (class, interface, enumeration, entity): listed in the palette's
+    /// <em>Data models</em> section rather than with the flow shapes.</summary>
+    public bool Model { get; init; }
 
     /// <summary>The properties a new node starts with (empty values), in file order. Rule checks get the fields the
     /// audit tool reads.</summary>

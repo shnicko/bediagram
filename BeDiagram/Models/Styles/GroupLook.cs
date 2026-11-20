@@ -7,9 +7,11 @@ public static class GroupLook
     public const string Bottom = "bottom";
     public const string Band = "band";
     public const string Text = "text";
+    /// <summary>The title in an outlined tag in the corner (a UML package or frame name).</summary>
+    public const string Tag = "tag";
 
     public static readonly (string Key, string Name)[] Positions = { (Top, "Top"), (Bottom, "Bottom") };
-    public static readonly (string Key, string Name)[] Styles = { (Band, "Band"), (Text, "Plain text") };
+    public static readonly (string Key, string Name)[] Styles = { (Band, "Band"), (Text, "Plain text"), (Tag, "Name tag") };
 
     /// <summary>
     /// Group outline width for a <see cref="LineLook"/> weight key. Regular stays at 1.5 (the width groups have always had),

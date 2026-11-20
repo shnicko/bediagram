@@ -45,7 +45,8 @@ public class Group : IGroupable
     /// <summary>Where the title goes: "top" or "bottom" (see <see cref="GroupLook"/>).</summary>
     public string HeaderPos { get; set; } = GroupLook.Top;
     /// <summary>"band" = title on a tinted strip inside the group; "text" = plain bold title
-    /// (inside at the top, or centred under the box when the title is at the bottom).</summary>
+    /// (inside at the top, or centred under the box when the title is at the bottom); "tag" = title in an outlined
+    /// tag in the corner, as for a UML package.</summary>
     public string HeaderStyle { get; set; } = GroupLook.Band;
 
     /// <summary>A copy with a new id; every other field (title, colour, fill, border, title style, link, parent group) is kept.</summary>
@@ -78,7 +79,7 @@ public class Group : IGroupable
     /// <summary>Space the title takes inside the bottom of the group (a band at the bottom).</summary>
     public double InsetBottom()
     {
-        if (HeaderPos == GroupLook.Bottom && HeaderStyle == GroupLook.Band)
+        if (HeaderPos == GroupLook.Bottom && HeaderStyle != GroupLook.Text)
         {
             return Header;
         }
@@ -111,9 +112,14 @@ public class Group : IGroupable
         return (x + 14, y + 21, "start");
     }
 
-    /// <summary>The tinted band behind the title (rounded on the outside corners), or null for a plain-text title.</summary>
+    /// <summary>The tinted band behind the title (rounded on the outside corners), the name tag, or null for a
+    /// plain-text title.</summary>
     public string? BandPath()
     {
+        if (HeaderStyle == GroupLook.Tag)
+        {
+            return TagPath();
+        }
         if (HeaderStyle != GroupLook.Band)
         {
             return null;
@@ -129,6 +135,31 @@ public class Group : IGroupable
         }
         double y = Y;
         return $"M{F(x)},{F(y + Header)} V{F(y + r)} Q{F(x)},{F(y)} {F(x + r)},{F(y)} H{F(x + w - r)} Q{F(x + w)},{F(y)} {F(x + w)},{F(y + r)} V{F(y + Header)} Z";
+    }
+
+    /// <summary>The band is outlined (the name tag), not only tinted.</summary>
+    public bool BandOutlined()
+    {
+        return HeaderStyle == GroupLook.Tag;
+    }
+
+    /// <summary>The name tag: as wide as the title, in the top-left corner (bottom-left when the title is at the
+    /// bottom), with its inner corner cut off like a UML frame's name.</summary>
+    string TagPath()
+    {
+        const double cut = 8;
+        const double r = 10;
+        double x = X;
+        // Width from the title (13px semibold), never wider than the group.
+        double w = Math.Min(W, Math.Max(60, Title.Length * 7.6 + 28 + cut));
+        if (HeaderPos == GroupLook.Bottom)
+        {
+            double y0 = Y + H - Header;
+            double y1 = Y + H;
+            return $"M{F(x)},{F(y0)} H{F(x + w - cut)} L{F(x + w)},{F(y0 + cut)} V{F(y1)} H{F(x + r)} Q{F(x)},{F(y1)} {F(x)},{F(y1 - r)} Z";
+        }
+        double y = Y;
+        return $"M{F(x)},{F(y + Header)} V{F(y + r)} Q{F(x)},{F(y)} {F(x + r)},{F(y)} H{F(x + w)} V{F(y + Header - cut)} L{F(x + w - cut)},{F(y + Header)} Z";
     }
 
     /// <summary>Fill opacity of the group body (0 = no fill; the body stays clickable).</summary>

@@ -123,13 +123,13 @@ public abstract class PanelLayout : IPanelLayout
 
     // ───────────── Title band ─────────────
 
-    public LabelLayout HeaderLabel(Node n, string label)
+    public virtual LabelLayout HeaderLabel(Node n, string label)
     {
         string text = Fit(label.Replace("\r", "").Replace("\n", " "), n.W - 28, 7.4);
         return new LabelLayout(new List<string> { text }, n.X + n.W / 2, n.Y + Header / 2 + 4.5, false, false, 0, 0, 0);
     }
 
-    public Rect TitleEditRect(Node n)
+    public virtual Rect TitleEditRect(Node n)
     {
         return new Rect(n.X + 8, n.Y + 4, n.W - 16, Header - 8);
     }
@@ -146,7 +146,7 @@ public abstract class PanelLayout : IPanelLayout
 
     // ───────────── SVG ─────────────
 
-    public string Body(Node n, NodeStyle st)
+    public virtual string Body(Node n, NodeStyle st)
     {
         StringBuilder sb = new StringBuilder();
         // On a solid fill the band and dividers are white, otherwise a tint of the outline colour.

@@ -16,7 +16,14 @@
               @onpointerdown="e => Input.GroupBodyDown(e, v.G.Id)" @onpointerdown:stopPropagation="true" />
         @if (v.BandPath is { } band)
         {
-            <path d="@band" fill="@v.Swatch.Stroke" fill-opacity="0.14" pointer-events="none" />
+            @if (v.BandStroke > 0)
+            {
+                <path d="@band" fill="@v.Swatch.Stroke" fill-opacity="0.14" stroke="@v.Swatch.Stroke" stroke-width="@F(v.BandStroke)" pointer-events="none" />
+            }
+            else
+            {
+                <path d="@band" fill="@v.Swatch.Stroke" fill-opacity="0.14" pointer-events="none" />
+            }
         }
         @* Title area: the drag handle (double-click to rename) *@
         <rect class="group-header" x="@F(v.TitleArea.X)" y="@F(v.TitleArea.Y)" width="@F(v.TitleArea.W)" height="@F(v.TitleArea.H)" fill="transparent"

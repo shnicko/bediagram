@@ -73,6 +73,13 @@ public class Node : IGroupable
     /// For display only: the numbers come from the row order and aren't saved. False (the default) is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool NumberRows { get; set; }
+    /// <summary>Classes: abstract (shown as {abstract} over the name). False (the default) is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Abstract { get; set; }
+    /// <summary>Classes and entities: show the name only, hiding the attributes and operations (a conceptual model).
+    /// The rows are kept. False (the default) is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool NameOnly { get; set; }
     /// <summary>Optional longer note drawn in smaller text under the label. For shapes with the label inside,
     /// it sits under the shape. A blank description is stored as null (left out of the file).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

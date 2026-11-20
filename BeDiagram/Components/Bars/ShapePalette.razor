@@ -44,6 +44,28 @@
             </div>
         }
     </div>
+    <div class="section">Data models <InfoTip>Classes, interfaces, enumerations and database entities, with structured rows (visibility, name, type, keys). A package is a group in the package look. Use the connector's relationship (or the arrowheads) for associations, inheritance and crow's-foot keys.</InfoTip></div>
+    <div class="tiles three">
+        @foreach (NodeTypeInfo t in ModelShapes)
+        {
+            <div class="tile" draggable="true" data-palette="@t.Name" data-tip="@ModelPaletteTip(t)" aria-label="@t.Display"
+                 @ondragstart="() => StartPaletteDrag(t.Key)"
+                 @onclick="() => Editor.QuickAdd(t.Key)">
+                <svg width="48" height="30" viewBox="-2 -2 52 32">
+                    <path d="@PaletteShapePath(t.Key)" fill="@t.Fill" stroke="@t.Stroke" stroke-width="1.5" />
+                    <path d="@PaletteInnerPath(t.Key)" fill="none" stroke="@t.Stroke" stroke-width="1" />
+                </svg>
+            </div>
+        }
+        <div class="tile" draggable="true" data-palette="package" data-tip="Package: a group with a name tag. Drag onto the canvas, or select items and click to wrap them" aria-label="Package"
+             @ondragstart="StartPackageDrag"
+             @onclick="Editor.AddPackageQuick">
+            <svg width="48" height="30" viewBox="-2 -2 52 32">
+                <rect x="1" y="1" width="46" height="26" rx="3" fill="none" stroke="#6b6b66" stroke-width="1.5" />
+                <path d="M1,10 H18 L23,5 V1" fill="#6b6b66" fill-opacity="0.15" stroke="#6b6b66" stroke-width="1.2" />
+            </svg>
+        </div>
+    </div>
     <div class="section">Text &amp; groups</div>
     <div class="tiles three">
         <div class="tile" draggable="true" data-palette="text" data-tip="Text box: drag onto the canvas, click to add, or press T" aria-label="Text box"

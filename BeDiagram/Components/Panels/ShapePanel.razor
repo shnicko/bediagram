@@ -57,7 +57,11 @@
 <ShapeStyle Editor="Editor" Nodes="[Node]" OnChanged="Redraw" />
 <BoundsFields Editor="Editor" Item="Node" FixedHeightTip="A list or IPO box is always as tall as its rows" OnChanged="Redraw">X and Y are the centre of the shape — the middle of the circle or symbol, not of the text under it. W and H resize it about that centre, so connectors stay straight.@HeightNote</BoundsFields>
 
-@if (Node.Kind.IsPanel)
+@if (IsModel)
+{
+    <ModelRows Editor="Editor" Node="Node" OnChanged="Redraw" />
+}
+else if (Node.Kind.IsPanel)
 {
     <PanelItems Editor="Editor" Node="Node" OnChanged="Redraw" />
 }

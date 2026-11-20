@@ -2,16 +2,26 @@ using Microsoft.AspNetCore.Components;
 using BeDiagram.Components.Pages;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Kinds;
 using BeDiagram.Models.Serialization;
 using BeDiagram.Models.Text;
 using static BeDiagram.Models.SvgNumbers;
 
 namespace BeDiagram.Components.Panels;
 
-/// <summary>The side panel for one selected shape: label, description, step, type, size, look, outcome or icon, rows of a list / IPO box, link, group and properties.</summary>
+/// <summary>The side panel for one selected shape: label, description, step, type, size, look, outcome or icon, rows of a list / IPO box / class / entity, link, group and properties.</summary>
 public partial class ShapePanel : DesignerPart
 {
     [Parameter, EditorRequired] public Node Node { get; set; } = default!;
+
+    /// <summary>A class, interface, enumeration or entity: its rows have structured fields (<see cref="ModelRows"/>).</summary>
+    bool IsModel
+    {
+        get
+        {
+            return Node.Kind is ModelKind;
+        }
+    }
 
     /// <summary>The icon search text. Kept by the page (<c>@bind-IconFilter</c>), so it stays while other items are selected.</summary>
     [Parameter] public string IconFilter { get; set; } = "";

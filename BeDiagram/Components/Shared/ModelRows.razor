@@ -1,0 +1,20 @@
+<label class="check" title="Show the name only, hiding the rows (a conceptual model). The rows are kept.">
+    <input type="checkbox" checked="@Node.NameOnly" @onchange="NameOnlyChanged" /> Name only (conceptual view)
+</label>
+@if (Model.CanBeAbstract)
+{
+    <label class="check" title="An abstract class: {abstract} is shown over the name">
+        <input type="checkbox" checked="@Node.Abstract" @onchange="AbstractChanged" /> Abstract
+    </label>
+}
+@foreach (RowSection section in Model.Sections)
+{
+    <div class="panel-section">
+        <label>@Model.SectionName(section) <InfoTip>One row per member. Drag from a row's ● port on the canvas to connect from that row (for example a foreign key to the key it refers to); drop a connector on a row to connect to it.</InfoTip></label>
+        @foreach (ListItem item in Model.RowsIn(Node, section))
+        {
+            <ModelRowEditor Editor="Editor" Node="Node" Item="item" Section="section" Fields="Model.Fields(section)" OnChanged="Changed" />
+        }
+        <button class="small" @onclick="() => Add(section)">+ Add to @Model.SectionName(section)</button>
+    </div>
+}
