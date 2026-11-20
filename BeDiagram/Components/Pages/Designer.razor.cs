@@ -21,7 +21,7 @@ public partial class Designer
     [Inject] ExportService Exports { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
-    enum Dialog { None, Open, OpenWhere, SaveAs, ConfirmLeave, ConfirmClose, FileChanged, StepOrder, Shortcuts, Json }
+    enum Dialog { None, Open, OpenWhere, SaveAs, ConfirmLeave, ConfirmClose, FileChanged, PasteSpecial, StepOrder, Shortcuts, Json }
 
     /// <summary>The open diagrams, in tab order.</summary>
     readonly List<DiagramTab> tabs = new List<DiagramTab>();

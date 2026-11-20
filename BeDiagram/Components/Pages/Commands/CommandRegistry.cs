@@ -33,6 +33,8 @@ public class CommandRegistry
         {
             new SaveCommand(), new SaveAsCommand(), new UndoCommand(), new RedoCommand(),
             new SelectAllCommand(), new CancelCommand(), new EditTextCommand(),
+            new CopyStyleCommand(), new PasteStyleCommand(), new PasteSpecialCommand(),
+            new FormatPainterCommand(false), new FormatPainterCommand(true),
             new DuplicateCommand(), new DeleteCommand(), new GroupCommand(), new UngroupCommand(), new JoinCommand(), new QuickBranchCommand(),
             new ToggleConnectorStyleCommand(), new ToggleAngleLockCommand(), new ArrangeLanesHorizontalCommand(), new ArrangeLanesVerticalCommand(),
             new TidyConnectorsCommand(), new PlaceTextCommand(), new AutoLayoutHorizontalCommand(), new AutoLayoutVerticalCommand(),

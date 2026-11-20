@@ -22,6 +22,10 @@ public partial class Designer
 
     void ItemDown(PointerEventArgs e, string id)
     {
+        if (PaintAt(e, id))
+        {
+            return;
+        }
         if (e.Button != 0)
         {
             StartPan(e);
@@ -58,8 +62,20 @@ public partial class Designer
     /// <summary>Pressing on a group's body: click selects the group, drag draws a selection box inside it.</summary>
     void GroupBodyDown(PointerEventArgs e, string id)
     {
-        if (e.Button != 0) { StartPan(e); return; }
-        if (e.ShiftKey || e.CtrlKey) { ItemDown(e, id); return; }
+        if (PaintAt(e, id))
+        {
+            return;
+        }
+        if (e.Button != 0)
+        {
+            StartPan(e);
+            return;
+        }
+        if (e.ShiftKey || e.CtrlKey)
+        {
+            ItemDown(e, id);
+            return;
+        }
         Editor.EndEdit();
         Editor.ClearSelection();
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
@@ -69,7 +85,15 @@ public partial class Designer
     /// <summary>Pressing a ● port: a shape's side, or (<paramref name="itemId"/>) a row of a list / IPO node.</summary>
     void PortDown(PointerEventArgs e, string id, string? itemId)
     {
-        if (e.Button != 0) { StartPan(e); return; }
+        if (PaintAt(e, id))
+        {
+            return;
+        }
+        if (e.Button != 0)
+        {
+            StartPan(e);
+            return;
+        }
         Editor.EndEdit();
         Editor.SelectOnly(id);
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
@@ -80,6 +104,10 @@ public partial class Designer
     /// same as pressing the shape (add to or take from the selection).</summary>
     void OutsideTextDown(PointerEventArgs e, string id)
     {
+        if (PaintAt(e, id))
+        {
+            return;
+        }
         if (e.Button != 0)
         {
             StartPan(e);
@@ -136,8 +164,19 @@ public partial class Designer
 
     void EdgeDown(PointerEventArgs e, string id)
     {
-        if (e.Button != 0) { StartPan(e); return; }
-        if (Editor.EditingId is not null && Editor.EditingId != id) Editor.EndEdit();
+        if (PaintAt(e, id))
+        {
+            return;
+        }
+        if (e.Button != 0)
+        {
+            StartPan(e);
+            return;
+        }
+        if (Editor.EditingId is not null && Editor.EditingId != id)
+        {
+            Editor.EndEdit();
+        }
         Editor.Selection.Clear();
         Editor.SelectedEdgeId = id;
     }
@@ -163,8 +202,20 @@ public partial class Designer
     void BgDown(PointerEventArgs e)
     {
         Editor.EndEdit();
-        if (e.Button != 0) { StartPan(e); return; }
-        if (!e.ShiftKey) Editor.ClearSelection();
+        if (e.Button != 0)
+        {
+            StartPan(e);
+            return;
+        }
+        // A click on empty canvas puts the single-shot format painter away (the sticky one waits for Esc).
+        if (painting && !paintSticky)
+        {
+            StopPainter();
+        }
+        if (!e.ShiftKey)
+        {
+            Editor.ClearSelection();
+        }
         (double x, double y) = ToWorld(e.ClientX, e.ClientY);
         gesture = new MarqueeGesture(this, x, y);
     }
@@ -211,10 +262,23 @@ public partial class Designer
             return new List<GuideLine>();
         }
     }
-    string SurfaceClass => gesture switch
+    string SurfaceClass
     {
-        PanGesture => "surface panning",
-        ConnectGesture => "surface connecting",
-        _ => "surface",
-    };
+        get
+        {
+            if (gesture is PanGesture)
+            {
+                return "surface panning";
+            }
+            if (gesture is ConnectGesture)
+            {
+                return "surface connecting";
+            }
+            if (painting)
+            {
+                return "surface painting";
+            }
+            return "surface";
+        }
+    }
 }

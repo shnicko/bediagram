@@ -11,6 +11,10 @@
     {
         <span class="status-lock">@IconSvg("lock", 14) Shapes locked in place <button class="link" @onclick="Unlock">Unlock</button></span>
     }
+    @if (Clipboard.Held is CopiedStyle held)
+    {
+        <span class="style-chip" title="The copied style: Ctrl+Alt+V pastes it onto the selection (in any tab), P paints it on with the format painter">@IconSvg("paintbrush", 13) @held.Summary <button class="link" title="Forget the copied style" @onclick="ClearStyle">×</button></span>
+    }
     @if (!string.IsNullOrEmpty(Host.Toast))
     {
         <span class="toast">@Host.Toast</span>

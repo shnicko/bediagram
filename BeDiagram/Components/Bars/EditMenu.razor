@@ -8,6 +8,11 @@
     <button disabled="@(!CanRun(Cmd.Duplicate))" @onclick="() => Run(Cmd.Duplicate)">Duplicate<span class="menu-key">@KeyText(Cmd.Duplicate)</span></button>
     <button disabled="@(!CanRun(Cmd.Delete))" @onclick="() => Run(Cmd.Delete)">Delete<span class="menu-key">@KeyText(Cmd.Delete)</span></button>
     <hr class="menu-divider" />
+    <button disabled="@(!CanRun(Cmd.CopyStyle))" @onclick="() => Run(Cmd.CopyStyle)" title="Copy the look of the selected item, to paste onto others in any tab">Copy style<span class="menu-key">@KeyText(Cmd.CopyStyle)</span></button>
+    <button disabled="@(!CanRun(Cmd.PasteStyle))" @onclick="() => Run(Cmd.PasteStyle)" title="The copied look onto the selected items of the same kind">Paste style<span class="menu-key">@KeyText(Cmd.PasteStyle)</span></button>
+    <button disabled="@(!CanRun(Cmd.PasteSpecial))" @onclick="() => Run(Cmd.PasteSpecial)" title="The copied look plus size, type, text, properties or link">Paste special…<span class="menu-key">@KeyText(Cmd.PasteSpecial)</span></button>
+    <button disabled="@(!CanRun(Cmd.Painter))" @onclick="() => Run(Cmd.Painter)">Format painter<span class="menu-key">@KeyText(Cmd.Painter)</span></button>
+    <hr class="menu-divider" />
     <button disabled="@(!CanRun(Cmd.Join))" @onclick="() => Run(Cmd.Join)">Join in selection order<span class="menu-key">@KeyText(Cmd.Join)</span></button>
     <button disabled="@(!CanRun(Cmd.Branch))" @onclick="() => Run(Cmd.Branch)">Branch pass / fail<span class="menu-key">@KeyText(Cmd.Branch)</span></button>
     <button disabled="@(!CanRun(Cmd.Group))" @onclick="() => Run(Cmd.Group)">Group<span class="menu-key">@KeyText(Cmd.Group)</span></button>

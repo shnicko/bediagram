@@ -4,11 +4,17 @@ using BeDiagram.Services;
 
 namespace BeDiagram.Components.Bars;
 
-/// <summary>The bar along the bottom: storage folder, page size, items off the page, the shape lock and the latest
-/// message.</summary>
+/// <summary>The bar along the bottom: storage folder, page size, items off the page, the shape lock, the copied style
+/// and the latest message.</summary>
 public partial class StatusBar : DesignerPart
 {
     [Inject] DiagramStore Store { get; set; } = default!;
+    [Inject] StyleClipboard Clipboard { get; set; } = default!;
+
+    void ClearStyle()
+    {
+        Clipboard.Clear();
+    }
 
     int OffPageCount
     {

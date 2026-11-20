@@ -6,7 +6,7 @@ using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Components.Bars;
 
-/// <summary>The bar along the top: the menu bar (File, Edit, Arrange, View, Help), the linked-diagram breadcrumb, undo / redo, grid, zoom, flow direction, snap and angle lock, and the diagram name.</summary>
+/// <summary>The bar along the top: the menu bar (File, Edit, Arrange, View, Help), the linked-diagram breadcrumb, undo / redo, the format painter, grid, zoom, flow direction, snap and angle lock, and the diagram name.</summary>
 public partial class Toolbar : DesignerPart
 {
     void CloseMenus()
@@ -36,6 +36,38 @@ public partial class Toolbar : DesignerPart
             }
             return "Snap to grid is off — click to turn on";
         }
+    }
+
+    /// <summary>The format painter brush: lit while it is on.</summary>
+    string PainterClass
+    {
+        get
+        {
+            if (Host.Painting)
+            {
+                return "on";
+            }
+            return "";
+        }
+    }
+
+    static string PainterTip
+    {
+        get
+        {
+            return "Format painter (P): copies the look of the selected item, then click an item to paint it on. "
+                + "Double-click (Shift+P) to keep painting until Esc. Edit menu: Copy style / Paste style / Paste special.";
+        }
+    }
+
+    Task Paint()
+    {
+        return Run(Cmd.Painter);
+    }
+
+    Task PaintSticky()
+    {
+        return Run(Cmd.PainterSticky);
     }
 
     void ToggleSnap()

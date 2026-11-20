@@ -42,6 +42,9 @@ public interface IDesignerHost
     /// <summary>Runs an Export menu entry (saved next to the diagram or copied to the clipboard); the current-view area uses what is on screen now.</summary>
     Task Export(ExportChoice choice, ExportOptions options);
 
+    /// <summary>The format painter is on (the brush button shows lit).</summary>
+    bool Painting { get; }
+
     // ───────────── Tabs ─────────────
 
     /// <summary>The open diagrams, in tab order.</summary>
