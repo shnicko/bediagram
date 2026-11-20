@@ -26,9 +26,10 @@ BeDiagram/
                           bounds), GroupTree, StepOrder, NodeFactory, SvgNumbers, Icons (generated Lucide markup)
   Models/Catalogue/       the enums for fixed value sets and their tables (NodeTypes, Outcomes, Sides, …)
   Models/Serialization/   enums saved by name (EnumNames, EnumNameConverter, OptionalEnumNameConverter)
-  Models/Kinds/           node kinds — Strategy (classic, circle, outcome, list, IPO)
+  Models/Kinds/           node kinds — Strategy (classic, circle, outcome, list, IPO, class / interface / enumeration,
+                          entity)
   Models/Shapes/          shape outlines — Strategy (one *Outline class each, ShapeOutlines holds the instances), Paths
-  Models/Panels/          list / IPO layouts — Strategy
+  Models/Panels/          list / IPO / compartment layouts — Strategy
   Models/Emphasis/        major / normal / minor looks — Strategy
   Models/Location/        item placement — Strategy (shape / panel by centre, text box by top centre, group by top-left)
   Models/Routing/         connector routes (EdgeRouter → ElbowRouting / StraightRouting — Strategy), EdgeLabels
@@ -172,7 +173,7 @@ is already working:
   (Mermaid ids, a toast, a dropdown's option values) use `EnumNames.Of(value)`, never `ToString()`. Free-form values
   the user extends (palette colour keys, icon names, property keys) stay strings.
 - **Typed nodes.** Every shape has a `Type` (start, process, decision, check, action, data, status, end, circle, outcome,
-  list, ipo) and free-form `Properties`. Outcome nodes carry `Outcome` (pass, fail, rework, conditional, hold — see
+  list, ipo, class, interface, enumeration, entity) and free-form `Properties`. Outcome nodes carry `Outcome` (pass, fail, rework, conditional, hold — see
   `Outcomes`). Rule-check nodes default to `ruleId`, `ifcEntity`, `property`, `operator`, `value`
   (`NodeTypeInfo.PropertyKeys`). This is what lets the audit tool read diagrams later — don't replace types with
   purely visual styling.
@@ -305,6 +306,13 @@ is already working:
   connects left / right (`IBox.ConnectSides`, `ItemBox.SideFacing` in `EdgeRouter.Route`). Row ids are only unique
   inside their node and survive a copy. Connectors ending on a row draw above the shapes (`Edge.EndsOnRow`). Mermaid: a
   subgraph with a node per row.
+- **Data models (classes and entities).** `class` / `interface` / `enumeration` / `entity` are `ModelKind`s (panels,
+  not steps; their own palette section via `NodeTypeInfo.Model`). Compartments come from `ModelKind.Sections`, the
+  structured row fields a compartment uses from `Fields(section)` (`ListItem.Visibility`, `DataType`, `Multiplicity`,
+  `PrimaryKey`, `ForeignKey`), and the drawn text from `RowText` / `RowType` / `RowKey`; `CompartmentLayout` draws
+  them. Row sections are `RowSection` (shared with IPO boxes; was `IpoSection`). `Node.Abstract` and `Node.NameOnly`
+  (conceptual view) are cleared by `NodeKind.Adopt` when a node stops being a model. A package is a group with
+  `HeaderStyle = tag` (`Editor.AddPackageAt` / `AddPackageQuick`), not a node.
 - **Connector labels** render in their own layer above shapes (canvas and export).
 - **Text outside a shape** (label under a circle / outcome, description) can sit on another side (`Node.LabelSide`)
   or be dragged free (`Node.FreeLabel`, an offset of the text block's centre from the shape's centre, with a leader
