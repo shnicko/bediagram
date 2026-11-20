@@ -13,14 +13,25 @@ public partial class EdgeLayer : CanvasLayer
     [Parameter] public bool RowLayer { get; set; }
 
     /// <summary>The connectors this layer draws (see <see cref="RowLayer"/>).</summary>
-    IEnumerable<EdgeView> Views()
+    List<EdgeView> Views()
     {
-        foreach (Edge e in D.Edges.Where(e => e.EndsOnRow == RowLayer))
+        List<EdgeView> result = new List<EdgeView>();
+        foreach (Edge e in D.Edges)
         {
-            if (Editor.Ends(e) is not (IBox a, IBox b)) continue;
+            if (e.EndsOnRow != RowLayer)
+            {
+                continue;
+            }
+            (IBox A, IBox B)? ends = Editor.Ends(e);
+            if (ends is null)
+            {
+                continue;
+            }
+            (IBox a, IBox b) = ends.Value;
             double lw = LineLook.Width(e.Weight);
             string lc = LineLook.Colour(e.Color);
-            yield return new EdgeView(e, Editor.SelectedEdgeId == e.Id, EdgeRouter.EdgeGeometry(a, b, e), lw, lc, $"url(#{LineLook.MarkerId(lc, e.Weight)})");
+            result.Add(new EdgeView(e, Editor.SelectedEdgeId == e.Id, EdgeRouter.EdgeGeometry(a, b, e), lw, lc, $"url(#{LineLook.MarkerId(lc, e.Weight)})"));
         }
+        return result;
     }
 }

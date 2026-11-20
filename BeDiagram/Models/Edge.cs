@@ -50,21 +50,71 @@ public class Edge
 
     /// <summary>True when either end is on a row; such connectors are drawn above the shapes (canvas and export).</summary>
     [JsonIgnore]
-    public bool EndsOnRow => FromItem is not null || ToItem is not null;
+    public bool EndsOnRow
+    {
+        get
+        {
+            return FromItem is not null || ToItem is not null;
+        }
+    }
 
     /// <summary>Both ends as boxes, looked up with <paramref name="find"/>: the row where an end names one
     /// (<see cref="Kinds.INodeKind.EndAt"/>), otherwise the item itself. Null when either item is missing.</summary>
-    public (IBox A, IBox B)? Ends(Func<string, IBox?> find) =>
-        find(From) is { } a && find(To) is { } b ? (EndOf(a, FromItem), EndOf(b, ToItem)) : null;
+    public (IBox A, IBox B)? Ends(Func<string, IBox?> find)
+    {
+        IBox? a = find(From);
+        if (a is null)
+        {
+            return null;
+        }
+        IBox? b = find(To);
+        if (b is null)
+        {
+            return null;
+        }
+        return (EndOf(a, FromItem), EndOf(b, ToItem));
+    }
 
-    static IBox EndOf(IBox box, string? itemId) => box is Node n ? n.Kind.EndAt(n, itemId) : box;
+    static IBox EndOf(IBox box, string? itemId)
+    {
+        if (box is Node n)
+        {
+            return n.Kind.EndAt(n, itemId);
+        }
+        return box;
+    }
 
-    public bool IsManual => FromSide is not null || ToSide is not null || Bend != 0;
+    public bool IsManual
+    {
+        get
+        {
+            return FromSide is not null || ToSide is not null || Bend != 0;
+        }
+    }
 
     /// <summary>Back to fully automatic sides and bend.</summary>
-    public void ResetRoute() { FromSide = null; ToSide = null; Bend = 0; }
+    public void ResetRoute()
+    {
+        FromSide = null;
+        ToSide = null;
+        Bend = 0;
+    }
 
-    public void CopyRouteFrom(Edge o) { FromSide = o.FromSide; ToSide = o.ToSide; Bend = o.Bend; }
+    public void CopyRouteFrom(Edge o)
+    {
+        FromSide = o.FromSide;
+        ToSide = o.ToSide;
+        Bend = o.Bend;
+    }
 
-    public void CopyLookFrom(Edge o) { Style = o.Style; Weight = o.Weight; Pattern = o.Pattern; Color = o.Color; Arrows = o.Arrows; LabelOrient = o.LabelOrient; LabelPlace = o.LabelPlace; }
+    public void CopyLookFrom(Edge o)
+    {
+        Style = o.Style;
+        Weight = o.Weight;
+        Pattern = o.Pattern;
+        Color = o.Color;
+        Arrows = o.Arrows;
+        LabelOrient = o.LabelOrient;
+        LabelPlace = o.LabelPlace;
+    }
 }
