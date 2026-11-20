@@ -67,9 +67,21 @@ public partial class Designer
         Navigate(trail[level], level);
     }
 
+    /// <summary>
+    /// Opens <paramref name="target"/> in this tab (following a link, Back, a breadcrumb level or "close and open").
+    /// When it's already open in another tab, that tab is shown instead, so a diagram is never open twice: e.g. a
+    /// link opened in a new tab with Ctrl+click, then Back there, goes back to the tab it came from.
+    /// </summary>
     void Navigate(string target, int keepTrail)
     {
         Editor.EndEdit();
+        DiagramTab? open = TabFor(target);
+        if (open is not null && open != active)
+        {
+            SwitchTo(open);
+            ShowToast($"{target} is already open: showing its tab");
+            return;
+        }
         if (Editor.Dirty)
         {
             pendingNav = (target, keepTrail);
