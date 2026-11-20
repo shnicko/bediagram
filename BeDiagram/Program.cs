@@ -17,6 +17,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<DiagramStore>();
 builder.Services.AddSingleton<StylePresetStore>();   // saved styles, shared by every diagram (styles.json)
 builder.Services.AddSingleton<StyleClipboard>();     // the copied style (Copy style, format painter): every tab and window
+builder.Services.AddSingleton<ItemClipboard>();      // copied items (Ctrl+C / Ctrl+V): every tab and window
 
 // Export strategies (see Services/Export). The Export menu lists destinations, formats and areas in the order registered here.
 // Destinations: where it goes (a file next to the diagram, or the clipboard). Formats: what kind of file.
