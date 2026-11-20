@@ -37,6 +37,7 @@ public class CommandRegistry
             new ToggleConnectorStyleCommand(), new ToggleAngleLockCommand(), new ArrangeLanesHorizontalCommand(), new ArrangeLanesVerticalCommand(),
             new TidyConnectorsCommand(), new PlaceTextCommand(), new AutoLayoutHorizontalCommand(), new AutoLayoutVerticalCommand(),
             new AddTextCommand(), new AddCommentCommand(), new AddGroupCommand(),
+            new NewDiagramCommand(), new CloseTabCommand(), new NextTabCommand(), new PreviousTabCommand(),
             new FitCommand(), new FitSelectionCommand(), new ZoomInCommand(), new ZoomOutCommand(), new ResetZoomCommand(),
         };
         foreach (bool fine in new bool[] { false, true })
@@ -49,6 +50,10 @@ public class CommandRegistry
         for (int i = 0; i < Math.Min(9, NodeTypes.All.Count); i++)
         {
             all.Add(new AddShapeCommand(i + 1, NodeTypes.All[i]));
+        }
+        for (int i = 1; i <= 9; i++)
+        {
+            all.Add(new GoToTabCommand(i));
         }
         return new CommandRegistry(all);
     }

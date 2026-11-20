@@ -22,21 +22,31 @@ public partial class Designer
 
     void FollowLink(string? link)
     {
-        if (string.IsNullOrWhiteSpace(link))
+        if (!CanFollow(link))
         {
             return;
+        }
+        Navigate(link!, -1);
+    }
+
+    /// <summary>True when <paramref name="link"/> names another diagram that exists; otherwise says why not.</summary>
+    bool CanFollow(string? link)
+    {
+        if (string.IsNullOrWhiteSpace(link))
+        {
+            return false;
         }
         if (hasFile && link == D.Name)
         {
             ShowToast("That link points to this diagram");
-            return;
+            return false;
         }
         if (!Store.Exists(link))
         {
             ShowToast($"Linked diagram “{link}” not found in {Store.Folder}");
-            return;
+            return false;
         }
-        Navigate(link, -1);
+        return true;
     }
 
     void GoBack()
@@ -130,13 +140,16 @@ public partial class Designer
         CloseDialog();
     }
 
+    /// <summary>Deleted from the Open dialog. A tab that had it open keeps the diagram, now unsaved.</summary>
     void DeleteFile(string name)
     {
+        DiagramTab? open = TabFor(name);
         Store.Delete(name);
-        if (hasFile && D.Name == name)
+        if (open is not null)
         {
-            hasFile = false;
-            Editor.Dirty = true;
+            open.HasFile = false;
+            open.FileTime = null;
+            open.Editor.Dirty = true;
         }
         ShowToast($"Deleted {name}");
     }
@@ -149,10 +162,39 @@ public partial class Designer
             ShowSaveAs();
             return;
         }
+        if (FileChangedOnDisk())
+        {
+            dialog = Dialog.FileChanged;
+            return;
+        }
+        await SaveNow();
+    }
+
+    /// <summary>
+    /// The file was written by someone else since this tab opened or saved it, most likely the same diagram open in
+    /// another window. Saving now would quietly throw their changes away, so Save asks first.
+    /// </summary>
+    bool FileChangedOnDisk()
+    {
+        if (active.FileTime is null)
+        {
+            return false;
+        }
+        DateTime? onDisk = Store.LastWritten(D.Name);
+        if (onDisk is null)
+        {
+            return false;
+        }
+        return onDisk.Value != active.FileTime.Value;
+    }
+
+    async Task SaveNow()
+    {
         try
         {
             string path = await Store.SaveAsync(D);
             Editor.Dirty = false;
+            active.FileTime = Store.LastWritten(D.Name);
             ShowToast($"Saved {Path.GetFileName(path)}");
         }
         catch (Exception ex)
@@ -161,12 +203,34 @@ public partial class Designer
         }
     }
 
+    /// <summary>"Changed on disk" answered with Overwrite: save anyway.</summary>
+    async Task OverwriteChanged()
+    {
+        CloseDialog();
+        await SaveNow();
+    }
+
     async Task ConfirmSaveAs(string name)
     {
-        D.Name = DiagramStore.SafeName(name);
+        string safe = DiagramStore.SafeName(name);
+        DiagramTab? other = TabFor(safe);
+        if (other is not null && other != active)
+        {
+            ShowToast($"“{safe}” is open in another tab: close it first, or pick another name");
+            return;
+        }
+        // Save as… from "save before closing?" closes the tab once it has saved.
+        DiagramTab? closeAfter = closing;
+        D.Name = safe;
         hasFile = true;
+        // Save as has already asked about replacing an existing file, so take its current time as known.
+        active.FileTime = Store.LastWritten(safe);
         CloseDialog();
         await Save();
+        if (closeAfter is not null && closeAfter == active && !Editor.Dirty)
+        {
+            RemoveTab(active);
+        }
     }
 
     /// <summary>

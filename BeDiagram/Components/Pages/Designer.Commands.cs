@@ -15,7 +15,7 @@ public partial class Designer
 
     /// <summary>Key press forwarded by designer.js (only keys it knows about, and not while typing in a field).</summary>
     [JSInvokable]
-    public async Task OnKey(string key, bool ctrl, bool shift)
+    public async Task OnKey(string key, bool ctrl, bool shift, bool alt)
     {
         if (openMenu is not null && key == "Escape")
         {
@@ -32,7 +32,7 @@ public partial class Designer
             StateHasChanged();
             return;
         }
-        IEditorCommand? command = Commands.Find(KeyGesture.From(key, ctrl, shift));
+        IEditorCommand? command = Commands.Find(KeyGesture.From(key, ctrl, shift, alt));
         if (command is null || !command.CanExecute(this))
         {
             return;

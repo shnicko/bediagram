@@ -22,6 +22,43 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
     grid-template-areas: "tb tb tb" "pal canvas panel" "st st st";
     height: 100vh;
 }
+/* With two or more diagrams open, a row of tabs sits above the canvas (between the palette and the panel). */
+.app.with-tabs {
+    grid-template-rows: 48px 32px 1fr 26px;
+    grid-template-areas: "tb tb tb" "pal tabs panel" "pal canvas panel" "st st st";
+}
+
+/* ── Tabs (one per open diagram) ── */
+.tabstrip {
+    grid-area: tabs;
+    display: flex; align-items: flex-end; gap: 2px;
+    padding: 0 6px; min-width: 0;
+    background: #eef1f5; border-bottom: 1px solid var(--line);
+}
+.tabstrip .tab {
+    position: relative; display: flex; align-items: center; gap: 4px; flex: 0 1 auto; min-width: 70px;
+    height: 27px; max-width: 220px; padding: 0 4px 0 10px;
+    border: 1px solid var(--line); border-bottom: none; border-radius: 6px 6px 0 0;
+    background: #e3e7ec; color: var(--muted); cursor: pointer; white-space: nowrap; font-size: 13px;
+}
+.tabstrip .tab:hover { background: #edf0f4; }
+.tabstrip .tab.on { background: var(--panel); color: var(--text); height: 29px; margin-bottom: -1px; }
+.tabstrip .tab-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tabstrip .tab-dirty { color: var(--accent); font-weight: 700; }
+.tabstrip .tab-close {
+    border: none; background: none; padding: 0 5px; line-height: 18px; border-radius: 4px;
+    color: var(--muted); font-size: 15px;
+}
+.tabstrip .tab-close:hover { background: #d5dae1; color: var(--text); }
+.tabstrip .tab-new {
+    align-self: center; border: none; background: none; padding: 0 8px; font-size: 18px; color: var(--muted);
+    border-radius: 4px;
+}
+.tabstrip .tab-new:hover { background: #dde2e8; color: var(--text); }
+/* Tabs shrink (like a browser's) rather than scroll, so the right-click menu can hang below its tab. */
+.tabstrip .tab-menu { top: 30px; left: 0; cursor: default; color: var(--text); }
+.menu .menu-link { padding: 7px 10px; color: var(--text); text-decoration: none; border-radius: 4px; }
+.menu .menu-link:hover { background: #eef2f7; }
 
 /* ── Toolbar ── */
 .toolbar {

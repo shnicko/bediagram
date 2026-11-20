@@ -2,6 +2,8 @@
 // canvas size, focusing inputs and downloading exports.
 let dotnet = null;
 let canvas = null;
+// True while any open tab has unsaved changes: closing or reloading the browser tab then asks first.
+let unsaved = false;
 
 function isTyping(e) {
     const t = e.target;
@@ -15,7 +17,7 @@ function onKey(e) {
     // Ctrl+S works everywhere, other shortcuts only when not typing in a field.
     if (ctrl && key.toLowerCase() === 's') {
         e.preventDefault();
-        dotnet.invokeMethodAsync('OnKey', 's', true, e.shiftKey);
+        dotnet.invokeMethodAsync('OnKey', 's', true, e.shiftKey, false);
         return;
     }
     if (isTyping(e)) {
@@ -27,12 +29,32 @@ function onKey(e) {
         if (key === 'Enter' && t.classList.contains('two-line') && t.value.includes('\n')) e.preventDefault();
         return;
     }
+    // Tab shortcuts use Alt, because the browser keeps Ctrl+Tab, Ctrl+W, Ctrl+T and Ctrl+N for itself.
+    const tabKeys = ['PageUp', 'PageDown', 'w', 'n', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    if (e.altKey && !ctrl) {
+        if (tabKeys.includes(key.length === 1 ? key.toLowerCase() : key)) {
+            e.preventDefault();
+            dotnet.invokeMethodAsync('OnKey', key, false, e.shiftKey, true);
+        }
+        return;
+    }
     const handled = ['Delete', 'Backspace', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'];
     const letters = ['j', 'b', 'c', 't', 'g', 'l', 'f', 'a', 'z', 'y', 'd', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '=', '-', '0'];
     if (handled.includes(key) || letters.includes(key.toLowerCase())) {
         if (ctrl || handled.includes(key)) e.preventDefault();
-        dotnet.invokeMethodAsync('OnKey', key, ctrl, e.shiftKey);
+        dotnet.invokeMethodAsync('OnKey', key, ctrl, e.shiftKey, false);
     }
+}
+
+function onBeforeUnload(e) {
+    if (!unsaved) return;
+    e.preventDefault();
+    e.returnValue = '';
+}
+
+// Called by the Designer after a render when "any tab has unsaved changes" has changed.
+export function setUnsaved(value) {
+    unsaved = value;
 }
 
 function onWheel(e) {
@@ -61,6 +83,7 @@ export function init(ref, el) {
     dotnet = ref;
     canvas = el;
     document.addEventListener('keydown', onKey);
+    window.addEventListener('beforeunload', onBeforeUnload);
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     // Firefox only starts an HTML5 drag when data is set; the dragged type is tracked in .NET.
@@ -72,6 +95,8 @@ export function init(ref, el) {
 
 export function dispose() {
     document.removeEventListener('keydown', onKey);
+    window.removeEventListener('beforeunload', onBeforeUnload);
+    unsaved = false;
     document.removeEventListener('dragstart', onDragStart);
     window.removeEventListener('resize', sendRect);
     if (canvas) canvas.removeEventListener('wheel', onWheel);

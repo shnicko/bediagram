@@ -7,7 +7,7 @@ namespace BeDiagram.Components.Pages;
 
 /// <summary>
 /// The Designer as the receiver of editor commands (<see cref="ICommandContext"/>). Explicit implementations:
-/// diagram actions forward to the <see cref="Editing.DiagramEditor"/>; saving, dialogs, zoom and cancelling a
+/// diagram actions forward to the <see cref="Editing.DiagramEditor"/>; saving, dialogs, tabs, zoom and cancelling a
 /// drag are the page's own.
 /// </summary>
 public partial class Designer : ICommandContext
@@ -42,6 +42,36 @@ public partial class Designer : ICommandContext
         {
             return Editor.Selection.Count > 0 || Editor.SelectedEdge is not null;
         }
+    }
+
+    // Tabs
+
+    int ICommandContext.TabCount
+    {
+        get
+        {
+            return tabs.Count;
+        }
+    }
+
+    void ICommandContext.GoToTab(int index)
+    {
+        GoToTab(index);
+    }
+
+    void ICommandContext.StepTab(int delta)
+    {
+        StepTab(delta);
+    }
+
+    void ICommandContext.CloseActiveTab()
+    {
+        CloseTab(active);
+    }
+
+    void ICommandContext.NewDiagram()
+    {
+        NewDiagram();
     }
 
     // Files and undo

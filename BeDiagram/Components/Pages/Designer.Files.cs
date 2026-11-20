@@ -1,29 +1,33 @@
-using Microsoft.JSInterop;
 using BeDiagram.Models;
 using BeDiagram.Services;
 
 namespace BeDiagram.Components.Pages;
 
-/// <summary>Open, save, save as, new and delete diagrams (DiagramStore), with the unsaved-changes prompts.</summary>
+/// <summary>Open (into the active tab), the dialogs, and the names the dialogs read. New and Open into a new tab are in
+/// Designer.Tabs.cs; Save and Save as in Designer.Navigation.cs.</summary>
 public partial class Designer
 {
     // ───────────── Files ─────────────
 
+    /// <summary>An empty diagram in the active tab, view back to the start.</summary>
     void Reset(bool keepTrail = false)
     {
-        if (!keepTrail) trail.Clear();
+        if (!keepTrail)
+        {
+            trail.Clear();
+        }
         Editor.Load(new Diagram());
         hasFile = false;
-        Zoom = 1; PanX = 40; PanY = 40;
+        active.FileTime = null;
+        Zoom = 1;
+        PanX = 40;
+        PanY = 40;
     }
 
-    void NewDiagram()
+    void ShowOpen()
     {
-        if (Editor.Dirty) dialog = Dialog.ConfirmNew;
-        else Reset();
+        dialog = Dialog.Open;
     }
-
-    void ShowOpen() => dialog = Dialog.Open;
 
     void ShowSaveAs()
     {
@@ -32,9 +36,15 @@ public partial class Designer
     }
 
     /// <summary>Opens the step order pop-up (Components/Dialogs/StepOrderDialog).</summary>
-    void ShowStepOrder() => dialog = Dialog.StepOrder;
+    void ShowStepOrder()
+    {
+        dialog = Dialog.StepOrder;
+    }
 
-    void ShowShortcuts() => dialog = Dialog.Shortcuts;
+    void ShowShortcuts()
+    {
+        dialog = Dialog.Shortcuts;
+    }
 
     /// <summary>Opens the JSON editor (Components/Dialogs/JsonDialog) on the whole diagram.</summary>
     void ShowJson()
@@ -51,14 +61,17 @@ public partial class Designer
         ShowToast("Diagram updated from JSON (Ctrl+Z to undo)");
     }
 
-    void CloseDialog() { dialog = Dialog.None; openMenu = null; }
-
-    /// <summary>Open from the Open dialog: a fresh start, so the linked-diagram trail is cleared.</summary>
-    async Task Open(string name)
+    /// <summary>Closes any dialog and menu; a close or open that was waiting on the dialog is forgotten.</summary>
+    void CloseDialog()
     {
-        if (await Load(name)) trail.Clear();
+        dialog = Dialog.None;
+        openMenu = null;
+        closing = null;
+        pendingOpen = null;
     }
 
+    /// <summary>Opens <paramref name="name"/> into the active tab, replacing what it shows (callers have already
+    /// asked about unsaved changes). Returns false, with a toast, when it can't be read.</summary>
     async Task<bool> Load(string name)
     {
         try
@@ -67,6 +80,7 @@ public partial class Designer
             Reset(keepTrail: true);
             Editor.Load(loaded);
             hasFile = true;
+            active.FileTime = Store.LastWritten(name);
             CloseDialog();
             Fit();
             ShowToast($"Opened {name}");
@@ -80,8 +94,28 @@ public partial class Designer
     }
 
     /// <summary>The name the open diagram is saved under, or null when it has never been saved.</summary>
-    string? SavedName => hasFile ? D.Name : null;
+    string? SavedName
+    {
+        get
+        {
+            if (hasFile)
+            {
+                return D.Name;
+            }
+            return null;
+        }
+    }
 
     /// <summary>The folder the Open dialog starts in: the open diagram's, or the top when it has never been saved.</summary>
-    string OpenFolder => hasFile ? DiagramStore.FolderOf(D.Name) : "";
+    string OpenFolder
+    {
+        get
+        {
+            if (hasFile)
+            {
+                return DiagramStore.FolderOf(D.Name);
+            }
+            return "";
+        }
+    }
 }

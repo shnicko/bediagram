@@ -1,7 +1,6 @@
 <div class="modal-bg" @onclick="OnClose">
     <div class="modal open-dialog" @onclick:stopPropagation="true">
         <h3>Open diagram</h3>
-        @if (Dirty) { <p class="warn">You have unsaved changes — opening another diagram will discard them.</p> }
         <input class="open-find" placeholder="Find a diagram in any folder…" @bind="find" @bind:event="oninput" />
         @if (!Finding)
         {

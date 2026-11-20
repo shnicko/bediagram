@@ -59,7 +59,17 @@ public partial class Designer
     [JSInvokable]
     public void OnCanvasRect(double left, double top, double width, double height)
     {
-        canvasLeft = left; canvasTop = top; canvasW = width; canvasH = height;
+        canvasLeft = left;
+        canvasTop = top;
+        canvasW = width;
+        canvasH = height;
+        // A diagram opened at start-up (new window) was fitted to a guessed size: fit it to the real one.
+        if (fitWhenSized)
+        {
+            fitWhenSized = false;
+            Fit();
+            StateHasChanged();
+        }
     }
 
     [JSInvokable]

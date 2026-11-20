@@ -15,8 +15,6 @@ public partial class OpenDialog
 {
     [Inject] DiagramStore Store { get; set; } = default!;
 
-    /// <summary>The open diagram has unsaved changes (shows a warning).</summary>
-    [Parameter] public bool Dirty { get; set; }
     /// <summary>The folder to start in ("" = the top), usually the open diagram's. The top if it no longer exists.</summary>
     [Parameter] public string StartFolder { get; set; } = "";
     [Parameter] public EventCallback<string> OnOpen { get; set; }

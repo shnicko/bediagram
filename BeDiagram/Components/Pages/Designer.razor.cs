@@ -21,7 +21,7 @@ public partial class Designer
     [Inject] ExportService Exports { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
-    enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave, StepOrder, Shortcuts, Json }
+    enum Dialog { None, Open, OpenWhere, SaveAs, ConfirmLeave, ConfirmClose, FileChanged, StepOrder, Shortcuts, Json }
 
     /// <summary>The open diagrams, in tab order.</summary>
     readonly List<DiagramTab> tabs = new List<DiagramTab>();
@@ -133,6 +133,7 @@ public partial class Designer
             module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/designer.js");
             selfRef = DotNetObjectReference.Create(this);
             await module.InvokeVoidAsync("init", selfRef, canvasEl);
+            await OpenStartDiagram();
         }
         if (focusId is not null && module is not null)
         {
@@ -140,6 +141,7 @@ public partial class Designer
             focusId = null;
             await module.InvokeVoidAsync("focus", id);
         }
+        await SendUnsaved();
     }
 
     /// <summary>

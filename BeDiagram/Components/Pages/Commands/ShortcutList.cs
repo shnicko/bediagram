@@ -14,6 +14,8 @@ public static class ShortcutList
         new("Double-click", "Edit text (on a connector: its label)"),
         new("Wheel · right-drag", "Pan"),
         new("Ctrl+wheel", "Zoom"),
+        new("Ctrl+click a link badge", "Open the linked diagram in a new tab"),
+        new("Right-click a tab", "Move it to a new window, or close it"),
     };
 
     /// <summary>
@@ -25,6 +27,7 @@ public static class ShortcutList
         List<ShortcutRow> rows = new List<ShortcutRow>();
         bool shapes = false;
         bool nudge = false;
+        bool tabs = false;
         foreach (IEditorCommand c in registry.All)
         {
             if (c.Keys.Count == 0)
@@ -46,6 +49,14 @@ public static class ShortcutList
                     rows.Add(new ShortcutRow("Arrow keys", "Nudge the selection (Shift = 1 px)"));
                 }
                 nudge = true;
+            }
+            else if (c is GoToTabCommand)
+            {
+                if (!tabs)
+                {
+                    rows.Add(new ShortcutRow("Alt+1–9", "Show that tab (Alt+9: the last tab)"));
+                }
+                tabs = true;
             }
             else
             {

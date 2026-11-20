@@ -1,0 +1,15 @@
+<div class="modal-bg" @onclick="OnCancel">
+    <div class="modal" @onclick:stopPropagation="true">
+        <h3>Open “@Target”</h3>
+        <p>“@OpenName” is open. Open “@Target” in a new tab, or close “@OpenName” and open it in its place?</p>
+        @if (Dirty)
+        {
+            <p class="muted">“@OpenName” has unsaved changes: closing it asks whether to save them first.</p>
+        }
+        <div class="actions">
+            <button @onclick="OnCancel">Cancel</button>
+            <button @onclick="Replace">Close “@OpenName” and open</button>
+            <button class="primary" @onclick="NewTab">Open in new tab</button>
+        </div>
+    </div>
+</div>

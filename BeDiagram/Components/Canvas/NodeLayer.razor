@@ -84,7 +84,7 @@
         }
         @if (SvgShapes.HasLink(v.N))
         {
-            <LinkBadge Box="v.N" Colour="@v.Style.Stroke" Link="@(v.N.Link!)" OnFollow="Host.FollowLink" />
+            <LinkBadge Box="v.N" Colour="@v.Style.Stroke" Link="@(v.N.Link!)" OnFollow="Host.FollowLink" OnFollowNewTab="Host.FollowLinkInNewTab" />
         }
         @if (SvgShapes.ShownStep(D, v.N) is int step)
         {

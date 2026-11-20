@@ -30,6 +30,9 @@ function watch(page) {
   const pending = new Set();   // ids of the browser's calls the server hasn't answered yet
   let timeouts = 0;
   const warnings = [];
+  // The app asks before the browser tab closes or reloads with unsaved changes ("Leave site?"). The suites reload the
+  // page on purpose, so say yes to that question; any other browser dialog is dismissed, as Playwright does by default.
+  page.on('dialog', d => (d.type() === 'beforeunload' ? d.accept() : d.dismiss()).catch(() => {}));
   page.on('websocket', ws => {
     ws.on('framesent', f => {
       c.sent++;

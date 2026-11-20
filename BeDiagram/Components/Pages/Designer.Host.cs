@@ -65,11 +65,54 @@ public partial class Designer : IDesignerHost, ICanvasInput
         return Export(choice, options);
     }
 
+    // Tabs
+
+    IReadOnlyList<DiagramTab> IDesignerHost.Tabs
+    {
+        get
+        {
+            return tabs;
+        }
+    }
+
+    DiagramTab IDesignerHost.ActiveTab
+    {
+        get
+        {
+            return active;
+        }
+    }
+
+    void IDesignerHost.SwitchTab(DiagramTab tab)
+    {
+        SwitchTo(tab);
+    }
+
+    void IDesignerHost.CloseTab(DiagramTab tab)
+    {
+        CloseTab(tab);
+    }
+
+    string? IDesignerHost.WindowLink(DiagramTab tab)
+    {
+        return WindowLink(tab);
+    }
+
+    void IDesignerHost.MovedToWindow(DiagramTab tab)
+    {
+        MovedToWindow(tab);
+    }
+
     // Linked diagrams
 
     void IDesignerHost.FollowLink(string? link)
     {
         FollowLink(link);
+    }
+
+    Task IDesignerHost.FollowLinkInNewTab(string? link)
+    {
+        return FollowLinkInNewTab(link);
     }
 
     string? IDesignerHost.LinkExclude

@@ -1,0 +1,11 @@
+<div class="modal-bg" @onclick="OnCancel">
+    <div class="modal" @onclick:stopPropagation="true">
+        <h3>The file has changed</h3>
+        <p>“@DiagramName” was saved from somewhere else (another window?) since you opened it here. Saving now replaces those changes with yours.</p>
+        <div class="actions">
+            <button @onclick="OnCancel">Cancel</button>
+            <button @onclick="OnSaveAs">Save as…</button>
+            <button class="danger" @onclick="OnOverwrite">Overwrite</button>
+        </div>
+    </div>
+</div>
