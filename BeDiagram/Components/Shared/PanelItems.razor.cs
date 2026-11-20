@@ -31,7 +31,7 @@ public partial class PanelItems
         }
     }
 
-    string SectionValue(IpoSection section)
+    string SectionValue(RowSection section)
     {
         string t = Node.SectionTitle(section);
         if (t == IpoSections.DefaultTitle(section))
@@ -41,7 +41,7 @@ public partial class PanelItems
         return t;
     }
 
-    Task SectionTyped(IpoSection section, ChangeEventArgs e)
+    Task SectionTyped(RowSection section, ChangeEventArgs e)
     {
         Editor.SetSectionTitle(Node, section, e.Value?.ToString());
         return OnChanged.InvokeAsync();
@@ -59,7 +59,7 @@ public partial class PanelItems
         return OnChanged.InvokeAsync();
     }
 
-    Task Add(IpoSection? section)
+    Task Add(RowSection? section)
     {
         Editor.AddItem(Node, section);
         iconFor = null;

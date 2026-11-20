@@ -27,7 +27,7 @@ public partial class DiagramEditor
     }
 
     /// <summary>Adds a row at the end of a list, or of an IPO section, and returns it.</summary>
-    public ListItem AddItem(Node n, IpoSection? section = null)
+    public ListItem AddItem(Node n, RowSection? section = null)
     {
         if (n.Kind is not PanelKind panel) throw new InvalidOperationException("Only lists and IPO boxes have rows.");
         Change();
@@ -67,7 +67,7 @@ public partial class DiagramEditor
     }
 
     /// <summary>Moves a row to another IPO section (to the end of it).</summary>
-    public void SetItemSection(Node n, string itemId, IpoSection? section)
+    public void SetItemSection(Node n, string itemId, RowSection? section)
     {
         if (n.Items?.FirstOrDefault(i => i.Id == itemId) is not { } item || IpoSections.Of(section) == IpoSections.Of(item.Section)) return;
         Change();
@@ -85,7 +85,7 @@ public partial class DiagramEditor
     }
 
     /// <summary>Renames an IPO section; a blank title goes back to the default.</summary>
-    public void SetSectionTitle(Node n, IpoSection section, string? title)
+    public void SetSectionTitle(Node n, RowSection section, string? title)
     {
         int i = IpoSections.IndexOf(section);
         List<string> titles = n.SectionTitles ?? new List<string>();

@@ -19,7 +19,7 @@
     @if (Ipo)
     {
         <select class="panel-item-section" value="@SectionName(IpoSections.Of(Item.Section))" title="Section" @onchange="SectionPicked">
-            @foreach (IpoSection s in IpoSections.All)
+            @foreach (RowSection s in IpoSections.All)
             {
                 <option value="@SectionName(s)">@Node.SectionTitle(s)</option>
             }

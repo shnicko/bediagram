@@ -126,7 +126,7 @@ public class Node : IGroupable
     }
 
     /// <summary>IPO nodes: the rows in one section (<see cref="IpoSections"/>), in order.</summary>
-    public List<ListItem> RowsIn(IpoSection section)
+    public List<ListItem> RowsIn(RowSection section)
     {
         List<ListItem> result = new List<ListItem>();
         foreach (ListItem item in Rows)
@@ -140,7 +140,7 @@ public class Node : IGroupable
     }
 
     /// <summary>IPO nodes: a section's title, the renamed one or the default.</summary>
-    public string SectionTitle(IpoSection section)
+    public string SectionTitle(RowSection section)
     {
         int i = IpoSections.IndexOf(section);
         string? t = null;

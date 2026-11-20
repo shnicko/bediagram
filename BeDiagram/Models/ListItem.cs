@@ -29,8 +29,8 @@ public class ListItem
 
     /// <summary>IPO boxes only: input, process or output (see <see cref="IpoSections"/>). Null in a list.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [JsonConverter(typeof(OptionalEnumNameConverter<IpoSection>))]
-    public IpoSection? Section { get; set; }
+    [JsonConverter(typeof(OptionalEnumNameConverter<RowSection>))]
+    public RowSection? Section { get; set; }
 
     /// <summary>A copy with the same id (rows are found by node id + row id, so a copied node keeps its row links).</summary>
     public ListItem Copy() => (ListItem)MemberwiseClone();
