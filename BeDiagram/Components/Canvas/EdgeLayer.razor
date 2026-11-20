@@ -12,7 +12,16 @@
         }
         <path d="@v.Geo.D" class="edge-line" stroke="@v.Colour" stroke-width="@F(v.Width)"
               stroke-dasharray="@LineLook.Dash(v.E.Pattern, v.Width)" stroke-linecap="@LineLook.Cap(v.E.Pattern)"
-              marker-end="@(v.E.Arrows == LineLook.ArrowNone ? null : v.Marker)"
-              marker-start="@(v.E.Arrows == LineLook.ArrowBoth ? v.Marker : null)" />
+              marker-end="@v.EndMarker"
+              marker-start="@v.StartMarker" />
+        @* Quick-change spots for the heads: shown while the connector is hovered or selected; click one to pick that end's head *@
+        <circle class="head-spot" cx="@F(v.StartSpot.X)" cy="@F(v.StartSpot.Y)" r="@F(SpotRadius)"
+                @onpointerdown="ev => Input.HeadSpotDown(ev, v.E.Id, true)" @onpointerdown:stopPropagation="true">
+            <title>Change the start of this connector</title>
+        </circle>
+        <circle class="head-spot" cx="@F(v.EndSpot.X)" cy="@F(v.EndSpot.Y)" r="@F(SpotRadius)"
+                @onpointerdown="ev => Input.HeadSpotDown(ev, v.E.Id, false)" @onpointerdown:stopPropagation="true">
+            <title>Change the end of this connector</title>
+        </circle>
     </g>
 }

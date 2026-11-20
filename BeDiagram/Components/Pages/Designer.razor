@@ -46,6 +46,7 @@
                     <path d="M0,0 L10,5 L0,10 z" fill="#2563eb" />
                 </marker>
                 @ArrowMarkerDefs
+                @HeadMarkerDefs
             </defs>
             <rect class="grid" width="100%" height="100%" fill="@CanvasFill" />
 
@@ -89,6 +90,7 @@
 
                 @* Connector labels sit above shapes so they're never hidden *@
                 <EdgeLabelLayer Host="this" />
+                <HeadPickerLayer Host="this" />
 
                 @* Handles on the selected connector: ends (move to another side) and the bend (drag sideways) *@
                 @if (SelectedEdgeHandles() is { } h)

@@ -25,8 +25,18 @@ public class Edge
     public string Pattern { get; set; } = LineLook.Solid;
     /// <summary>Palette colour key, or null for the default grey.</summary>
     public string? Color { get; set; }
-    /// <summary>"end", "both" or "none".</summary>
+    /// <summary>"end", "both" or "none": the plain filled arrowheads. Ignored at an end that has a
+    /// <see cref="FromHead"/> / <see cref="ToHead"/>. Read the ends with <see cref="StartHead"/> / <see cref="EndHead"/>.</summary>
     public string Arrows { get; set; } = LineLook.ArrowEnd;
+    /// <summary>What is drawn at the start (UML or crow's foot, see <see cref="Heads.ArrowHeads"/>). Null (left out of
+    /// the file) when <see cref="Arrows"/> says it: connectors with plain arrows are saved as they always were.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonConverter(typeof(OptionalEnumNameConverter<ArrowHead>))]
+    public ArrowHead? FromHead { get; set; }
+    /// <summary>What is drawn at the end; see <see cref="FromHead"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonConverter(typeof(OptionalEnumNameConverter<ArrowHead>))]
+    public ArrowHead? ToHead { get; set; }
 
     /// <summary>Side of the source shape the connector leaves from; null = automatic.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -107,6 +117,65 @@ public class Edge
         Bend = o.Bend;
     }
 
+    /// <summary>The head drawn at the start: <see cref="FromHead"/>, or an arrow when <see cref="Arrows"/> is "both".</summary>
+    public ArrowHead StartHead()
+    {
+        if (FromHead is not null)
+        {
+            return FromHead.Value;
+        }
+        if (Arrows == LineLook.ArrowBoth)
+        {
+            return ArrowHead.Arrow;
+        }
+        return ArrowHead.None;
+    }
+
+    /// <summary>The head drawn at the end: <see cref="ToHead"/>, or an arrow unless <see cref="Arrows"/> is "none".</summary>
+    public ArrowHead EndHead()
+    {
+        if (ToHead is not null)
+        {
+            return ToHead.Value;
+        }
+        if (Arrows == LineLook.ArrowNone)
+        {
+            return ArrowHead.None;
+        }
+        return ArrowHead.Arrow;
+    }
+
+    /// <summary>Sets both ends. Plain arrows that <see cref="Arrows"/> can say (end, both, none) are saved there with
+    /// no heads, as connectors always were; anything else is saved in <see cref="FromHead"/> / <see cref="ToHead"/>.</summary>
+    public void SetHeads(ArrowHead from, ArrowHead to)
+    {
+        bool plainFrom = from == ArrowHead.None || from == ArrowHead.Arrow;
+        bool plainTo = to == ArrowHead.None || to == ArrowHead.Arrow;
+        // "both" needs an arrow at the end too, so an arrow at the start only can't be said with Arrows.
+        bool startOnly = from == ArrowHead.Arrow && to == ArrowHead.None;
+        if (plainFrom && plainTo && !startOnly)
+        {
+            FromHead = null;
+            ToHead = null;
+            if (to == ArrowHead.None)
+            {
+                Arrows = LineLook.ArrowNone;
+            }
+            else if (from == ArrowHead.Arrow)
+            {
+                Arrows = LineLook.ArrowBoth;
+            }
+            else
+            {
+                Arrows = LineLook.ArrowEnd;
+            }
+            return;
+        }
+        FromHead = from;
+        ToHead = to;
+        Arrows = LineLook.ArrowNone;
+    }
+
     public void CopyLookFrom(Edge o)
     {
         Style = o.Style;
@@ -114,6 +183,8 @@ public class Edge
         Pattern = o.Pattern;
         Color = o.Color;
         Arrows = o.Arrows;
+        FromHead = o.FromHead;
+        ToHead = o.ToHead;
         LabelOrient = o.LabelOrient;
         LabelPlace = o.LabelPlace;
     }

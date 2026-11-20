@@ -1,4 +1,5 @@
 using BeDiagram.Components.Pages.Commands;
+using BeDiagram.Components.Pages.Views;
 using BeDiagram.Editing;
 using BeDiagram.Services.Export;
 
@@ -114,4 +115,9 @@ public interface IDesignerHost
 
     /// <summary>What a drop from the palette adds at the drop point (world x, y); set when a tile drag starts.</summary>
     void SetPaletteDrop(Action<double, double> drop);
+
+    /// <summary>The open head picker for a connector end (see <see cref="ICanvasInput.HeadSpotDown"/>), or null.</summary>
+    HeadPick? HeadPick { get; }
+
+    void CloseHeadPicker();
 }

@@ -32,6 +32,7 @@ BeDiagram/
   Models/Panels/          list / IPO / compartment layouts — Strategy
   Models/Emphasis/        major / normal / minor looks — Strategy
   Models/Location/        item placement — Strategy (shape / panel by centre, text box by top centre, group by top-left)
+  Models/Heads/           connector ends — Strategy (IArrowHead per ArrowHead, SVG markers), Relationships
   Models/Routing/         connector routes (EdgeRouter → ElbowRouting / StraightRouting — Strategy), EdgeLabels
   Models/Text/            TextLayout: labels, descriptions, text boxes, wrapping
   Models/Styles/          looks and colours
@@ -313,6 +314,11 @@ is already working:
   them. Row sections are `RowSection` (shared with IPO boxes; was `IpoSection`). `Node.Abstract` and `Node.NameOnly`
   (conceptual view) are cleared by `NodeKind.Adopt` when a node stops being a model. A package is a group with
   `HeaderStyle = tag` (`Editor.AddPackageAt` / `AddPackageQuick`), not a node.
+- **Connector ends use the Strategy pattern.** What is drawn at an end is an `IArrowHead` (`Models/Heads/`), reached
+  with `ArrowHeads.Of`. Read an end with `e.StartHead()` / `e.EndHead()` (never test `e.Arrows` directly: `fromHead` /
+  `toHead` win over it) and set ends with `e.SetHeads` (via `Editor.SetEdgeHead` / `ApplyRelationship` /
+  `SwapHeads`), which keeps plain arrows in `Arrows` so old files stay as they were. Both renderers use
+  `ArrowHeads.MarkerDefs` / `MarkerUrl`; a new head is a new class (and `ArrowHead` member), not a branch elsewhere.
 - **Connector labels** render in their own layer above shapes (canvas and export).
 - **Text outside a shape** (label under a circle / outcome, description) can sit on another side (`Node.LabelSide`)
   or be dragged free (`Node.FreeLabel`, an offset of the text block's centre from the shape's centre, with a leader

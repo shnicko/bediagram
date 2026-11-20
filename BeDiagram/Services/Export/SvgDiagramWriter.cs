@@ -3,6 +3,7 @@ using System.Text;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 using BeDiagram.Models.Emphasis;
+using BeDiagram.Models.Heads;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Routing;
 using BeDiagram.Models.Styles;
@@ -115,6 +116,8 @@ public class SvgDiagramWriter
         {
             sb.Append(LineLook.MarkerDef(m.Colour, m.Weight));
         }
+        // UML and crow's-foot heads have their own markers.
+        sb.Append(ArrowHeads.MarkerDefs(d.Edges));
         sb.Append("</defs>\n");
         return sb.ToString();
     }
@@ -298,19 +301,20 @@ public class SvgDiagramWriter
         double lw = LineLook.Width(e.Weight);
         string lc = LineLook.Colour(e.Color);
         string? dash = LineLook.Dash(e.Pattern, lw);
-        string mk = $"url(#{LineLook.MarkerId(lc, e.Weight)})";
         lines.Append($"<path d=\"{geo.D}\" fill=\"none\" stroke=\"{lc}\" stroke-width=\"{F(lw)}\" stroke-linecap=\"{LineLook.Cap(e.Pattern)}\"");
         if (dash is not null)
         {
             lines.Append($" stroke-dasharray=\"{dash}\"");
         }
-        if (e.Arrows != LineLook.ArrowNone)
+        string? endMarker = ArrowHeads.MarkerUrl(e, false);
+        if (endMarker is not null)
         {
-            lines.Append($" marker-end=\"{mk}\"");
+            lines.Append($" marker-end=\"{endMarker}\"");
         }
-        if (e.Arrows == LineLook.ArrowBoth)
+        string? startMarker = ArrowHeads.MarkerUrl(e, true);
+        if (startMarker is not null)
         {
-            lines.Append($" marker-start=\"{mk}\"");
+            lines.Append($" marker-start=\"{startMarker}\"");
         }
         lines.Append("/>\n");
         if (string.IsNullOrWhiteSpace(e.Label))
