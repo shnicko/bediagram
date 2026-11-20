@@ -18,8 +18,14 @@ public class ListItem
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description
     {
-        get => description;
-        set => description = string.IsNullOrWhiteSpace(value) ? null : value;
+        get
+        {
+            return description;
+        }
+        set
+        {
+            description = string.IsNullOrWhiteSpace(value) ? null : value;
+        }
     }
     string? description;
 
@@ -33,5 +39,8 @@ public class ListItem
     public RowSection? Section { get; set; }
 
     /// <summary>A copy with the same id (rows are found by node id + row id, so a copied node keeps its row links).</summary>
-    public ListItem Copy() => (ListItem)MemberwiseClone();
+    public ListItem Copy()
+    {
+        return (ListItem)MemberwiseClone();
+    }
 }

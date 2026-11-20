@@ -11,7 +11,13 @@ namespace BeDiagram.Models.Catalogue;
 public record NodeTypeInfo(NodeType Key, string Display, IShapeOutline Outline, string Fill, string Stroke, double W, double H)
 {
     /// <summary>The type's saved name ("decision"), also its palette key.</summary>
-    public string Name => EnumNames.Of(Key);
+    public string Name
+    {
+        get
+        {
+            return EnumNames.Of(Key);
+        }
+    }
 
     /// <summary>How nodes of this type behave: classic shape, circle, outcome, list or IPO box.</summary>
     public required INodeKind Kind { get; init; }
@@ -28,8 +34,23 @@ public record NodeTypeInfo(NodeType Key, string Display, IShapeOutline Outline, 
     public IReadOnlyList<string> PropertyKeys { get; init; } = Array.Empty<string>();
 
     /// <summary>A new, empty property set for a node of this type.</summary>
-    public Dictionary<string, string> NewProperties() => PropertyKeys.ToDictionary(k => k, _ => "");
+    public Dictionary<string, string> NewProperties()
+    {
+        Dictionary<string, string> result = new Dictionary<string, string>();
+        foreach (string k in PropertyKeys)
+        {
+            result.Add(k, "");
+        }
+        return result;
+    }
 
     /// <summary>Width and height of a new node, or of a classic shape drawn as a circle.</summary>
-    public (double W, double H) SizeFor(bool round) => round ? (NodeTypes.RoundSize, NodeTypes.RoundSize) : (W, H);
+    public (double W, double H) SizeFor(bool round)
+    {
+        if (round)
+        {
+            return (NodeTypes.RoundSize, NodeTypes.RoundSize);
+        }
+        return (W, H);
+    }
 }

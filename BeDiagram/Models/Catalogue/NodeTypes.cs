@@ -35,7 +35,20 @@ public static class NodeTypes
     /// <summary>Width and height of a circle-drawn shape (the same as a new Circle).</summary>
     public const double RoundSize = 84;
 
-    static readonly Dictionary<NodeType, NodeTypeInfo> ByKey = All.ToDictionary(t => t.Key);
+    static readonly Dictionary<NodeType, NodeTypeInfo> ByKey = BuildByKey();
 
-    public static NodeTypeInfo Get(NodeType type) => ByKey[type];
+    static Dictionary<NodeType, NodeTypeInfo> BuildByKey()
+    {
+        Dictionary<NodeType, NodeTypeInfo> result = new Dictionary<NodeType, NodeTypeInfo>();
+        foreach (NodeTypeInfo t in All)
+        {
+            result.Add(t.Key, t);
+        }
+        return result;
+    }
+
+    public static NodeTypeInfo Get(NodeType type)
+    {
+        return ByKey[type];
+    }
 }
