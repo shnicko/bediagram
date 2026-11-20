@@ -33,23 +33,28 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
     grid-area: tabs;
     display: flex; align-items: flex-end; gap: 2px;
     padding: 0 6px; min-width: 0;
-    background: #eef1f5; border-bottom: 1px solid var(--line);
+    background: #f4f6f9; border-bottom: 1px solid var(--line);
 }
+/* Inactive tabs are a darker blue-grey than the page-mode canvas (#e3e7ec), so they never look like the tab on
+   screen; the active tab is white with a blue line along its top. */
 .tabstrip .tab {
     position: relative; display: flex; align-items: center; gap: 4px; flex: 0 1 auto; min-width: 70px;
     height: 27px; max-width: 220px; padding: 0 4px 0 10px;
-    border: 1px solid var(--line); border-bottom: none; border-radius: 6px 6px 0 0;
-    background: #e3e7ec; color: var(--muted); cursor: pointer; white-space: nowrap; font-size: 13px;
+    border: 1px solid #c3cbd6; border-bottom: none; border-radius: 6px 6px 0 0;
+    background: #d3dae3; color: #4b5563; cursor: pointer; white-space: nowrap; font-size: 13px;
 }
-.tabstrip .tab:hover { background: #edf0f4; }
-.tabstrip .tab.on { background: var(--panel); color: var(--text); height: 29px; margin-bottom: -1px; }
+.tabstrip .tab:hover { background: #dde3ea; color: var(--text); }
+.tabstrip .tab.on {
+    background: var(--panel); color: var(--text); font-weight: 600; height: 29px; margin-bottom: -1px;
+    border-color: var(--line); box-shadow: inset 0 2px 0 var(--accent);
+}
 .tabstrip .tab-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .tabstrip .tab-dirty { color: var(--accent); font-weight: 700; }
 .tabstrip .tab-close {
     border: none; background: none; padding: 0 5px; line-height: 18px; border-radius: 4px;
     color: var(--muted); font-size: 15px;
 }
-.tabstrip .tab-close:hover { background: #d5dae1; color: var(--text); }
+.tabstrip .tab-close:hover { background: #c3cbd6; color: var(--text); }
 .tabstrip .tab-new {
     align-self: center; border: none; background: none; padding: 0 8px; font-size: 18px; color: var(--muted);
     border-radius: 4px;
