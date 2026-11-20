@@ -1,0 +1,18 @@
+<div class="modal-bg" @onclick="OnCancel">
+    <div class="modal" @onclick:stopPropagation="true">
+        <h3>Save changes before closing?</h3>
+        <p>“@DiagramName” has changes that haven't been saved.</p>
+        <div class="actions">
+            <button @onclick="OnCancel">Cancel</button>
+            <button class="danger" @onclick="Discard">Discard and close</button>
+            @if (HasFile)
+            {
+                <button class="primary" @onclick="SaveFirst">Save and close</button>
+            }
+            else
+            {
+                <button class="primary" @onclick="SaveFirst">Save as…</button>
+            }
+        </div>
+    </div>
+</div>

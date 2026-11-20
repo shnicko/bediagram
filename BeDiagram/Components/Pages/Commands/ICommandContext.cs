@@ -15,6 +15,19 @@ public interface ICommandContext
     /// <summary>Any shape, text box, group or connector is selected.</summary>
     bool HasSelection { get; }
 
+    // ───────────── Tabs ─────────────
+
+    /// <summary>How many diagrams are open.</summary>
+    int TabCount { get; }
+    /// <summary>Shows the tab at <paramref name="index"/> (0 = the first).</summary>
+    void GoToTab(int index);
+    /// <summary>Shows the next (+1) or previous (−1) tab, wrapping round at the ends.</summary>
+    void StepTab(int delta);
+    /// <summary>Closes the tab on screen, asking first when it has unsaved changes.</summary>
+    void CloseActiveTab();
+    /// <summary>A new, empty diagram in a new tab.</summary>
+    void NewDiagram();
+
     Task SaveAsync();
     void ShowSaveAs();
     void Undo();

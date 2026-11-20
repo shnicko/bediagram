@@ -1,0 +1,32 @@
+@inherits DesignerPart
+
+<nav class="tabstrip">
+    @foreach (DiagramTab t in Host.Tabs)
+    {
+        <div @key="t.Id" class="@TabClass(t)" title="@TabTip(t)"
+             @onclick="() => Show(t)" @onmousedown="e => MouseDown(e, t)"
+             @oncontextmenu="() => OpenTabMenu(t)" @oncontextmenu:preventDefault="true">
+            <span class="tab-name">@t.Title</span>
+            @if (t.Editor.Dirty)
+            {
+                <span class="tab-dirty" title="Unsaved changes">•</span>
+            }
+            <button class="tab-close" title="@CloseTip" @onclick="() => Close(t)" @onclick:stopPropagation="true">×</button>
+            @if (MenuOpenFor(t))
+            {
+                <div class="menu tab-menu" @onclick:stopPropagation="true">
+                    @if (Host.WindowLink(t) is string link)
+                    {
+                        <a class="menu-link" href="@link" target="_blank" @onclick="() => Moved(t)">Move to new window</a>
+                    }
+                    else
+                    {
+                        <button disabled title="@MoveTip(t)">Move to new window</button>
+                    }
+                    <button @onclick="() => Close(t)">Close tab<span class="menu-key">Alt+W</span></button>
+                </div>
+            }
+        </div>
+    }
+    <button class="tab-new" title="New diagram in a new tab (Alt+N)" @onclick="New">+</button>
+</nav>

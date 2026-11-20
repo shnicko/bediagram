@@ -24,6 +24,37 @@ public class DiagramTab
     /// <summary>True once the diagram has been opened from or saved to a file.</summary>
     public bool HasFile { get; set; }
 
+    /// <summary>When the file was last written as far as this tab knows (opened or saved here), UTC. If the file on
+    /// disk is newer, someone else saved it (another window) and Save asks before overwriting.</summary>
+    public DateTime? FileTime { get; set; }
+
+    /// <summary>
+    /// An empty, untouched, never-saved diagram: what the page starts with. Opening a diagram reuses it rather than
+    /// leaving it behind as an extra tab.
+    /// </summary>
+    public bool IsFresh
+    {
+        get
+        {
+            return !HasFile && !Editor.Dirty && Editor.IsBlank;
+        }
+    }
+
+    /// <summary>The name shown on the tab: the file name without its folder.</summary>
+    public string Title
+    {
+        get
+        {
+            string name = Editor.Diagram.Name;
+            int slash = name.LastIndexOf('/');
+            if (slash >= 0)
+            {
+                return name.Substring(slash + 1);
+            }
+            return name;
+        }
+    }
+
     // View: kept per tab, so switching back shows the diagram where it was left.
     public double PanX { get; set; } = 40;
     public double PanY { get; set; } = 40;

@@ -4,10 +4,16 @@
 
 <PageTitle>@(D.Name)@(Editor.Dirty ? " •" : "") — BeDiagram</PageTitle>
 
-<div class="app">
+<div class="@AppClass">
     @* ───────────── Toolbar and palette (Components/Bars) ───────────── *@
     <Toolbar Host="this" />
     <ShapePalette Host="this" />
+
+    @* ───────────── Open diagrams, one tab each (shown once there are two) ───────────── *@
+    @if (ShowTabs)
+    {
+        <TabStrip Host="this" />
+    }
 
     @* ───────────── Canvas ───────────── *@
     <main class="canvas" @ref="canvasEl"
@@ -78,7 +84,7 @@
                 @* Group link badges sit above the members so they're never hidden *@
                 @foreach (Group g in D.Groups.Where(SvgShapes.HasLink))
                 {
-                    <LinkBadge Box="g" Colour="@Palette.Get(g.Color).Stroke" Link="@(g.Link!)" OnFollow="FollowLink" />
+                    <LinkBadge Box="g" Colour="@Palette.Get(g.Color).Stroke" Link="@(g.Link!)" OnFollow="FollowLink" OnFollowNewTab="FollowLinkInNewTab" />
                 }
 
                 @* Connector labels sit above shapes so they're never hidden *@
@@ -165,7 +171,19 @@
 @* ───────────── Dialogs (Components/Dialogs) ───────────── *@
 @if (dialog == Dialog.Open)
 {
-    <OpenDialog Dirty="@Editor.Dirty" StartFolder="@OpenFolder" OnOpen="Open" OnDelete="DeleteFile" OnClose="CloseDialog" />
+    <OpenDialog StartFolder="@OpenFolder" OnOpen="Open" OnDelete="DeleteFile" OnClose="CloseDialog" />
+}
+else if (dialog == Dialog.OpenWhere && pendingOpen is not null)
+{
+    <OpenWhereDialog OpenName="@D.Name" Target="@pendingOpen" Dirty="@Editor.Dirty" OnChoose="OpenWhere" OnCancel="CloseDialog" />
+}
+else if (dialog == Dialog.ConfirmClose && closing is not null)
+{
+    <ConfirmCloseDialog DiagramName="@D.Name" HasFile="@hasFile" OnConfirm="ConfirmClose" OnCancel="CloseDialog" />
+}
+else if (dialog == Dialog.FileChanged)
+{
+    <FileChangedDialog DiagramName="@D.Name" OnOverwrite="OverwriteChanged" OnSaveAs="ShowSaveAs" OnCancel="CloseDialog" />
 }
 else if (dialog == Dialog.SaveAs)
 {
@@ -187,7 +205,4 @@ else if (dialog == Dialog.Json)
 {
     <JsonDialog Editor="Editor" OnApplied="JsonApplied" OnClose="CloseDialog" />
 }
-else if (dialog == Dialog.ConfirmNew)
-{
-    <ConfirmNewDialog DiagramName="@D.Name" OnDiscard="DiscardAndNew" OnCancel="CloseDialog" />
-}
+

@@ -135,6 +135,20 @@ public class DiagramStore
 
     public bool Exists(string name) => File.Exists(PathFor(name, Extension));
 
+    /// <summary>
+    /// When the diagram's file was last written (UTC), or null when there is no such file. The Designer keeps this
+    /// from opening or saving, so Save can tell when another window (or anything else) has changed the file since.
+    /// </summary>
+    public DateTime? LastWritten(string name)
+    {
+        string path = PathFor(name, Extension);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+        return File.GetLastWriteTimeUtc(path);
+    }
+
     public async Task<Diagram> LoadAsync(string name)
     {
         await using FileStream s = File.OpenRead(PathFor(name, Extension));

@@ -73,7 +73,9 @@ public partial class Designer
     /// <summary>After the lane creator adds lanes: fit them in view.</summary>
     Task FitAfterLanes() => Run(Cmd.Fit);
 
-    void CloseMenus() => openMenu = null;
-    void DiscardAndNew() { Reset(); CloseDialog(); }
+    void CloseMenus()
+    {
+        openMenu = null;
+    }
 
 }

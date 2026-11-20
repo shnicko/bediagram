@@ -33,7 +33,7 @@ public interface IDesignerHost
     /// <summary>Opens the JSON editor on the whole diagram (the canvas waits until it closes).</summary>
     void ShowJson();
 
-    /// <summary>Starts a new diagram (asking first when there are unsaved changes).</summary>
+    /// <summary>Starts a new diagram in a new tab.</summary>
     void NewDiagram();
 
     /// <summary>Shows the Open dialog.</summary>
@@ -42,10 +42,33 @@ public interface IDesignerHost
     /// <summary>Runs an Export menu entry (saved next to the diagram or copied to the clipboard); the current-view area uses what is on screen now.</summary>
     Task Export(ExportChoice choice, ExportOptions options);
 
+    // ───────────── Tabs ─────────────
+
+    /// <summary>The open diagrams, in tab order.</summary>
+    IReadOnlyList<DiagramTab> Tabs { get; }
+
+    /// <summary>The tab on screen (the only one that can be edited).</summary>
+    DiagramTab ActiveTab { get; }
+
+    /// <summary>Shows a tab.</summary>
+    void SwitchTab(DiagramTab tab);
+
+    /// <summary>Closes a tab, asking first when it has unsaved changes.</summary>
+    void CloseTab(DiagramTab tab);
+
+    /// <summary>The address that opens the tab's diagram in a new window, or null when it must be saved first.</summary>
+    string? WindowLink(DiagramTab tab);
+
+    /// <summary>The tab's diagram was opened in a new window: close the tab here.</summary>
+    void MovedToWindow(DiagramTab tab);
+
     // ───────────── Linked diagrams ─────────────
 
     /// <summary>Opens the linked diagram (after asking about unsaved changes).</summary>
     void FollowLink(string? link);
+
+    /// <summary>Ctrl+click on a link badge: opens the linked diagram in a new tab.</summary>
+    Task FollowLinkInNewTab(string? link);
 
     /// <summary>The open diagram's own name, left out of the link pickers (null when it has never been saved).</summary>
     string? LinkExclude { get; }
