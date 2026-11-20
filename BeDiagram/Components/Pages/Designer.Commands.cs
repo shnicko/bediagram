@@ -24,25 +24,53 @@ public partial class Designer
         }
         if (dialog != Dialog.None)
         {
-            if (key == "Escape") CloseDialog();
+            if (key == "Escape")
+            {
+                CloseDialog();
+            }
             StateHasChanged();
             return;
         }
         IEditorCommand? command = Commands.Find(KeyGesture.From(key, ctrl, shift));
-        if (command is null || !command.CanExecute(this)) return;
+        if (command is null || !command.CanExecute(this))
+        {
+            return;
+        }
         await command.ExecuteAsync(this);
         StateHasChanged();
     }
 
     /// <summary>The commands with buttons (made on first use: <see cref="Commands"/> is injected after construction).</summary>
-    CommandButtons Cmd => buttons ??= new CommandButtons(Commands, this, Editor);
+    CommandButtons Cmd
+    {
+        get
+        {
+            if (buttons is null)
+            {
+                buttons = new CommandButtons(Commands, this, Editor);
+            }
+            return buttons;
+        }
+    }
     CommandButtons? buttons;
 
-    Task Run(IEditorCommand command) => Cmd.Run(command);
+    Task Run(IEditorCommand command)
+    {
+        return Cmd.Run(command);
+    }
 
-    bool CanRun(IEditorCommand command) => Cmd.CanRun(command);
+    bool CanRun(IEditorCommand command)
+    {
+        return Cmd.CanRun(command);
+    }
 
-    static string KeyText(IEditorCommand command) => CommandButtons.KeyText(command);
+    static string KeyText(IEditorCommand command)
+    {
+        return CommandButtons.KeyText(command);
+    }
 
-    static string Tip(IEditorCommand command) => CommandButtons.Tip(command);
+    static string Tip(IEditorCommand command)
+    {
+        return CommandButtons.Tip(command);
+    }
 }

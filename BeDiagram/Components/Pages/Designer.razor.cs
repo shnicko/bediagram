@@ -29,7 +29,13 @@ public partial class Designer
     readonly DiagramEditor Editor;
 
     /// <summary>Short name for the open diagram — the markup reads it a lot.</summary>
-    Diagram D => Editor.Diagram;
+    Diagram D
+    {
+        get
+        {
+            return Editor.Diagram;
+        }
+    }
 
     bool hasFile;
 
@@ -71,8 +77,9 @@ public partial class Designer
             selfRef = DotNetObjectReference.Create(this);
             await module.InvokeVoidAsync("init", selfRef, canvasEl);
         }
-        if (focusId is { } id && module is not null)
+        if (focusId is not null && module is not null)
         {
+            string id = focusId;
             focusId = null;
             await module.InvokeVoidAsync("focus", id);
         }
@@ -84,11 +91,18 @@ public partial class Designer
     /// there. Asking straight away raced the render and could miss on a busy machine, sending the next keys to the
     /// shortcuts instead of the box.
     /// </summary>
-    void FocusAfterRender(string id) => focusId = id;
+    void FocusAfterRender(string id)
+    {
+        focusId = id;
+    }
 
     protected override bool ShouldRender()
     {
-        if (skipRender) { skipRender = false; return false; }
+        if (skipRender)
+        {
+            skipRender = false;
+            return false;
+        }
         return true;
     }
 
@@ -102,14 +116,28 @@ public partial class Designer
                 await module.DisposeAsync();
             }
         }
-        catch (JSDisconnectedException) { }
-        selfRef?.Dispose();
+        catch (JSDisconnectedException)
+        {
+        }
+        if (selfRef is not null)
+        {
+            selfRef.Dispose();
+        }
     }
 
     // ───────────── Canvas coordinates ─────────────
 
-    (double X, double Y) ToWorld(double clientX, double clientY) =>
-        ((clientX - canvasLeft - PanX) / Zoom, (clientY - canvasTop - PanY) / Zoom);
+    (double X, double Y) ToWorld(double clientX, double clientY)
+    {
+        double x = (clientX - canvasLeft - PanX) / Zoom;
+        double y = (clientY - canvasTop - PanY) / Zoom;
+        return (x, y);
+    }
 
-    (double X, double Y) ViewCentre() => ((canvasW / 2 - PanX) / Zoom, (canvasH / 2 - PanY) / Zoom);
+    (double X, double Y) ViewCentre()
+    {
+        double x = (canvasW / 2 - PanX) / Zoom;
+        double y = (canvasH / 2 - PanY) / Zoom;
+        return (x, y);
+    }
 }

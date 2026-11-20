@@ -9,25 +9,45 @@ public partial class Designer
     // ───────────── Linked diagrams ─────────────
 
     /// <summary>Diagrams we drilled down from via link badges, outermost first. Shown as a breadcrumb with Back.</summary>
-    readonly List<string> trail = new();
+    readonly List<string> trail = new List<string>();
 
     /// <summary>Where we're going once the unsaved-changes question is answered. KeepTrail = trail entries to keep (-1 = push current).</summary>
     (string Target, int KeepTrail)? pendingNav;
 
     void FollowLink(string? link)
     {
-        if (string.IsNullOrWhiteSpace(link)) return;
-        if (hasFile && link == D.Name) { ShowToast("That link points to this diagram"); return; }
-        if (!Store.Exists(link)) { ShowToast($"Linked diagram “{link}” not found in {Store.Folder}"); return; }
+        if (string.IsNullOrWhiteSpace(link))
+        {
+            return;
+        }
+        if (hasFile && link == D.Name)
+        {
+            ShowToast("That link points to this diagram");
+            return;
+        }
+        if (!Store.Exists(link))
+        {
+            ShowToast($"Linked diagram “{link}” not found in {Store.Folder}");
+            return;
+        }
         Navigate(link, -1);
     }
 
-    void GoBack() { if (trail.Count > 0) GoUpTo(trail.Count - 1); }
+    void GoBack()
+    {
+        if (trail.Count > 0)
+        {
+            GoUpTo(trail.Count - 1);
+        }
+    }
 
     /// <summary>Jump back to trail[level], dropping it and everything below it from the trail.</summary>
     void GoUpTo(int level)
     {
-        if (level < 0 || level >= trail.Count) return;
+        if (level < 0 || level >= trail.Count)
+        {
+            return;
+        }
         Navigate(trail[level], level);
     }
 
@@ -45,26 +65,52 @@ public partial class Designer
 
     async Task DoNavigate(string target, int keepTrail)
     {
-        string? from = hasFile ? D.Name : null;
-        List<string> before = trail.ToList();
-        if (!await Load(target)) return;
+        string? from = null;
+        if (hasFile)
+        {
+            from = D.Name;
+        }
+        List<string> before = new List<string>(trail);
+        if (!await Load(target))
+        {
+            return;
+        }
         trail.Clear();
-        if (keepTrail >= 0) trail.AddRange(before.Take(keepTrail));
+        if (keepTrail >= 0)
+        {
+            // Back to a level of the breadcrumb: keep the levels above it.
+            for (int i = 0; i < keepTrail && i < before.Count; i++)
+            {
+                trail.Add(before[i]);
+            }
+        }
         else
         {
+            // Following a link: the diagram we came from goes on the end of the breadcrumb.
             trail.AddRange(before);
-            if (from is not null) trail.Add(from);
+            if (from is not null)
+            {
+                trail.Add(from);
+            }
         }
         StateHasChanged();
     }
 
     async Task ConfirmLeave(bool save)
     {
-        if (pendingNav is not { } nav) { CloseDialog(); return; }
+        if (pendingNav is null)
+        {
+            CloseDialog();
+            return;
+        }
+        (string Target, int KeepTrail) nav = pendingNav.Value;
         if (save)
         {
             await Save();
-            if (Editor.Dirty) return; // save failed: stay put, the toast says why
+            if (Editor.Dirty)
+            {
+                return; // save failed: stay put, the toast says why
+            }
         }
         pendingNav = null;
         CloseDialog();
@@ -72,19 +118,31 @@ public partial class Designer
         await DoNavigate(nav.Target, nav.KeepTrail);
     }
 
-    void CancelLeave() { pendingNav = null; CloseDialog(); }
+    void CancelLeave()
+    {
+        pendingNav = null;
+        CloseDialog();
+    }
 
     void DeleteFile(string name)
     {
         Store.Delete(name);
-        if (hasFile && D.Name == name) { hasFile = false; Editor.Dirty = true; }
+        if (hasFile && D.Name == name)
+        {
+            hasFile = false;
+            Editor.Dirty = true;
+        }
         ShowToast($"Deleted {name}");
     }
 
     async Task Save()
     {
         Editor.EndEdit();
-        if (!hasFile) { ShowSaveAs(); return; }
+        if (!hasFile)
+        {
+            ShowSaveAs();
+            return;
+        }
         try
         {
             string path = await Store.SaveAsync(D);
@@ -126,11 +184,19 @@ public partial class Designer
     void ShowToast(string message)
     {
         toast = message;
-        toastCts?.Cancel();
-        CancellationTokenSource cts = toastCts = new CancellationTokenSource();
+        if (toastCts is not null)
+        {
+            toastCts.Cancel();
+        }
+        CancellationTokenSource cts = new CancellationTokenSource();
+        toastCts = cts;
+        // Hide the toast after 3.5 s, unless a newer toast has replaced it (that cancels this wait).
         _ = Task.Delay(3500, cts.Token).ContinueWith(t =>
         {
-            if (t.IsCanceled) return;
+            if (t.IsCanceled)
+            {
+                return;
+            }
             toast = null;
             _ = InvokeAsync(StateHasChanged);
         }, TaskScheduler.Default);
