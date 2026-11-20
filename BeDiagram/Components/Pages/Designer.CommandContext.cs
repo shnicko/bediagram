@@ -1,27 +1,77 @@
 using BeDiagram.Components.Pages.Commands;
 using BeDiagram.Editing.Lanes;
+using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
 
 namespace BeDiagram.Components.Pages;
 
 /// <summary>
 /// The Designer as the receiver of editor commands (<see cref="ICommandContext"/>). Explicit implementations:
-/// diagram actions forward to the <see cref="Editing.DiagramEditor"/>; saving, dialogs, zoom and cancelling a drag are
-/// the page's own.
+/// diagram actions forward to the <see cref="Editing.DiagramEditor"/>; saving, dialogs, zoom and cancelling a
+/// drag are the page's own.
 /// </summary>
 public partial class Designer : ICommandContext
 {
-    bool ICommandContext.CanUndo => Editor.CanUndo;
-    bool ICommandContext.CanRedo => Editor.CanRedo;
-    bool ICommandContext.HasSelectedConnector => Editor.SelectedEdge is not null;
-    bool ICommandContext.HasSelection => Editor.Selection.Count > 0 || Editor.SelectedEdge is not null;
+    bool ICommandContext.CanUndo
+    {
+        get
+        {
+            return Editor.CanUndo;
+        }
+    }
 
-    Task ICommandContext.SaveAsync() => Save();
-    void ICommandContext.ShowSaveAs() => ShowSaveAs();
-    void ICommandContext.Undo() => Editor.Undo();
-    void ICommandContext.Redo() => Editor.Redo();
+    bool ICommandContext.CanRedo
+    {
+        get
+        {
+            return Editor.CanRedo;
+        }
+    }
 
-    void ICommandContext.SelectAll() => Editor.SelectAll();
+    bool ICommandContext.HasSelectedConnector
+    {
+        get
+        {
+            return Editor.SelectedEdge is not null;
+        }
+    }
+
+    bool ICommandContext.HasSelection
+    {
+        get
+        {
+            return Editor.Selection.Count > 0 || Editor.SelectedEdge is not null;
+        }
+    }
+
+    // Files and undo
+
+    Task ICommandContext.SaveAsync()
+    {
+        return Save();
+    }
+
+    void ICommandContext.ShowSaveAs()
+    {
+        ShowSaveAs();
+    }
+
+    void ICommandContext.Undo()
+    {
+        Editor.Undo();
+    }
+
+    void ICommandContext.Redo()
+    {
+        Editor.Redo();
+    }
+
+    // Selection and editing
+
+    void ICommandContext.SelectAll()
+    {
+        Editor.SelectAll();
+    }
 
     void ICommandContext.CancelAndClearSelection()
     {
@@ -32,14 +82,42 @@ public partial class Designer : ICommandContext
 
     void ICommandContext.EditSelected()
     {
-        if (Editor.Selection.Count == 1) Editor.BeginEdit(Editor.Selection[0]);
-        else if (Editor.SelectedEdgeId is not null) Editor.BeginEdit(Editor.SelectedEdgeId);
+        if (Editor.Selection.Count == 1)
+        {
+            Editor.BeginEdit(Editor.Selection[0]);
+        }
+        else if (Editor.SelectedEdgeId is not null)
+        {
+            Editor.BeginEdit(Editor.SelectedEdgeId);
+        }
     }
 
-    bool ICommandContext.HasShapes => Editor.HasShapes;
-    void ICommandContext.AutoLayout(ILaneLayout layout) => Editor.AutoLayout(layout);
-    bool ICommandContext.HasConnectors => D.Edges.Count > 0;
-    void ICommandContext.TidyConnectors() => Editor.TidyConnectors();
+    bool ICommandContext.HasShapes
+    {
+        get
+        {
+            return Editor.HasShapes;
+        }
+    }
+
+    void ICommandContext.AutoLayout(ILaneLayout layout)
+    {
+        Editor.AutoLayout(layout);
+    }
+
+    bool ICommandContext.HasConnectors
+    {
+        get
+        {
+            return D.Edges.Count > 0;
+        }
+    }
+
+    void ICommandContext.TidyConnectors()
+    {
+        Editor.TidyConnectors();
+    }
+
     bool ICommandContext.HasOutsideText
     {
         get
@@ -47,26 +125,71 @@ public partial class Designer : ICommandContext
             return Editor.HasOutsideText;
         }
     }
+
     void ICommandContext.PlaceTextClear()
     {
         Editor.PlaceTextClear();
     }
-    bool ICommandContext.HasLanes => Editor.HasLanes;
-    void ICommandContext.ArrangeLanes(ILaneLayout layout) => Editor.ArrangeLanes(layout);
 
-    void ICommandContext.Duplicate() => Editor.Duplicate();
-    void ICommandContext.DeleteSelection() => Editor.DeleteSelection();
-    void ICommandContext.GroupSelection() => Editor.GroupSelection();
+    bool ICommandContext.HasLanes
+    {
+        get
+        {
+            return Editor.HasLanes;
+        }
+    }
+
+    void ICommandContext.ArrangeLanes(ILaneLayout layout)
+    {
+        Editor.ArrangeLanes(layout);
+    }
+
+    void ICommandContext.Duplicate()
+    {
+        Editor.Duplicate();
+    }
+
+    void ICommandContext.DeleteSelection()
+    {
+        Editor.DeleteSelection();
+    }
+
+    void ICommandContext.GroupSelection()
+    {
+        Editor.GroupSelection();
+    }
 
     void ICommandContext.UngroupSelected()
     {
-        if (Editor.SelectedGroup is { } g) Editor.Ungroup(g);
+        Group? g = Editor.SelectedGroup;
+        if (g is not null)
+        {
+            Editor.Ungroup(g);
+        }
     }
 
-    void ICommandContext.JoinSelected() => Editor.JoinSelected();
-    bool ICommandContext.CanBranch => Editor.BranchSource is not null;
-    void ICommandContext.QuickBranch() => Editor.QuickBranch();
-    void ICommandContext.Nudge(double dx, double dy) => Editor.Nudge(dx, dy);
+    void ICommandContext.JoinSelected()
+    {
+        Editor.JoinSelected();
+    }
+
+    bool ICommandContext.CanBranch
+    {
+        get
+        {
+            return Editor.BranchSource is not null;
+        }
+    }
+
+    void ICommandContext.QuickBranch()
+    {
+        Editor.QuickBranch();
+    }
+
+    void ICommandContext.Nudge(double dx, double dy)
+    {
+        Editor.Nudge(dx, dy);
+    }
 
     void ICommandContext.ToggleAngleLock()
     {
@@ -75,16 +198,61 @@ public partial class Designer : ICommandContext
 
     void ICommandContext.ToggleSelectedConnectorStyle()
     {
-        if (Editor.SelectedEdge is { } e) Editor.SetEdgeStyle(e, e.Style == EdgeStyle.Straight ? EdgeStyle.Elbow : EdgeStyle.Straight);
+        Edge? e = Editor.SelectedEdge;
+        if (e is not null)
+        {
+            if (e.Style == EdgeStyle.Straight)
+            {
+                Editor.SetEdgeStyle(e, EdgeStyle.Elbow);
+            }
+            else
+            {
+                Editor.SetEdgeStyle(e, EdgeStyle.Straight);
+            }
+        }
     }
 
-    void ICommandContext.AddShape(NodeType type) => Editor.QuickAdd(type);
-    void ICommandContext.AddText() => Editor.AddTextQuick();
-    void ICommandContext.AddComment() => Editor.AddCommentQuick();
-    void ICommandContext.AddGroup() => Editor.AddGroupQuick();
+    // Adding items
 
-    void ICommandContext.Fit() => Fit();
-    void ICommandContext.FitSelection() => FitSelection();
-    void ICommandContext.ZoomBy(double factor) => ZoomBy(factor);
-    void ICommandContext.ResetZoom() => Zoom = 1;
+    void ICommandContext.AddShape(NodeType type)
+    {
+        Editor.QuickAdd(type);
+    }
+
+    void ICommandContext.AddText()
+    {
+        Editor.AddTextQuick();
+    }
+
+    void ICommandContext.AddComment()
+    {
+        Editor.AddCommentQuick();
+    }
+
+    void ICommandContext.AddGroup()
+    {
+        Editor.AddGroupQuick();
+    }
+
+    // View
+
+    void ICommandContext.Fit()
+    {
+        Fit();
+    }
+
+    void ICommandContext.FitSelection()
+    {
+        FitSelection();
+    }
+
+    void ICommandContext.ZoomBy(double factor)
+    {
+        ZoomBy(factor);
+    }
+
+    void ICommandContext.ResetZoom()
+    {
+        Zoom = 1;
+    }
 }

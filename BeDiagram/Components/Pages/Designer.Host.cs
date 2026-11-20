@@ -14,51 +14,198 @@ namespace BeDiagram.Components.Pages;
 /// </summary>
 public partial class Designer : IDesignerHost, ICanvasInput
 {
-    DiagramEditor IDesignerHost.Editor => Editor;
-    CommandButtons IDesignerHost.Buttons => Cmd;
-    void IDesignerHost.Redraw() => StateHasChanged();
+    DiagramEditor IDesignerHost.Editor
+    {
+        get
+        {
+            return Editor;
+        }
+    }
 
-    void IDesignerHost.ShowStepOrder() => ShowStepOrder();
-    void IDesignerHost.ShowShortcuts() => ShowShortcuts();
+    CommandButtons IDesignerHost.Buttons
+    {
+        get
+        {
+            return Cmd;
+        }
+    }
+
+    void IDesignerHost.Redraw()
+    {
+        StateHasChanged();
+    }
+
+    void IDesignerHost.ShowStepOrder()
+    {
+        ShowStepOrder();
+    }
+
+    void IDesignerHost.ShowShortcuts()
+    {
+        ShowShortcuts();
+    }
+
     void IDesignerHost.ShowJson()
     {
         ShowJson();
     }
-    void IDesignerHost.NewDiagram() => NewDiagram();
-    void IDesignerHost.ShowOpen() => ShowOpen();
-    Task IDesignerHost.Export(ExportChoice choice, ExportOptions options) => Export(choice, options);
 
-    void IDesignerHost.FollowLink(string? link) => FollowLink(link);
-    string? IDesignerHost.LinkExclude => LinkExclude;
-    IReadOnlyList<string> IDesignerHost.Trail => trail;
-    void IDesignerHost.GoBack() => GoBack();
-    void IDesignerHost.GoUpTo(int level) => GoUpTo(level);
+    void IDesignerHost.NewDiagram()
+    {
+        NewDiagram();
+    }
 
-    void IDesignerHost.SetPageSize(string? size) => SetPageSize(size);
-    void IDesignerHost.SetLandscape(bool landscape) => SetOrientation(landscape ? "landscape" : "portrait");
-    double IDesignerHost.Zoom => Zoom;
-    string IDesignerHost.Grid => grid;
-    void IDesignerHost.SetGrid(string key) => grid = key;
-    string? IDesignerHost.OpenMenu => openMenu;
-    void IDesignerHost.SetOpenMenu(string? menu) => openMenu = menu;
-    string? IDesignerHost.Toast => toast;
-    void IDesignerHost.SetPaletteDrop(Action<double, double> drop) => paletteDrop = drop;
+    void IDesignerHost.ShowOpen()
+    {
+        ShowOpen();
+    }
 
-    ICanvasInput IDesignerHost.Canvas => this;
-    void ICanvasInput.ItemDown(PointerEventArgs e, string id) => ItemDown(e, id);
-    void ICanvasInput.GroupBodyDown(PointerEventArgs e, string id) => GroupBodyDown(e, id);
-    void ICanvasInput.PortDown(PointerEventArgs e, string id, string? itemId) => PortDown(e, id, itemId);
+    Task IDesignerHost.Export(ExportChoice choice, ExportOptions options)
+    {
+        return Export(choice, options);
+    }
+
+    // Linked diagrams
+
+    void IDesignerHost.FollowLink(string? link)
+    {
+        FollowLink(link);
+    }
+
+    string? IDesignerHost.LinkExclude
+    {
+        get
+        {
+            return LinkExclude;
+        }
+    }
+
+    IReadOnlyList<string> IDesignerHost.Trail
+    {
+        get
+        {
+            return trail;
+        }
+    }
+
+    void IDesignerHost.GoBack()
+    {
+        GoBack();
+    }
+
+    void IDesignerHost.GoUpTo(int level)
+    {
+        GoUpTo(level);
+    }
+
+    // Page and view
+
+    void IDesignerHost.SetPageSize(string? size)
+    {
+        SetPageSize(size);
+    }
+
+    void IDesignerHost.SetLandscape(bool landscape)
+    {
+        if (landscape)
+        {
+            SetOrientation("landscape");
+        }
+        else
+        {
+            SetOrientation("portrait");
+        }
+    }
+
+    double IDesignerHost.Zoom
+    {
+        get
+        {
+            return Zoom;
+        }
+    }
+
+    string IDesignerHost.Grid
+    {
+        get
+        {
+            return grid;
+        }
+    }
+
+    void IDesignerHost.SetGrid(string key)
+    {
+        grid = key;
+    }
+
+    string? IDesignerHost.OpenMenu
+    {
+        get
+        {
+            return openMenu;
+        }
+    }
+
+    void IDesignerHost.SetOpenMenu(string? menu)
+    {
+        openMenu = menu;
+    }
+
+    string? IDesignerHost.Toast
+    {
+        get
+        {
+            return toast;
+        }
+    }
+
+    void IDesignerHost.SetPaletteDrop(Action<double, double> drop)
+    {
+        paletteDrop = drop;
+    }
+
+    // Canvas input
+
+    ICanvasInput IDesignerHost.Canvas
+    {
+        get
+        {
+            return this;
+        }
+    }
+
+    void ICanvasInput.ItemDown(PointerEventArgs e, string id)
+    {
+        ItemDown(e, id);
+    }
+
+    void ICanvasInput.GroupBodyDown(PointerEventArgs e, string id)
+    {
+        GroupBodyDown(e, id);
+    }
+
+    void ICanvasInput.PortDown(PointerEventArgs e, string id, string? itemId)
+    {
+        PortDown(e, id, itemId);
+    }
+
     void ICanvasInput.DividerDown(PointerEventArgs e, LaneDivider d)
     {
         DividerDown(e, d);
     }
+
     void ICanvasInput.ResizeDown(PointerEventArgs e, string id, ResizeHandle handle)
     {
         ResizeDown(e, id, handle);
     }
+
     void ICanvasInput.OutsideTextDown(PointerEventArgs e, string id)
     {
         OutsideTextDown(e, id);
     }
-    void ICanvasInput.EdgeDown(PointerEventArgs e, string id) => EdgeDown(e, id);
+
+    void ICanvasInput.EdgeDown(PointerEventArgs e, string id)
+    {
+        EdgeDown(e, id);
+    }
 }
