@@ -12,13 +12,14 @@ public sealed class CommandButtons
 {
     readonly CommandRegistry registry;
     readonly ICommandContext context;
-    readonly DiagramEditor editor;
+    /// <summary>Gets the editor of the diagram on screen: asked each time, as the page can switch tabs.</summary>
+    readonly Func<DiagramEditor> currentEditor;
 
-    public CommandButtons(CommandRegistry registry, ICommandContext context, DiagramEditor editor)
+    public CommandButtons(CommandRegistry registry, ICommandContext context, Func<DiagramEditor> currentEditor)
     {
         this.registry = registry;
         this.context = context;
-        this.editor = editor;
+        this.currentEditor = currentEditor;
     }
 
     public async Task Run(IEditorCommand command)
@@ -83,6 +84,7 @@ public sealed class CommandButtons
             {
                 return "No connectors yet";
             }
+            DiagramEditor editor = currentEditor();
             if (editor.SelectedEdge is not null)
             {
                 return "Tidy the selected connector: re-route it round any shape it passes through";
@@ -104,7 +106,7 @@ public sealed class CommandButtons
             {
                 return "No shape has text outside it yet (a label under a circle or outcome, or a description)";
             }
-            if (editor.Selection.Count > 0)
+            if (currentEditor().Selection.Count > 0)
             {
                 return "Move the text of the selected shapes to the side (under, above, right or left) with the fewest connectors through it";
             }

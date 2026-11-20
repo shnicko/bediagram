@@ -13,7 +13,8 @@ public partial class Designer
 {
     public Designer()
     {
-        Editor = new DiagramEditor(this);
+        active = new DiagramTab(new DiagramEditor(this));
+        tabs.Add(active);
     }
 
     [Inject] DiagramStore Store { get; set; } = default!;
@@ -22,11 +23,24 @@ public partial class Designer
 
     enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave, StepOrder, Shortcuts, Json }
 
+    /// <summary>The open diagrams, in tab order.</summary>
+    readonly List<DiagramTab> tabs = new List<DiagramTab>();
+
+    /// <summary>The tab on screen: the only one that takes input, so the only one that can be edited.</summary>
+    DiagramTab active;
+
     /// <summary>
-    /// The diagram and everything done to it (selection, undo, editing actions) live in the editor; this page shows
-    /// it, turns mouse / keyboard / panel input into editor calls, and handles files, dialogs and export.
+    /// The active tab's editor. The diagram and everything done to it (selection, undo, editing actions) live in the
+    /// editor; this page shows it, turns mouse / keyboard / panel input into editor calls, and handles files, dialogs
+    /// and export.
     /// </summary>
-    readonly DiagramEditor Editor;
+    DiagramEditor Editor
+    {
+        get
+        {
+            return active.Editor;
+        }
+    }
 
     /// <summary>Short name for the open diagram — the markup reads it a lot.</summary>
     Diagram D
@@ -37,10 +51,53 @@ public partial class Designer
         }
     }
 
-    bool hasFile;
+    /// <summary>The active tab has a file (opened or saved).</summary>
+    bool hasFile
+    {
+        get
+        {
+            return active.HasFile;
+        }
+        set
+        {
+            active.HasFile = value;
+        }
+    }
 
-    // View state
-    double PanX = 40, PanY = 40, Zoom = 1;
+    // View state: pan and zoom belong to the active tab.
+    double PanX
+    {
+        get
+        {
+            return active.PanX;
+        }
+        set
+        {
+            active.PanX = value;
+        }
+    }
+    double PanY
+    {
+        get
+        {
+            return active.PanY;
+        }
+        set
+        {
+            active.PanY = value;
+        }
+    }
+    double Zoom
+    {
+        get
+        {
+            return active.Zoom;
+        }
+        set
+        {
+            active.Zoom = value;
+        }
+    }
     /// <summary>Background grid (<see cref="GridLook"/>): a view setting, kept while the page is open, not saved in the file.</summary>
     string grid = GridLook.Dots;
     double canvasLeft, canvasTop, canvasW = 1000, canvasH = 700;

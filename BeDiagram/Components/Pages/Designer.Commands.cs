@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using BeDiagram.Components.Pages.Commands;
+using BeDiagram.Editing;
 
 namespace BeDiagram.Components.Pages;
 
@@ -47,12 +48,18 @@ public partial class Designer
         {
             if (buttons is null)
             {
-                buttons = new CommandButtons(Commands, this, Editor);
+                buttons = new CommandButtons(Commands, this, ActiveEditor);
             }
             return buttons;
         }
     }
     CommandButtons? buttons;
+
+    /// <summary>The active tab's editor, asked for each time (the buttons outlive a tab switch).</summary>
+    DiagramEditor ActiveEditor()
+    {
+        return Editor;
+    }
 
     Task Run(IEditorCommand command)
     {

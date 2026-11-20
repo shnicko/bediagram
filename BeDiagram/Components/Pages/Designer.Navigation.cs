@@ -9,7 +9,13 @@ public partial class Designer
     // ───────────── Linked diagrams ─────────────
 
     /// <summary>Diagrams we drilled down from via link badges, outermost first. Shown as a breadcrumb with Back.</summary>
-    readonly List<string> trail = new List<string>();
+    List<string> trail
+    {
+        get
+        {
+            return active.Trail;
+        }
+    }
 
     /// <summary>Where we're going once the unsaved-changes question is answered. KeepTrail = trail entries to keep (-1 = push current).</summary>
     (string Target, int KeepTrail)? pendingNav;
