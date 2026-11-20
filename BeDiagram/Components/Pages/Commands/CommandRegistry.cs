@@ -33,6 +33,7 @@ public class CommandRegistry
         {
             new SaveCommand(), new SaveAsCommand(), new UndoCommand(), new RedoCommand(),
             new SelectAllCommand(), new CancelCommand(), new EditTextCommand(),
+            new CopyItemsCommand(), new CutItemsCommand(), new PasteItemsCommand(),
             new CopyStyleCommand(), new PasteStyleCommand(), new PasteSpecialCommand(),
             new FormatPainterCommand(false), new FormatPainterCommand(true),
             new DuplicateCommand(), new DeleteCommand(), new GroupCommand(), new UngroupCommand(), new JoinCommand(), new QuickBranchCommand(),

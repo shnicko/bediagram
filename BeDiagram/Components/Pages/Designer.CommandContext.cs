@@ -74,6 +74,39 @@ public partial class Designer : ICommandContext
         NewDiagram();
     }
 
+    // Copy and paste items
+
+    bool ICommandContext.CanCopyItems
+    {
+        get
+        {
+            return Editor.Selection.Count > 0;
+        }
+    }
+
+    bool ICommandContext.HasCopiedItems
+    {
+        get
+        {
+            return Items.Held is not null;
+        }
+    }
+
+    void ICommandContext.CopyItems()
+    {
+        CopyItems();
+    }
+
+    void ICommandContext.CutItems()
+    {
+        CutItems();
+    }
+
+    void ICommandContext.PasteItems()
+    {
+        PasteItems();
+    }
+
     // Copy style and the format painter
 
     bool ICommandContext.CanCopyStyle

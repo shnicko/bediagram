@@ -150,6 +150,27 @@ public sealed class CommandButtons
             return registry.Get<SelectAllCommand>();
         }
     }
+    public IEditorCommand CopyItems
+    {
+        get
+        {
+            return registry.Get<CopyItemsCommand>();
+        }
+    }
+    public IEditorCommand CutItems
+    {
+        get
+        {
+            return registry.Get<CutItemsCommand>();
+        }
+    }
+    public IEditorCommand PasteItems
+    {
+        get
+        {
+            return registry.Get<PasteItemsCommand>();
+        }
+    }
     public IEditorCommand CopyStyle
     {
         get

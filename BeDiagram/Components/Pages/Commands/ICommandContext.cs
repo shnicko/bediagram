@@ -28,6 +28,16 @@ public interface ICommandContext
     /// <summary>A new, empty diagram in a new tab.</summary>
     void NewDiagram();
 
+    // ───────────── Copy and paste items ─────────────
+
+    /// <summary>A shape, text box or group is selected (connectors are copied with their two ends).</summary>
+    bool CanCopyItems { get; }
+    /// <summary>Items have been copied (in any tab or window).</summary>
+    bool HasCopiedItems { get; }
+    void CopyItems();
+    void CutItems();
+    void PasteItems();
+
     // ───────────── Copy style and the format painter ─────────────
 
     /// <summary>Exactly one item or a connector is selected, so its style can be copied.</summary>

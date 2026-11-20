@@ -4,6 +4,9 @@
     <button disabled="@(!CanRun(Cmd.Undo))" @onclick="() => Run(Cmd.Undo)">Undo<span class="menu-key">@KeyText(Cmd.Undo)</span></button>
     <button disabled="@(!CanRun(Cmd.Redo))" @onclick="() => Run(Cmd.Redo)">Redo<span class="menu-key">@KeyText(Cmd.Redo)</span></button>
     <hr class="menu-divider" />
+    <button disabled="@(!CanRun(Cmd.CutItems))" @onclick="() => Run(Cmd.CutItems)">Cut<span class="menu-key">@KeyText(Cmd.CutItems)</span></button>
+    <button disabled="@(!CanRun(Cmd.CopyItems))" @onclick="() => Run(Cmd.CopyItems)" title="Copy the selected items, to paste here or in another tab">Copy<span class="menu-key">@KeyText(Cmd.CopyItems)</span></button>
+    <button disabled="@(!CanRun(Cmd.PasteItems))" @onclick="() => Run(Cmd.PasteItems)">Paste<span class="menu-key">@KeyText(Cmd.PasteItems)</span></button>
     <button @onclick="() => Run(Cmd.SelectAll)">Select all<span class="menu-key">@KeyText(Cmd.SelectAll)</span></button>
     <button disabled="@(!CanRun(Cmd.Duplicate))" @onclick="() => Run(Cmd.Duplicate)">Duplicate<span class="menu-key">@KeyText(Cmd.Duplicate)</span></button>
     <button disabled="@(!CanRun(Cmd.Delete))" @onclick="() => Run(Cmd.Delete)">Delete<span class="menu-key">@KeyText(Cmd.Delete)</span></button>
