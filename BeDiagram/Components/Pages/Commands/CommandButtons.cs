@@ -12,44 +12,90 @@ public sealed class CommandButtons
 {
     readonly CommandRegistry registry;
     readonly ICommandContext context;
-    readonly DiagramEditor editor;
+    /// <summary>Gets the editor of the diagram on screen: asked each time, as the page can switch tabs.</summary>
+    readonly Func<DiagramEditor> currentEditor;
 
-    public CommandButtons(CommandRegistry registry, ICommandContext context, DiagramEditor editor)
+    public CommandButtons(CommandRegistry registry, ICommandContext context, Func<DiagramEditor> currentEditor)
     {
         this.registry = registry;
         this.context = context;
-        this.editor = editor;
+        this.currentEditor = currentEditor;
     }
 
     public async Task Run(IEditorCommand command)
     {
-        if (command.CanExecute(context)) await command.ExecuteAsync(context);
+        if (command.CanExecute(context))
+        {
+            await command.ExecuteAsync(context);
+        }
     }
 
-    public bool CanRun(IEditorCommand command) => command.CanExecute(context);
+    public bool CanRun(IEditorCommand command)
+    {
+        return command.CanExecute(context);
+    }
 
     /// <summary>The first shortcut of a command for a menu item, e.g. "Ctrl+S" (empty when it has none).</summary>
-    public static string KeyText(IEditorCommand command) => command.Keys.Count == 0 ? "" : command.Keys[0].ToString();
+    public static string KeyText(IEditorCommand command)
+    {
+        if (command.Keys.Count == 0)
+        {
+            return "";
+        }
+        return command.Keys[0].ToString();
+    }
 
     /// <summary>Tooltip with the first shortcut, e.g. "Undo (Ctrl+Z)".</summary>
-    public static string Tip(IEditorCommand command) =>
-        command.Keys.Count == 0 ? command.Name : $"{command.Name} ({command.Keys[0]})";
+    public static string Tip(IEditorCommand command)
+    {
+        if (command.Keys.Count == 0)
+        {
+            return command.Name;
+        }
+        return $"{command.Name} ({command.Keys[0]})";
+    }
 
     /// <summary>Tooltip for the swim-lane buttons (they have no shortcut key, so say what they do or why they're off).</summary>
-    public string LanesTip(IEditorCommand command) => CanRun(command)
-        ? $"{command.Name}: line the lanes up and put their shapes in columns by step number"
-        : "Group the shapes of each lane first (select them, Ctrl+G)";
+    public string LanesTip(IEditorCommand command)
+    {
+        if (CanRun(command))
+        {
+            return $"{command.Name}: line the lanes up and put their shapes in columns by step number";
+        }
+        return "Group the shapes of each lane first (select them, Ctrl+G)";
+    }
 
     /// <summary>Tooltip for the auto-layout buttons.</summary>
-    public string LayoutTip(IEditorCommand command) => CanRun(command)
-        ? $"{command.Name}: put every shape in columns by step number (groups move as blocks), then tidy the connectors"
-        : "Nothing to lay out yet";
+    public string LayoutTip(IEditorCommand command)
+    {
+        if (CanRun(command))
+        {
+            return $"{command.Name}: put every shape in columns by step number (groups move as blocks), then tidy the connectors";
+        }
+        return "Nothing to lay out yet";
+    }
 
     /// <summary>Tooltip for Tidy: what it will work on, given the selection.</summary>
-    public string TidyTip => !CanRun(Tidy) ? "No connectors yet"
-        : editor.SelectedEdge is not null ? "Tidy the selected connector: re-route it round any shape it passes through"
-        : editor.Selection.Count > 0 ? "Tidy the connectors on the selected items: re-route any that pass through a shape"
-        : "Tidy connectors: re-route any that pass through a shape (select items first to tidy just theirs)";
+    public string TidyTip
+    {
+        get
+        {
+            if (!CanRun(Tidy))
+            {
+                return "No connectors yet";
+            }
+            DiagramEditor editor = currentEditor();
+            if (editor.SelectedEdge is not null)
+            {
+                return "Tidy the selected connector: re-route it round any shape it passes through";
+            }
+            if (editor.Selection.Count > 0)
+            {
+                return "Tidy the connectors on the selected items: re-route any that pass through a shape";
+            }
+            return "Tidy connectors: re-route any that pass through a shape (select items first to tidy just theirs)";
+        }
+    }
 
     /// <summary>Tooltip for Place text: what it will work on, given the selection.</summary>
     public string PlaceTextTip
@@ -60,7 +106,7 @@ public sealed class CommandButtons
             {
                 return "No shape has text outside it yet (a label under a circle or outcome, or a description)";
             }
-            if (editor.Selection.Count > 0)
+            if (currentEditor().Selection.Count > 0)
             {
                 return "Move the text of the selected shapes to the side (under, above, right or left) with the fewest connectors through it";
             }
@@ -69,20 +115,104 @@ public sealed class CommandButtons
     }
 
     // The commands that have buttons.
-    public IEditorCommand Save => registry.Get<SaveCommand>();
-    public IEditorCommand SaveAs => registry.Get<SaveAsCommand>();
-    public IEditorCommand Undo => registry.Get<UndoCommand>();
-    public IEditorCommand Redo => registry.Get<RedoCommand>();
-    public IEditorCommand SelectAll => registry.Get<SelectAllCommand>();
-    public IEditorCommand Duplicate => registry.Get<DuplicateCommand>();
-    public IEditorCommand Delete => registry.Get<DeleteCommand>();
-    public IEditorCommand Join => registry.Get<JoinCommand>();
-    public IEditorCommand Branch => registry.Get<QuickBranchCommand>();
-    public IEditorCommand Group => registry.Get<GroupCommand>();
-    public IEditorCommand Ungroup => registry.Get<UngroupCommand>();
-    public IEditorCommand AddComment => registry.Get<AddCommentCommand>();
-    public IEditorCommand LanesAcross => registry.Get<ArrangeLanesHorizontalCommand>();
-    public IEditorCommand LanesDown => registry.Get<ArrangeLanesVerticalCommand>();
+    public IEditorCommand Save
+    {
+        get
+        {
+            return registry.Get<SaveCommand>();
+        }
+    }
+    public IEditorCommand SaveAs
+    {
+        get
+        {
+            return registry.Get<SaveAsCommand>();
+        }
+    }
+    public IEditorCommand Undo
+    {
+        get
+        {
+            return registry.Get<UndoCommand>();
+        }
+    }
+    public IEditorCommand Redo
+    {
+        get
+        {
+            return registry.Get<RedoCommand>();
+        }
+    }
+    public IEditorCommand SelectAll
+    {
+        get
+        {
+            return registry.Get<SelectAllCommand>();
+        }
+    }
+    public IEditorCommand Duplicate
+    {
+        get
+        {
+            return registry.Get<DuplicateCommand>();
+        }
+    }
+    public IEditorCommand Delete
+    {
+        get
+        {
+            return registry.Get<DeleteCommand>();
+        }
+    }
+    public IEditorCommand Join
+    {
+        get
+        {
+            return registry.Get<JoinCommand>();
+        }
+    }
+    public IEditorCommand Branch
+    {
+        get
+        {
+            return registry.Get<QuickBranchCommand>();
+        }
+    }
+    public IEditorCommand Group
+    {
+        get
+        {
+            return registry.Get<GroupCommand>();
+        }
+    }
+    public IEditorCommand Ungroup
+    {
+        get
+        {
+            return registry.Get<UngroupCommand>();
+        }
+    }
+    public IEditorCommand AddComment
+    {
+        get
+        {
+            return registry.Get<AddCommentCommand>();
+        }
+    }
+    public IEditorCommand LanesAcross
+    {
+        get
+        {
+            return registry.Get<ArrangeLanesHorizontalCommand>();
+        }
+    }
+    public IEditorCommand LanesDown
+    {
+        get
+        {
+            return registry.Get<ArrangeLanesVerticalCommand>();
+        }
+    }
     public IEditorCommand AngleToggle
     {
         get
@@ -90,7 +220,13 @@ public sealed class CommandButtons
             return registry.Get<ToggleAngleLockCommand>();
         }
     }
-    public IEditorCommand Tidy => registry.Get<TidyConnectorsCommand>();
+    public IEditorCommand Tidy
+    {
+        get
+        {
+            return registry.Get<TidyConnectorsCommand>();
+        }
+    }
     public IEditorCommand PlaceText
     {
         get
@@ -98,11 +234,53 @@ public sealed class CommandButtons
             return registry.Get<PlaceTextCommand>();
         }
     }
-    public IEditorCommand LayoutAcross => registry.Get<AutoLayoutHorizontalCommand>();
-    public IEditorCommand LayoutDown => registry.Get<AutoLayoutVerticalCommand>();
-    public IEditorCommand ZoomIn => registry.Get<ZoomInCommand>();
-    public IEditorCommand ZoomOut => registry.Get<ZoomOutCommand>();
-    public IEditorCommand ResetZoom => registry.Get<ResetZoomCommand>();
-    public IEditorCommand Fit => registry.Get<FitCommand>();
-    public IEditorCommand FitSelection => registry.Get<FitSelectionCommand>();
+    public IEditorCommand LayoutAcross
+    {
+        get
+        {
+            return registry.Get<AutoLayoutHorizontalCommand>();
+        }
+    }
+    public IEditorCommand LayoutDown
+    {
+        get
+        {
+            return registry.Get<AutoLayoutVerticalCommand>();
+        }
+    }
+    public IEditorCommand ZoomIn
+    {
+        get
+        {
+            return registry.Get<ZoomInCommand>();
+        }
+    }
+    public IEditorCommand ZoomOut
+    {
+        get
+        {
+            return registry.Get<ZoomOutCommand>();
+        }
+    }
+    public IEditorCommand ResetZoom
+    {
+        get
+        {
+            return registry.Get<ResetZoomCommand>();
+        }
+    }
+    public IEditorCommand Fit
+    {
+        get
+        {
+            return registry.Get<FitCommand>();
+        }
+    }
+    public IEditorCommand FitSelection
+    {
+        get
+        {
+            return registry.Get<FitSelectionCommand>();
+        }
+    }
 }

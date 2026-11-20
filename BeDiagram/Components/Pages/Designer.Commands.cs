@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using BeDiagram.Components.Pages.Commands;
+using BeDiagram.Editing;
 
 namespace BeDiagram.Components.Pages;
 
@@ -24,25 +25,59 @@ public partial class Designer
         }
         if (dialog != Dialog.None)
         {
-            if (key == "Escape") CloseDialog();
+            if (key == "Escape")
+            {
+                CloseDialog();
+            }
             StateHasChanged();
             return;
         }
         IEditorCommand? command = Commands.Find(KeyGesture.From(key, ctrl, shift));
-        if (command is null || !command.CanExecute(this)) return;
+        if (command is null || !command.CanExecute(this))
+        {
+            return;
+        }
         await command.ExecuteAsync(this);
         StateHasChanged();
     }
 
     /// <summary>The commands with buttons (made on first use: <see cref="Commands"/> is injected after construction).</summary>
-    CommandButtons Cmd => buttons ??= new CommandButtons(Commands, this, Editor);
+    CommandButtons Cmd
+    {
+        get
+        {
+            if (buttons is null)
+            {
+                buttons = new CommandButtons(Commands, this, ActiveEditor);
+            }
+            return buttons;
+        }
+    }
     CommandButtons? buttons;
 
-    Task Run(IEditorCommand command) => Cmd.Run(command);
+    /// <summary>The active tab's editor, asked for each time (the buttons outlive a tab switch).</summary>
+    DiagramEditor ActiveEditor()
+    {
+        return Editor;
+    }
 
-    bool CanRun(IEditorCommand command) => Cmd.CanRun(command);
+    Task Run(IEditorCommand command)
+    {
+        return Cmd.Run(command);
+    }
 
-    static string KeyText(IEditorCommand command) => CommandButtons.KeyText(command);
+    bool CanRun(IEditorCommand command)
+    {
+        return Cmd.CanRun(command);
+    }
 
-    static string Tip(IEditorCommand command) => CommandButtons.Tip(command);
+    static string KeyText(IEditorCommand command)
+    {
+        return CommandButtons.KeyText(command);
+    }
+
+    static string Tip(IEditorCommand command)
+    {
+        return CommandButtons.Tip(command);
+    }
 }

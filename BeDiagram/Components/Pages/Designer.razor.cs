@@ -13,7 +13,8 @@ public partial class Designer
 {
     public Designer()
     {
-        Editor = new DiagramEditor(this);
+        active = new DiagramTab(new DiagramEditor(this));
+        tabs.Add(active);
     }
 
     [Inject] DiagramStore Store { get; set; } = default!;
@@ -22,19 +23,81 @@ public partial class Designer
 
     enum Dialog { None, Open, SaveAs, ConfirmNew, ConfirmLeave, StepOrder, Shortcuts, Json }
 
+    /// <summary>The open diagrams, in tab order.</summary>
+    readonly List<DiagramTab> tabs = new List<DiagramTab>();
+
+    /// <summary>The tab on screen: the only one that takes input, so the only one that can be edited.</summary>
+    DiagramTab active;
+
     /// <summary>
-    /// The diagram and everything done to it (selection, undo, editing actions) live in the editor; this page shows
-    /// it, turns mouse / keyboard / panel input into editor calls, and handles files, dialogs and export.
+    /// The active tab's editor. The diagram and everything done to it (selection, undo, editing actions) live in the
+    /// editor; this page shows it, turns mouse / keyboard / panel input into editor calls, and handles files, dialogs
+    /// and export.
     /// </summary>
-    readonly DiagramEditor Editor;
+    DiagramEditor Editor
+    {
+        get
+        {
+            return active.Editor;
+        }
+    }
 
     /// <summary>Short name for the open diagram — the markup reads it a lot.</summary>
-    Diagram D => Editor.Diagram;
+    Diagram D
+    {
+        get
+        {
+            return Editor.Diagram;
+        }
+    }
 
-    bool hasFile;
+    /// <summary>The active tab has a file (opened or saved).</summary>
+    bool hasFile
+    {
+        get
+        {
+            return active.HasFile;
+        }
+        set
+        {
+            active.HasFile = value;
+        }
+    }
 
-    // View state
-    double PanX = 40, PanY = 40, Zoom = 1;
+    // View state: pan and zoom belong to the active tab.
+    double PanX
+    {
+        get
+        {
+            return active.PanX;
+        }
+        set
+        {
+            active.PanX = value;
+        }
+    }
+    double PanY
+    {
+        get
+        {
+            return active.PanY;
+        }
+        set
+        {
+            active.PanY = value;
+        }
+    }
+    double Zoom
+    {
+        get
+        {
+            return active.Zoom;
+        }
+        set
+        {
+            active.Zoom = value;
+        }
+    }
     /// <summary>Background grid (<see cref="GridLook"/>): a view setting, kept while the page is open, not saved in the file.</summary>
     string grid = GridLook.Dots;
     double canvasLeft, canvasTop, canvasW = 1000, canvasH = 700;
@@ -71,8 +134,9 @@ public partial class Designer
             selfRef = DotNetObjectReference.Create(this);
             await module.InvokeVoidAsync("init", selfRef, canvasEl);
         }
-        if (focusId is { } id && module is not null)
+        if (focusId is not null && module is not null)
         {
+            string id = focusId;
             focusId = null;
             await module.InvokeVoidAsync("focus", id);
         }
@@ -84,11 +148,18 @@ public partial class Designer
     /// there. Asking straight away raced the render and could miss on a busy machine, sending the next keys to the
     /// shortcuts instead of the box.
     /// </summary>
-    void FocusAfterRender(string id) => focusId = id;
+    void FocusAfterRender(string id)
+    {
+        focusId = id;
+    }
 
     protected override bool ShouldRender()
     {
-        if (skipRender) { skipRender = false; return false; }
+        if (skipRender)
+        {
+            skipRender = false;
+            return false;
+        }
         return true;
     }
 
@@ -102,14 +173,28 @@ public partial class Designer
                 await module.DisposeAsync();
             }
         }
-        catch (JSDisconnectedException) { }
-        selfRef?.Dispose();
+        catch (JSDisconnectedException)
+        {
+        }
+        if (selfRef is not null)
+        {
+            selfRef.Dispose();
+        }
     }
 
     // ───────────── Canvas coordinates ─────────────
 
-    (double X, double Y) ToWorld(double clientX, double clientY) =>
-        ((clientX - canvasLeft - PanX) / Zoom, (clientY - canvasTop - PanY) / Zoom);
+    (double X, double Y) ToWorld(double clientX, double clientY)
+    {
+        double x = (clientX - canvasLeft - PanX) / Zoom;
+        double y = (clientY - canvasTop - PanY) / Zoom;
+        return (x, y);
+    }
 
-    (double X, double Y) ViewCentre() => ((canvasW / 2 - PanX) / Zoom, (canvasH / 2 - PanY) / Zoom);
+    (double X, double Y) ViewCentre()
+    {
+        double x = (canvasW / 2 - PanX) / Zoom;
+        double y = (canvasH / 2 - PanY) / Zoom;
+        return (x, y);
+    }
 }
