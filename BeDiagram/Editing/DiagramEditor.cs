@@ -78,8 +78,21 @@ public partial class DiagramEditor
     readonly List<string> redo = new();
     const int MaxUndo = 100;
 
-    public bool CanUndo => undo.Count > 0;
-    public bool CanRedo => redo.Count > 0;
+    public bool CanUndo
+    {
+        get
+        {
+            return undo.Count > 0;
+        }
+    }
+
+    public bool CanRedo
+    {
+        get
+        {
+            return redo.Count > 0;
+        }
+    }
 
     /// <summary>Starts editing <paramref name="diagram"/>: clean, no history, nothing selected.</summary>
     public void Load(Diagram diagram)
@@ -96,38 +109,82 @@ public partial class DiagramEditor
 
     // ───────────── Lookups ─────────────
 
-    public IBox? FindBox(string? id) =>
-        id is null ? null
+    public IBox? FindBox(string? id)
+    {
+        return id is null ? null
         : (IBox?)Diagram.Nodes.FirstOrDefault(n => n.Id == id)
           ?? (IBox?)Diagram.TextBoxes.FirstOrDefault(c => c.Id == id)
           ?? Diagram.Groups.FirstOrDefault(g => g.Id == id);
+    }
 
     public Group? FindGroup(string? id) => id is null ? null : Diagram.Groups.FirstOrDefault(g => g.Id == id);
 
     /// <summary>The group hierarchy (Composite) of the open diagram, worked out from the GroupId fields.</summary>
-    public GroupTree Tree => new GroupTree(Diagram);
+    public GroupTree Tree
+    {
+        get
+        {
+            return new GroupTree(Diagram);
+        }
+    }
 
     /// <summary>The step order of the open diagram (see <see cref="StepOrder"/>).</summary>
-    public StepOrder Steps => new StepOrder(Diagram);
+    public StepOrder Steps
+    {
+        get
+        {
+            return new StepOrder(Diagram);
+        }
+    }
 
     /// <summary>A group's direct members: shapes, text boxes and the groups nested in it.</summary>
-    public IEnumerable<IGroupable> Members(Group g) => Tree.Children(g);
-
-    public Node? SelectedNode => Selection.Count == 1 ? Diagram.Nodes.FirstOrDefault(n => n.Id == Selection[0]) : null;
-
-    public TextBox? SelectedText => Selection.Count == 1 ? Diagram.TextBoxes.FirstOrDefault(c => c.Id == Selection[0]) : null;
-
-    public Group? SelectedGroup => Selection.Count == 1 ? FindGroup(Selection[0]) : null;
-
-    public Edge? SelectedEdge => SelectedEdgeId is null ? null : Diagram.Edges.FirstOrDefault(e => e.Id == SelectedEdgeId);
-
-    public string LabelOf(string id) => FindBox(id) switch
+    public IEnumerable<IGroupable> Members(Group g)
     {
-        Node n => string.IsNullOrWhiteSpace(n.Label) ? NodeTypes.Get(n.Type).Display : n.Label,
-        TextBox t => t.IsComment ? "Comment" : $"Text “{TextPreview(t.Text)}”",
-        Group g => $"Group “{g.Title}”",
-        _ => "?",
-    };
+        return Tree.Children(g);
+    }
+
+    public Node? SelectedNode
+    {
+        get
+        {
+            return Selection.Count == 1 ? Diagram.Nodes.FirstOrDefault(n => n.Id == Selection[0]) : null;
+        }
+    }
+
+    public TextBox? SelectedText
+    {
+        get
+        {
+            return Selection.Count == 1 ? Diagram.TextBoxes.FirstOrDefault(c => c.Id == Selection[0]) : null;
+        }
+    }
+
+    public Group? SelectedGroup
+    {
+        get
+        {
+            return Selection.Count == 1 ? FindGroup(Selection[0]) : null;
+        }
+    }
+
+    public Edge? SelectedEdge
+    {
+        get
+        {
+            return SelectedEdgeId is null ? null : Diagram.Edges.FirstOrDefault(e => e.Id == SelectedEdgeId);
+        }
+    }
+
+    public string LabelOf(string id)
+    {
+        return FindBox(id) switch
+        {
+            Node n => string.IsNullOrWhiteSpace(n.Label) ? NodeTypes.Get(n.Type).Display : n.Label,
+            TextBox t => t.IsComment ? "Comment" : $"Text “{TextPreview(t.Text)}”",
+            Group g => $"Group “{g.Title}”",
+            _ => "?",
+        };
+    }
 
     static string TextPreview(string text)
     {
@@ -175,10 +232,15 @@ public partial class DiagramEditor
     }
 
     /// <summary>A group can't hold itself or one of its own ancestors (that would make a loop).</summary>
-    static bool CanHold(GroupTree tree, Group container, IGroupable? item) =>
-        item is not Group ig || (container.Id != ig.Id && !tree.IsInside(container, ig));
+    static bool CanHold(GroupTree tree, Group container, IGroupable? item)
+    {
+        return item is not Group ig || (container.Id != ig.Id && !tree.IsInside(container, ig));
+    }
 
-    public double SnapV(double v) => Snap ? Math.Round(v / 10) * 10 : v;
+    public double SnapV(double v)
+    {
+        return Snap ? Math.Round(v / 10) * 10 : v;
+    }
 
     /// <summary>Switches between Free and the last angle lock picked (<see cref="LastAngleLock"/>).</summary>
     public void ToggleAngleLock()
@@ -194,7 +256,10 @@ public partial class DiagramEditor
     }
 
     /// <summary>A drag offset after the angle lock (see <see cref="LockedOffset"/> for which axes may still snap).</summary>
-    public LockedOffset LockOffset(double dx, double dy) => AngleLock.Apply(dx, dy, Snap);
+    public LockedOffset LockOffset(double dx, double dy)
+    {
+        return AngleLock.Apply(dx, dy, Snap);
+    }
 
     /// <summary>
     /// Where a point dragged from (<paramref name="fromX"/>, <paramref name="fromY"/>) lands: on an allowed angle from
@@ -239,11 +304,20 @@ public partial class DiagramEditor
         redo.Clear();
     }
 
-    public void Checkpoint() => PushUndo(Snapshot());
+    public void Checkpoint()
+    {
+        PushUndo(Snapshot());
+    }
 
-    public void Change() { Checkpoint(); Dirty = true; }
+    public void Change() 
+    { 
+        Checkpoint(); Dirty = true; 
+    }
 
-    public void MarkDirty() => Dirty = true;
+    public void MarkDirty()
+    {
+        Dirty = true;
+    }
 
     void Restore(string snap)
     {
