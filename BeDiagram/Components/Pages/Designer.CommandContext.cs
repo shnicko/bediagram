@@ -74,6 +74,52 @@ public partial class Designer : ICommandContext
         NewDiagram();
     }
 
+    // Copy style and the format painter
+
+    bool ICommandContext.CanCopyStyle
+    {
+        get
+        {
+            return CanCopyStyle;
+        }
+    }
+
+    bool ICommandContext.HasCopiedStyle
+    {
+        get
+        {
+            return Styles.Held is not null;
+        }
+    }
+
+    bool ICommandContext.Painting
+    {
+        get
+        {
+            return painting;
+        }
+    }
+
+    void ICommandContext.CopyStyle()
+    {
+        CopyStyle();
+    }
+
+    void ICommandContext.PasteStyle()
+    {
+        PasteStyle();
+    }
+
+    void ICommandContext.ShowPasteSpecial()
+    {
+        ShowPasteSpecial();
+    }
+
+    void ICommandContext.StartPainter(bool sticky)
+    {
+        StartPainter(sticky);
+    }
+
     // Files and undo
 
     Task ICommandContext.SaveAsync()
@@ -105,6 +151,7 @@ public partial class Designer : ICommandContext
 
     void ICommandContext.CancelAndClearSelection()
     {
+        StopPainter();
         Editor.EditingId = null;
         CancelGesture();
         Editor.ClearSelection();

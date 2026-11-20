@@ -1,0 +1,29 @@
+<div class="modal-bg" @onclick="OnCancel">
+    <div class="modal paste-special" @onclick:stopPropagation="true">
+        <h3>Paste special</h3>
+        <p>Paste the copied style of the @Style.Summary onto the selected @Style.KindPlural. Its look always comes; also paste:</p>
+        <div class="paste-parts">
+            @if (PasteParts.SizeFor(Style))
+            {
+                <label><input type="checkbox" @bind="Parts.Size" /> Size (width and height)</label>
+            }
+            @if (PasteParts.TypeFor(Style))
+            {
+                <label><input type="checkbox" @bind="Parts.Type" /> Type (and outcome, drawn as circle)</label>
+            }
+            <label><input type="checkbox" @bind="Parts.Text" /> @TextLabel</label>
+            @if (PasteParts.PropertiesFor(Style))
+            {
+                <label><input type="checkbox" @bind="Parts.Properties" /> Properties (replaces the shape's own)</label>
+            }
+            @if (PasteParts.LinkFor(Style))
+            {
+                <label><input type="checkbox" @bind="Parts.Link" /> Link to another diagram</label>
+            }
+        </div>
+        <div class="actions">
+            <button @onclick="OnCancel">Cancel</button>
+            <button class="primary" @onclick="Paste">Paste</button>
+        </div>
+    </div>
+</div>

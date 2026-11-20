@@ -28,6 +28,22 @@ public interface ICommandContext
     /// <summary>A new, empty diagram in a new tab.</summary>
     void NewDiagram();
 
+    // ───────────── Copy style and the format painter ─────────────
+
+    /// <summary>Exactly one item or a connector is selected, so its style can be copied.</summary>
+    bool CanCopyStyle { get; }
+    /// <summary>A style has been copied (in any tab or window).</summary>
+    bool HasCopiedStyle { get; }
+    /// <summary>The format painter is waiting for a click.</summary>
+    bool Painting { get; }
+    void CopyStyle();
+    /// <summary>The copied look onto the selected items of the same kind.</summary>
+    void PasteStyle();
+    /// <summary>Opens the Paste special pop-up (look plus size, type, text, …).</summary>
+    void ShowPasteSpecial();
+    /// <summary>Starts the format painter (or stops it when it is already on and <paramref name="sticky"/> is false).</summary>
+    void StartPainter(bool sticky);
+
     Task SaveAsync();
     void ShowSaveAs();
     void Undo();

@@ -25,6 +25,7 @@
     <div class="group">
         <button @onclick="() => Run(Cmd.Undo)" disabled="@(!CanRun(Cmd.Undo))" title="@Tip(Cmd.Undo)">↶</button>
         <button @onclick="() => Run(Cmd.Redo)" disabled="@(!CanRun(Cmd.Redo))" title="@Tip(Cmd.Redo)">↷</button>
+        <button class="@PainterClass" @onclick="Paint" @ondblclick="PaintSticky" disabled="@(!CanRun(Cmd.Painter))" title="@PainterTip">@IconSvg("paintbrush", 16)</button>
     </div>
     <div class="group" title="Background grid (screen only, not exported)">
         <span class="muted-label">Grid</span>

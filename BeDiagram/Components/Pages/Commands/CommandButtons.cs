@@ -150,6 +150,56 @@ public sealed class CommandButtons
             return registry.Get<SelectAllCommand>();
         }
     }
+    public IEditorCommand CopyStyle
+    {
+        get
+        {
+            return registry.Get<CopyStyleCommand>();
+        }
+    }
+    public IEditorCommand PasteStyle
+    {
+        get
+        {
+            return registry.Get<PasteStyleCommand>();
+        }
+    }
+    public IEditorCommand PasteSpecial
+    {
+        get
+        {
+            return registry.Get<PasteSpecialCommand>();
+        }
+    }
+    /// <summary>The single-click format painter (P). The sticky one (Shift+P) is <see cref="PainterSticky"/>.</summary>
+    public IEditorCommand Painter
+    {
+        get
+        {
+            foreach (IEditorCommand c in registry.All)
+            {
+                if (c is FormatPainterCommand painter && !painter.Sticky)
+                {
+                    return c;
+                }
+            }
+            throw new InvalidOperationException("No format painter is registered");
+        }
+    }
+    public IEditorCommand PainterSticky
+    {
+        get
+        {
+            foreach (IEditorCommand c in registry.All)
+            {
+                if (c is FormatPainterCommand painter && painter.Sticky)
+                {
+                    return c;
+                }
+            }
+            throw new InvalidOperationException("No sticky format painter is registered");
+        }
+    }
     public IEditorCommand Duplicate
     {
         get

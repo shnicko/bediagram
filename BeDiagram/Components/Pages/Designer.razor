@@ -181,6 +181,10 @@ else if (dialog == Dialog.ConfirmClose && closing is not null)
 {
     <ConfirmCloseDialog DiagramName="@D.Name" HasFile="@hasFile" OnConfirm="ConfirmClose" OnCancel="CloseDialog" />
 }
+else if (dialog == Dialog.PasteSpecial && Styles.Held is not null)
+{
+    <PasteSpecialDialog Style="@Styles.Held" Start="@Styles.LastSpecial" OnPaste="PasteSpecialChosen" OnCancel="CloseDialog" />
+}
 else if (dialog == Dialog.FileChanged)
 {
     <FileChangedDialog DiagramName="@D.Name" OnOverwrite="OverwriteChanged" OnSaveAs="ShowSaveAs" OnCancel="CloseDialog" />

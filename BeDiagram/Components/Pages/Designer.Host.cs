@@ -65,6 +65,14 @@ public partial class Designer : IDesignerHost, ICanvasInput
         return Export(choice, options);
     }
 
+    bool IDesignerHost.Painting
+    {
+        get
+        {
+            return painting;
+        }
+    }
+
     // Tabs
 
     IReadOnlyList<DiagramTab> IDesignerHost.Tabs
