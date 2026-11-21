@@ -168,6 +168,12 @@
     </aside>
 
     <StatusBar Host="this" />
+
+    @* ───────────── Row editor window (floating over the page, follows the selection) ───────────── *@
+    @if (rowEditorOpen)
+    {
+        <RowEditorWindow Host="this" />
+    }
 </div>
 
 @* ───────────── Dialogs (Components/Dialogs) ───────────── *@

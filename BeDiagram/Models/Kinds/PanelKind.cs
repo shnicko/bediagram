@@ -93,6 +93,9 @@ public abstract class PanelKind : NodeKind
     /// <summary>The rows a row is ordered among: the whole list, or its IPO section.</summary>
     public abstract List<ListItem> Peers(Node n, string itemId);
 
+    /// <summary>The blocks of rows the row editor window shows, in drawing order, with the fields each block's rows use.</summary>
+    public abstract List<RowGroup> RowGroups(Node n);
+
     /// <summary>After a type change to this kind: starter rows if it had none, and rows made to fit (sections set or cleared).</summary>
     public abstract void TidyRows(Node n);
 }

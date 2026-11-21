@@ -79,6 +79,17 @@ public class IpoKind : PanelKind
         return n.RowsIn(section);
     }
 
+    /// <summary>One block per section, under its (possibly renamed) title: label and description only.</summary>
+    public override List<RowGroup> RowGroups(Node n)
+    {
+        List<RowGroup> result = new List<RowGroup>();
+        foreach (RowSection s in IpoSections.All)
+        {
+            result.Add(new RowGroup(s, n.SectionTitle(s), new ModelRowFields(false, false, false, false), n.RowsIn(s)));
+        }
+        return result;
+    }
+
     /// <summary>Every row in a section (input when it had none), sorted by section.</summary>
     public override void TidyRows(Node n)
     {

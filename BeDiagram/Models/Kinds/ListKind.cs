@@ -27,6 +27,17 @@ public class ListKind : PanelKind
 
     public override List<ListItem> Peers(Node n, string itemId) => n.Items ?? new List<ListItem>();
 
+    /// <summary>All the rows in one block: label and description only.</summary>
+    public override List<RowGroup> RowGroups(Node n)
+    {
+        List<ListItem> rows = new List<ListItem>();
+        foreach (ListItem item in n.Rows)
+        {
+            rows.Add(item);
+        }
+        return new List<RowGroup> { new RowGroup(null, "Items", new ModelRowFields(false, false, false, false), rows) };
+    }
+
     /// <summary>A list has no sections.</summary>
     public override void TidyRows(Node n)
     {

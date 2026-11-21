@@ -15,6 +15,16 @@ namespace BeDiagram.Components.Canvas;
 /// <summary>Shapes: selection outline, halo, shadow, outline, side stripe, list / IPO body, icon, label (inline editor while editing), description, property dot, link and step badges, and ports (rows of a list / IPO box have their own).</summary>
 public partial class NodeLayer : CanvasLayer
 {
+    /// <summary>Where the row editor's ⤢ goes: in the top-right corner of the title band, 16 px on screen at any zoom
+    /// (drawn in a 24-unit box).</summary>
+    string RowEditButtonTransform(Node n)
+    {
+        double size = 16 / Host.Zoom;
+        double x = n.X + n.W - size - 8 / Host.Zoom;
+        double y = n.Y + 8 / Host.Zoom;
+        return $"translate({F(x)},{F(y)}) scale({F(size / 24)})";
+    }
+
     /// <summary>The node's own four ● ports, or none when the diagram shows row ports only and this node shows row
     /// ports (<see cref="Diagram.RowPortsOnly"/>). A panel with no rows showing (empty, or a class drawn name only)
     /// keeps its node ports, so it can always be connected.</summary>

@@ -568,3 +568,32 @@ h4.bulk { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line)
 .head-ends { display: flex; gap: 4px; align-items: center; }
 .head-ends select { flex: 1; min-width: 0; }
 .chips.relationships .chip.on { border-color: var(--accent, #2f6fd6); background: #eef3fb; }
+
+/* Row editor: the ⤢ on panel nodes, and the floating window */
+.node .row-edit-btn { opacity: 0; cursor: pointer; }
+.node:hover .row-edit-btn, .node.selected .row-edit-btn { opacity: 1; }
+.row-edit-btn rect { fill: #ffffff; stroke: #cfd4da; stroke-width: 1.5; }
+.row-edit-btn path { fill: none; stroke: #454e5b; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.row-edit-btn:hover rect { stroke: var(--accent, #2f6fd6); }
+.floating-window { position: fixed; z-index: 40; width: 600px; min-width: 320px; min-height: 140px; max-height: 80vh;
+    display: flex; flex-direction: column; background: #fff; border: 1px solid #cfd4da; border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18); resize: both; overflow: hidden; }
+.floating-title { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 6px 12px;
+    background: #f3f5f8; border-bottom: 1px solid #e3e6ea; font-weight: 600; cursor: move; user-select: none; }
+.floating-body { padding: 8px 12px 12px; overflow: auto; flex: 1; font-size: 13px; }
+.row-editor-head { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; margin-bottom: 6px; }
+.row-editor-head label:first-child { margin: 0; }
+.row-editor-options { grid-column: 1 / -1; display: flex; gap: 14px; }
+.row-editor-options label.check { margin: 0; }
+.row-group { border-top: 1px solid #e3e6ea; padding-top: 8px; margin-top: 8px; }
+.row-group-title { font-weight: 600; margin-bottom: 4px; }
+.row-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+.row-table th { text-align: left; font-weight: 500; font-size: 11px; color: #55606e; padding: 2px 3px; }
+.row-table td { padding: 2px 3px; }
+.row-table input:not([type=checkbox]), .row-table select { width: 100%; min-width: 0; font-size: 12px; box-sizing: border-box; }
+.row-table .num { width: 22px; color: #9aa3ad; text-align: right; font-size: 11px; }
+.row-table .cell-vis { width: 74px; }
+.row-table .cell-mult { width: 56px; }
+.row-table .chk { width: 26px; text-align: center; }
+.row-table .row-actions { white-space: nowrap; width: 76px; }
+.row-table .row-actions button:disabled { opacity: .35; }
