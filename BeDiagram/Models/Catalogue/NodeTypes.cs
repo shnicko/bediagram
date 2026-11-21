@@ -30,12 +30,30 @@ public static class NodeTypes
         // After Outcome so the 1–9 shortcut keys stay on the classic shapes.
         new(NodeType.List,     "List",          ShapeOutlines.Panel,         "#f3f5f8", "#4f6478", 220, 200) { Kind = new ListKind() },
         new(NodeType.Ipo,      "Input / process / output", ShapeOutlines.Panel, "#fbf4ec", "#a8662a", 480, 150) { Kind = new IpoKind() },
+        // Structural models (UML classes and database entities): their own palette section, no number keys.
+        new(NodeType.Class,       "Class",       ShapeOutlines.Rect, "#fdf6e9", "#9a6b1f", 200, 120) { Kind = new ClassKind(), Model = true },
+        new(NodeType.Interface,   "Interface",   ShapeOutlines.Rect, "#f0f7ee", "#4a7f3a", 200, 90) { Kind = new InterfaceKind(), Model = true },
+        new(NodeType.Enumeration, "Enumeration", ShapeOutlines.Rect, "#fbeff5", "#a14778", 180, 100) { Kind = new EnumerationKind(), Model = true },
+        new(NodeType.Entity,      "Entity",      ShapeOutlines.Rect, "#eef4f8", "#2f6688", 240, 100) { Kind = new EntityKind(), Model = true },
     };
 
     /// <summary>Width and height of a circle-drawn shape (the same as a new Circle).</summary>
     public const double RoundSize = 84;
 
-    static readonly Dictionary<NodeType, NodeTypeInfo> ByKey = All.ToDictionary(t => t.Key);
+    static readonly Dictionary<NodeType, NodeTypeInfo> ByKey = BuildByKey();
 
-    public static NodeTypeInfo Get(NodeType type) => ByKey[type];
+    static Dictionary<NodeType, NodeTypeInfo> BuildByKey()
+    {
+        Dictionary<NodeType, NodeTypeInfo> result = new Dictionary<NodeType, NodeTypeInfo>();
+        foreach (NodeTypeInfo t in All)
+        {
+            result.Add(t.Key, t);
+        }
+        return result;
+    }
+
+    public static NodeTypeInfo Get(NodeType type)
+    {
+        return ByKey[type];
+    }
 }

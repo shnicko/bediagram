@@ -118,7 +118,7 @@ public class MermaidExportFormat : IExportFormat
         else
         {
             sb.Append(n.Stacked ? "    direction TB\n" : "    direction LR\n");
-            foreach (IpoSection section in IpoSections.All)
+            foreach (RowSection section in IpoSections.All)
             {
                 List<ListItem> rows = n.RowsIn(section);
                 if (rows.Count == 0) continue;

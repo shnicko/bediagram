@@ -23,12 +23,39 @@ public partial class ShapePalette : DesignerPart
         List<PaletteShape> result = new List<PaletteShape>();
         foreach (NodeTypeInfo t in NodeTypes.All)
         {
-            if (!t.Kind.HasOutcome)
+            if (!t.Kind.HasOutcome && !t.Model)
             {
                 result.Add(new PaletteShape(t, result.Count + 1));
             }
         }
         return result;
+    }
+
+    /// <summary>Classes, interfaces, enumerations and entities, for the <em>Data models</em> section.</summary>
+    static readonly List<NodeTypeInfo> ModelShapes = BuildModelShapes();
+
+    static List<NodeTypeInfo> BuildModelShapes()
+    {
+        List<NodeTypeInfo> result = new List<NodeTypeInfo>();
+        foreach (NodeTypeInfo t in NodeTypes.All)
+        {
+            if (t.Model)
+            {
+                result.Add(t);
+            }
+        }
+        return result;
+    }
+
+    static string ModelPaletteTip(NodeTypeInfo t)
+    {
+        return $"{t.Display}: drag onto the canvas or click to add";
+    }
+
+    /// <summary>A package is a group in the package look: dropped empty, or (clicked with items selected) around them.</summary>
+    void StartPackageDrag()
+    {
+        Host.SetPaletteDrop((x, y) => Editor.AddPackageAt(x, y));
     }
 
     static List<NodeTypeInfo> BuildRoundShapes()

@@ -23,4 +23,12 @@ public enum NodeType
     List,
     /// <summary>Input / process / output box.</summary>
     Ipo,
+    /// <summary>A UML class: name, attributes and operations.</summary>
+    Class,
+    /// <summary>A UML interface: «interface» and its operations.</summary>
+    Interface,
+    /// <summary>A UML enumeration: «enumeration» and its literals.</summary>
+    Enumeration,
+    /// <summary>A database entity (table): name and columns with key and data type.</summary>
+    Entity,
 }

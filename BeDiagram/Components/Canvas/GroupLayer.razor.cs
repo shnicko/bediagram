@@ -22,8 +22,13 @@ public partial class GroupLayer : CanvasLayer
             (double tx, double ty, string anchor) = g.TitlePos();
             bool selected = Editor.Selection.Contains(g.Id);
             double width = GroupLook.Width(g.BorderWeight) + (selected ? 1 : 0);
+            double bandStroke = 0;
+            if (g.BandOutlined())
+            {
+                bandStroke = width;
+            }
             result.Add(new GroupView(g, Palette.Get(g.Color), selected, g.BandPath(), new Rect(ax, ay, aw, ah),
-                                     tx, ty, anchor, g.FillOpacity(), LineLook.Dash(g.Border, width), width));
+                                     tx, ty, anchor, g.FillOpacity(), LineLook.Dash(g.Border, width), width, bandStroke));
         }
         return result;
     }

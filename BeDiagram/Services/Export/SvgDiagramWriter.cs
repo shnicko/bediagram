@@ -272,7 +272,12 @@ public class SvgDiagramWriter
         string? band = g.BandPath();
         if (band is not null)
         {
-            sb.Append($"<path d=\"{band}\" fill=\"{sw.Stroke}\" fill-opacity=\"0.14\"/>\n");
+            string outline = "";
+            if (g.BandOutlined())
+            {
+                outline = $" stroke=\"{sw.Stroke}\" stroke-width=\"{F(width)}\"";
+            }
+            sb.Append($"<path d=\"{band}\" fill=\"{sw.Stroke}\" fill-opacity=\"0.14\"{outline}/>\n");
         }
         (double tx, double ty, string anchor) = g.TitlePos();
         sb.Append($"<text x=\"{F(tx)}\" y=\"{F(ty)}\" font-size=\"13\" font-weight=\"600\" text-anchor=\"{anchor}\" fill=\"{sw.Text}\">{E(g.Title)}</text>\n");

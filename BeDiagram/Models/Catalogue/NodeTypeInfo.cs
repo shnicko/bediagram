@@ -11,9 +11,15 @@ namespace BeDiagram.Models.Catalogue;
 public record NodeTypeInfo(NodeType Key, string Display, IShapeOutline Outline, string Fill, string Stroke, double W, double H)
 {
     /// <summary>The type's saved name ("decision"), also its palette key.</summary>
-    public string Name => EnumNames.Of(Key);
+    public string Name
+    {
+        get
+        {
+            return EnumNames.Of(Key);
+        }
+    }
 
-    /// <summary>How nodes of this type behave: classic shape, circle, outcome, list or IPO box.</summary>
+    /// <summary>How nodes of this type behave: classic shape, circle, outcome, list, IPO box, class or entity.</summary>
     public required INodeKind Kind { get; init; }
 
     /// <summary>The icon a new node starts with: start ▶ and end 🏁 so the two ends of a flow read as a pair (End is
@@ -23,13 +29,32 @@ public record NodeTypeInfo(NodeType Key, string Display, IShapeOutline Outline, 
     /// <summary>The icon when drawn as a circle (<see cref="Node.Round"/>), so every circle of a type looks the same.</summary>
     public string RoundIcon { get; init; } = "settings";
 
+    /// <summary>A structural model element (class, interface, enumeration, entity): listed in the palette's
+    /// <em>Data models</em> section rather than with the flow shapes.</summary>
+    public bool Model { get; init; }
+
     /// <summary>The properties a new node starts with (empty values), in file order. Rule checks get the fields the
     /// audit tool reads.</summary>
     public IReadOnlyList<string> PropertyKeys { get; init; } = Array.Empty<string>();
 
     /// <summary>A new, empty property set for a node of this type.</summary>
-    public Dictionary<string, string> NewProperties() => PropertyKeys.ToDictionary(k => k, _ => "");
+    public Dictionary<string, string> NewProperties()
+    {
+        Dictionary<string, string> result = new Dictionary<string, string>();
+        foreach (string k in PropertyKeys)
+        {
+            result.Add(k, "");
+        }
+        return result;
+    }
 
     /// <summary>Width and height of a new node, or of a classic shape drawn as a circle.</summary>
-    public (double W, double H) SizeFor(bool round) => round ? (NodeTypes.RoundSize, NodeTypes.RoundSize) : (W, H);
+    public (double W, double H) SizeFor(bool round)
+    {
+        if (round)
+        {
+            return (NodeTypes.RoundSize, NodeTypes.RoundSize);
+        }
+        return (W, H);
+    }
 }

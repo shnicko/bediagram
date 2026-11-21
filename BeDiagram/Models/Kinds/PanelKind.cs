@@ -88,7 +88,7 @@ public abstract class PanelKind : NodeKind
     }
 
     /// <summary>Adds a new row (to the end of the list, or of IPO section <paramref name="section"/>) and returns it.</summary>
-    public abstract ListItem AddRow(Node n, IpoSection? section);
+    public abstract ListItem AddRow(Node n, RowSection? section);
 
     /// <summary>The rows a row is ordered among: the whole list, or its IPO section.</summary>
     public abstract List<ListItem> Peers(Node n, string itemId);

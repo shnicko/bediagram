@@ -207,12 +207,15 @@ public abstract class NodeKind : INodeKind
         return null;
     }
 
-public virtual void Init(Node n, OutcomeType? outcome)
+    public virtual void Init(Node n, OutcomeType? outcome)
     {
     }
 
-public virtual void Adopt(Node n)
+    /// <summary>Clears what only other kinds use: the outcome, and a class's abstract / name-only flags.</summary>
+    public virtual void Adopt(Node n)
     {
         n.Outcome = null;
+        n.Abstract = false;
+        n.NameOnly = false;
     }
 }

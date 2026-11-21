@@ -1,0 +1,37 @@
+@using BeDiagram.Models.Serialization
+<div class="panel-item model-row">
+    <div class="panel-item-top">
+        @if (Fields.Visibility)
+        {
+            <select class="model-vis" value="@VisibilityValue" title="Visibility" @onchange="VisibilityPicked">
+                <option value="">·</option>
+                @foreach (Visibility v in Visibilities.All)
+                {
+                    <option value="@EnumNames.Of(v)">@Visibilities.Display(v)</option>
+                }
+            </select>
+        }
+        <input class="panel-item-label" value="@Item.Label" placeholder="@NamePlaceholder" title="Name" @onfocus="Editor.Checkpoint" @oninput="LabelTyped" />
+        <button class="icon" title="Move up" disabled="@(!Editor.CanMoveItem(Node, Item.Id, -1))" @onclick="Up">↑</button>
+        <button class="icon" title="Move down" disabled="@(!Editor.CanMoveItem(Node, Item.Id, 1))" @onclick="Down">↓</button>
+        <button class="icon" title="Remove this row (and connectors to it)" @onclick="Remove">✕</button>
+    </div>
+    @if (HasSecondLine)
+    {
+        <div class="model-row-fields">
+            @if (Fields.DataType)
+            {
+                <input class="model-type" value="@TypeValue" placeholder="@TypePlaceholder" title="@TypePlaceholder" @onfocus="Editor.Checkpoint" @oninput="TypeTyped" />
+            }
+            @if (Fields.Multiplicity)
+            {
+                <input class="model-mult" value="@MultiplicityValue" placeholder="mult." title="Multiplicity, e.g. 1, 0..1, 1..*, * (drawn as [0..1])" @onfocus="Editor.Checkpoint" @oninput="MultiplicityTyped" />
+            }
+            @if (Fields.Keys)
+            {
+                <label class="check" title="Primary key (or part of it)"><input type="checkbox" checked="@Item.PrimaryKey" @onchange="PrimaryKeyChanged" /> PK</label>
+                <label class="check" title="Foreign key: refers to another entity's key"><input type="checkbox" checked="@Item.ForeignKey" @onchange="ForeignKeyChanged" /> FK</label>
+            }
+        </div>
+    }
+</div>

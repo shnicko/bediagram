@@ -60,5 +60,7 @@ public class OutcomeKind : NodeKind
     {
         n.Outcome ??= OutcomeType.Pass;
         n.Filled = true;
+        n.Abstract = false;
+        n.NameOnly = false;
     }
 }

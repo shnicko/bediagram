@@ -87,11 +87,15 @@ public partial class GroupStyle
 
     static string StyleTip(string style)
     {
-        if (style == GroupLook.Band)
+        switch (style)
         {
-            return "Title on a tinted strip inside the group";
+            case GroupLook.Band:
+                return "Title on a tinted strip inside the group";
+            case GroupLook.Tag:
+                return "Title in an outlined name tag in the corner, as for a UML package";
+            default:
+                return "Plain bold title — inside at the top, or centred under the box when the title is at the bottom";
         }
-        return "Plain bold title — inside at the top, or centred under the box when the title is at the bottom";
     }
 
     // ───────────── Saved styles ─────────────
