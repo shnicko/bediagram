@@ -9,6 +9,11 @@ namespace BeDiagram.Components.Panels;
 /// <summary>The side panel when nothing is selected: the diagram's name and summary, title and description, step numbers, swim lanes, auto-layout and the page (paper size, orientation, margins).</summary>
 public partial class DiagramPanel : DesignerPart
 {
+    void RowPortsOnlyChanged(ChangeEventArgs e)
+    {
+        Editor.SetRowPortsOnly(e.Value is true);
+    }
+
     void PageSizePicked(ChangeEventArgs e)
     {
         Host.SetPageSize(e.Value?.ToString());

@@ -106,6 +106,18 @@ public partial class DiagramEditor
         FitPanel(n);
     }
 
+    /// <summary>Show only the row ports on lists, IPO boxes, classes and entities (<see cref="Diagram.RowPortsOnly"/>).
+    /// One undo step.</summary>
+    public void SetRowPortsOnly(bool rowPortsOnly)
+    {
+        if (Diagram.RowPortsOnly == rowPortsOnly)
+        {
+            return;
+        }
+        Change();
+        Diagram.RowPortsOnly = rowPortsOnly;
+    }
+
     /// <summary>Show 1, 2, 3, … on the left of a list's or IPO box's rows (display only). One undo step.</summary>
     public void SetNumberRows(Node n, bool numbered)
     {

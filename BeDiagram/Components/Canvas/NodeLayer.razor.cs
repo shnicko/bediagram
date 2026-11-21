@@ -15,6 +15,31 @@ namespace BeDiagram.Components.Canvas;
 /// <summary>Shapes: selection outline, halo, shadow, outline, side stripe, list / IPO body, icon, label (inline editor while editing), description, property dot, link and step badges, and ports (rows of a list / IPO box have their own).</summary>
 public partial class NodeLayer : CanvasLayer
 {
+    /// <summary>The node's own four ● ports, or none when the diagram shows row ports only and this node shows row
+    /// ports (<see cref="Diagram.RowPortsOnly"/>). A panel with no rows showing (empty, or a class drawn name only)
+    /// keeps its node ports, so it can always be connected.</summary>
+    List<(double, double)> NodePorts(Node n)
+    {
+        List<(double, double)> result = new List<(double, double)>();
+        if (D.RowPortsOnly && HasRowPorts(n))
+        {
+            return result;
+        }
+        foreach ((double, double) p in Ports(n))
+        {
+            result.Add(p);
+        }
+        return result;
+    }
+
+    static bool HasRowPorts(Node n)
+    {
+        foreach ((double X, double Y, string ItemId) port in n.Kind.RowPorts(n))
+        {
+            return true;
+        }
+        return false;
+    }
 
     List<NodeView> NodeViews()
     {

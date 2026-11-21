@@ -90,7 +90,7 @@
         {
             <g class="step-badge">@StepBadgeMarkup(v, step)</g>
         }
-        @foreach ((double px, double py) in Ports(v.N))
+        @foreach ((double px, double py) in NodePorts(v.N))
         {
             <circle class="port" cx="@F(px)" cy="@F(py)" r="6"
                     @onpointerdown="e => Input.PortDown(e, v.N.Id)" @onpointerdown:stopPropagation="true" />
