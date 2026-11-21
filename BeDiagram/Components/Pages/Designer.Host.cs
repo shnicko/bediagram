@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Components.Pages.Commands;
 using BeDiagram.Components.Pages.Gestures;
+using BeDiagram.Components.Pages.Views;
 using BeDiagram.Editing;
 using BeDiagram.Editing.Lanes;
 using BeDiagram.Services.Export;
@@ -258,5 +259,23 @@ public partial class Designer : IDesignerHost, ICanvasInput
     void ICanvasInput.EdgeDown(PointerEventArgs e, string id)
     {
         EdgeDown(e, id);
+    }
+
+    void ICanvasInput.HeadSpotDown(PointerEventArgs e, string id, bool atStart)
+    {
+        HeadSpotDown(e, id, atStart);
+    }
+
+    HeadPick? IDesignerHost.HeadPick
+    {
+        get
+        {
+            return headPick;
+        }
+    }
+
+    void IDesignerHost.CloseHeadPicker()
+    {
+        headPick = null;
     }
 }

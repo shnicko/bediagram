@@ -96,6 +96,13 @@ e2 = node(k, 'entity', 460, 1880, w=240, h=36 + comp(2), label="template", fille
 nodes[-1]["items"] = [member(32, "template_id", "attribute", "int", pk=True, fk=True), member(33, "name", "attribute", "varchar(100)")]
 edge(e, e1, e2, "elbow"); edges[-1].update({"fromItem": "i_0000001e", "toItem": "i_00000020"}); e += 1
 edge(e, cid, ifc, "straight"); e += 1
+# Connector ends (UML and crow's foot): saved as fromHead / toHead with "arrows": "none".
+edges[-2].update({"fromHead": "zeroOrMany", "toHead": "onlyOne", "arrows": "none"})
+edges[-1].update({"fromHead": "none", "toHead": "triangle", "arrows": "none", "pattern": "dashed"})
+edge(e, cid, enm, "elbow"); edges[-1].update({"fromHead": "filledDiamond", "toHead": "open", "arrows": "none", "weight": "heavy"}); e += 1
+edge(e, ifc, nmo, "straight"); edges[-1].update({"fromHead": "diamond", "toHead": "oneOrMany", "arrows": "none", "weight": "light", "color": "red"}); e += 1
+edge(e, e2, nmo, "elbow"); edges[-1].update({"fromHead": "one", "toHead": "zeroOrOne", "arrows": "none"}); e += 1
+edge(e, nmo, e1, "straight"); edges[-1].update({"fromHead": "many", "toHead": "arrow", "arrows": "none"}); e += 1
 d = {"schema": "bediagram/1", "name": "shapes", "defaultConnector": "elbow", "groups": [g, pkg], "nodes": nodes, "edges": edges, "textBoxes": [],
      "page": {"size": "none", "orientation": "landscape", "customW": 210, "customH": 297, "marginMm": 10, "fitOnExport": True}}
 for folder in sys.argv[1:]:

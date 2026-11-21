@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Heads;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Styles;
 using BeDiagram.Models.Text;
@@ -34,6 +35,19 @@ public static class UiSvg
         string icon = t.RoundIcon;
         return new($"<svg width=\"{size}\" height=\"{size}\" viewBox=\"-2 -2 28 28\"><circle cx=\"12\" cy=\"12\" r=\"12\" fill=\"{t.Fill}\" stroke=\"{t.Stroke}\" stroke-width=\"1.6\"/>"
                  + $"<g transform=\"translate(6,6) scale(0.5)\" fill=\"none\" stroke=\"{t.Stroke}\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{Icons.Get(icon)}</g></svg>");
+    }
+
+    /// <summary>A short line with one head (<see cref="IArrowHead"/>) on its right, or on its left for the start of a
+    /// connector, in the current text colour: the head pickers.</summary>
+    public static MarkupString HeadPreview(IArrowHead head, bool atStart)
+    {
+        string body = $"<line x1=\"2\" y1=\"8\" x2=\"40\" y2=\"8\" stroke=\"currentColor\" stroke-width=\"1.5\"/>{head.Preview(40, 8, "currentColor")}";
+        // The start of a connector: mirror it, so the head sits on the left as it does on the line's start.
+        if (atStart)
+        {
+            body = $"<g transform=\"translate(42,0) scale(-1,1)\">{body}</g>";
+        }
+        return new MarkupString($"<svg width=\"42\" height=\"16\" viewBox=\"0 0 42 16\">{body}</svg>");
     }
 
     /// <summary>A short sample of a line (weight, pattern, arrowheads) for the style buttons in the panels.</summary>

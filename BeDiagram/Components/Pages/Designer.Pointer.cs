@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using BeDiagram.Components.Pages.Gestures;
+using BeDiagram.Components.Pages.Views;
 using BeDiagram.Editing;
 using BeDiagram.Editing.Guides;
 using BeDiagram.Editing.Lanes;
@@ -20,8 +21,12 @@ public partial class Designer
         return new GesturePoint(e.ClientX, e.ClientY, x, y);
     }
 
+    /// <summary>The head picker open on a connector end, or null (<see cref="HeadSpotDown"/>).</summary>
+    HeadPick? headPick;
+
     void ItemDown(PointerEventArgs e, string id)
     {
+        headPick = null;
         if (PaintAt(e, id))
         {
             return;
@@ -164,6 +169,7 @@ public partial class Designer
 
     void EdgeDown(PointerEventArgs e, string id)
     {
+        headPick = null;
         if (PaintAt(e, id))
         {
             return;
@@ -179,6 +185,27 @@ public partial class Designer
         }
         Editor.Selection.Clear();
         Editor.SelectedEdgeId = id;
+    }
+
+    /// <summary>Pressing a connector's quick-change spot: select the connector and open the head picker for that end
+    /// where the spot is (a second press on the same spot closes it).</summary>
+    void HeadSpotDown(PointerEventArgs e, string id, bool atStart)
+    {
+        if (e.Button != 0)
+        {
+            StartPan(e);
+            return;
+        }
+        Editor.EndEdit();
+        Editor.Selection.Clear();
+        Editor.SelectedEdgeId = id;
+        if (headPick is not null && headPick.EdgeId == id && headPick.AtStart == atStart)
+        {
+            headPick = null;
+            return;
+        }
+        (double x, double y) = ToWorld(e.ClientX, e.ClientY);
+        headPick = new HeadPick(id, atStart, x, y);
     }
 
     /// <summary>Pressing a ● end of the selected connector: drag it to another side of its shape.</summary>
@@ -201,6 +228,7 @@ public partial class Designer
 
     void BgDown(PointerEventArgs e)
     {
+        headPick = null;
         Editor.EndEdit();
         if (e.Button != 0)
         {

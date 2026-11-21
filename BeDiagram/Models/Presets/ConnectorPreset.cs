@@ -1,11 +1,12 @@
 using System.Text.Json.Serialization;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Serialization;
 using BeDiagram.Models.Styles;
 
 namespace BeDiagram.Models.Presets;
 
 /// <summary>
-/// A saved connector style: elbow or straight, weight, line type, colour, arrowheads and label placement, and the
+/// A saved connector style: elbow or straight, weight, line type, colour, arrowheads (or UML / crow's-foot ends) and label placement, and the
 /// label when the user chose to save it (null = not saved). Connectors need two ends, so this style is applied from
 /// the connector panel and isn't placed from the sidebar.
 /// </summary>
@@ -17,6 +18,13 @@ public class ConnectorPreset
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Color { get; set; }
     public string Arrows { get; set; } = LineLook.ArrowEnd;
+    /// <summary>UML or crow's-foot ends (see <see cref="Edge.FromHead"/>); null when <see cref="Arrows"/> says it all.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonConverter(typeof(OptionalEnumNameConverter<ArrowHead>))]
+    public ArrowHead? FromHead { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonConverter(typeof(OptionalEnumNameConverter<ArrowHead>))]
+    public ArrowHead? ToHead { get; set; }
     public LabelOrient LabelOrient { get; set; } = LabelOrient.Along;
     public LabelPlace LabelPlace { get; set; } = LabelPlace.Inline;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -31,6 +39,8 @@ public class ConnectorPreset
         p.Pattern = e.Pattern;
         p.Color = e.Color;
         p.Arrows = e.Arrows;
+        p.FromHead = e.FromHead;
+        p.ToHead = e.ToHead;
         p.LabelOrient = e.LabelOrient;
         p.LabelPlace = e.LabelPlace;
         if (PresetTexts.KeepsLabel(text))
@@ -48,6 +58,8 @@ public class ConnectorPreset
         e.Pattern = Pattern;
         e.Color = Color;
         e.Arrows = Arrows;
+        e.FromHead = FromHead;
+        e.ToHead = ToHead;
         e.LabelOrient = LabelOrient;
         e.LabelPlace = LabelPlace;
         if (Label is not null)

@@ -3,18 +3,77 @@ using BeDiagram.Components.Pages;
 using BeDiagram.Editing;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Heads;
 using BeDiagram.Models.Presets;
+using BeDiagram.Models.Serialization;
 using BeDiagram.Services;
 
 namespace BeDiagram.Components.Panels;
 
-/// <summary>The side panel for one selected connector: line style, route reset, weight, pattern, colour, arrowheads, label text, direction, placement and position.</summary>
+/// <summary>The side panel for one selected connector: line style, route reset, weight, pattern, colour, arrowheads and ends (UML / crow's foot, relationships), label text, direction, placement and position.</summary>
 public partial class ConnectorPanel : DesignerPart
 {
     [Parameter, EditorRequired] public Edge Edge { get; set; } = default!;
 
     /// <summary>Quick labels offered under the label box (the empty one clears it).</summary>
     static readonly string[] EdgeLabelChips = { "Yes", "No", "Pass", "Fail", "" };
+
+    /// <summary>A plain arrow button is lit when the connector has no UML / crow's-foot head and its arrows match.</summary>
+    string ArrowsClass(string arrows)
+    {
+        if (Edge.FromHead is null && Edge.ToHead is null && Edge.Arrows == arrows)
+        {
+            return "on";
+        }
+        return "";
+    }
+
+    /// <summary>The head at one end as its saved name (the select's option values).</summary>
+    string HeadValue(bool atStart)
+    {
+        if (atStart)
+        {
+            return EnumNames.Of(Edge.StartHead());
+        }
+        return EnumNames.Of(Edge.EndHead());
+    }
+
+    static string HeadName(IArrowHead h)
+    {
+        return EnumNames.Of(h.Key);
+    }
+
+    string RelationshipClass(Relationship r)
+    {
+        if (DiagramEditor.IsRelationship(Edge, r))
+        {
+            return "chip on";
+        }
+        return "chip";
+    }
+
+    void StartPicked(ChangeEventArgs e)
+    {
+        ArrowHead? head = EnumNames.Parse<ArrowHead>(e.Value?.ToString());
+        if (head is not null)
+        {
+            Editor.SetEdgeHead(Edge, true, head.Value);
+        }
+    }
+
+    void EndPicked(ChangeEventArgs e)
+    {
+        ArrowHead? head = EnumNames.Parse<ArrowHead>(e.Value?.ToString());
+        if (head is not null)
+        {
+            Editor.SetEdgeHead(Edge, false, head.Value);
+        }
+    }
+
+    void Swap()
+    {
+        Editor.SwapHeads(Edge);
+    }
 
     /// <summary>What above / below mean for the label's text direction (the Label placement tooltip).</summary>
     static string LabelPlaceHint(Edge e)

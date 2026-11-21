@@ -43,7 +43,40 @@
 <div class="seg wide stacked">
     @foreach ((string k, string name) in LineLook.ArrowModes)
     {
-        <button class="@(Edge.Arrows == k ? "on" : "")" title="@name" @onclick="() => Editor.SetEdgeLook(Edge, x => x.Arrows = k)">@LinePreview(LineLook.Regular, LineLook.Solid, k) @name</button>
+        <button class="@ArrowsClass(k)" title="@name" @onclick="() => Editor.SetEdgeArrows(Edge, k)">@LinePreview(LineLook.Regular, LineLook.Solid, k) @name</button>
+    }
+</div>
+<label>Ends <InfoTip>What is drawn at each end: arrows, UML heads or crow's-foot cardinality. On the canvas, hover a connector and click the small dot near an end to change that end. ⇄ swaps the two ends.</InfoTip></label>
+<div class="head-ends">
+    <select id="head-start" value="@HeadValue(true)" title="Start (where the connector was drawn from)" @onchange="StartPicked">
+        @foreach (HeadFamily f in ArrowHeads.Families)
+        {
+            <optgroup label="@f.Name">
+                @foreach (IArrowHead h in f.Heads)
+                {
+                    <option value="@HeadName(h)">@h.Name</option>
+                }
+            </optgroup>
+        }
+    </select>
+    <button class="icon" title="Swap the start and end heads" @onclick="Swap">⇄</button>
+    <select id="head-end" value="@HeadValue(false)" title="End (where the connector points)" @onchange="EndPicked">
+        @foreach (HeadFamily f in ArrowHeads.Families)
+        {
+            <optgroup label="@f.Name">
+                @foreach (IArrowHead h in f.Heads)
+                {
+                    <option value="@HeadName(h)">@h.Name</option>
+                }
+            </optgroup>
+        }
+    </select>
+</div>
+<label>Relationship <InfoTip>Sets both ends and the line type in one click. UML: draw inheritance and realisation from the child to the parent, aggregation and composition from the whole to the part. Crow's foot: the start is where the connector was drawn from (use ⇄ if it was drawn the other way).</InfoTip></label>
+<div class="chips relationships">
+    @foreach (Relationship r in Relationships.All)
+    {
+        <button class="@RelationshipClass(r)" title="@r.Hint" @onclick="() => Editor.ApplyRelationship(Edge, r)">@r.Name</button>
     }
 </div>
 

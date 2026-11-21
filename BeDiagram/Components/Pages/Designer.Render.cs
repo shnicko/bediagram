@@ -3,6 +3,7 @@ using BeDiagram.Components.Pages.Gestures;
 using BeDiagram.Components.Pages.Views;
 using BeDiagram.Models;
 using BeDiagram.Models.Catalogue;
+using BeDiagram.Models.Heads;
 using BeDiagram.Models.Layout;
 using BeDiagram.Models.Routing;
 using BeDiagram.Models.Styles;
@@ -32,6 +33,15 @@ public partial class Designer
     MarkupString ArrowMarkerDefs => (MarkupString)string.Concat(D.Edges.Append(D.DefaultLook)
         .Select(x => (Colour: LineLook.Colour(x.Color), x.Weight)).Distinct()
         .Select(m => LineLook.MarkerDef(m.Colour, m.Weight)));
+
+    /// <summary>Markers for the UML and crow's-foot heads the connectors use (<see cref="ArrowHeads"/>).</summary>
+    MarkupString HeadMarkerDefs
+    {
+        get
+        {
+            return (MarkupString)ArrowHeads.MarkerDefs(D.Edges);
+        }
+    }
 
     /// <summary>The live connector drawn while dragging from a port (null when not connecting).</summary>
     ConnectPreview? LiveConnector()

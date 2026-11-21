@@ -36,4 +36,8 @@ public interface ICanvasInput
 
     /// <summary>Pressed on a connector or its label: select it.</summary>
     void EdgeDown(PointerEventArgs e, string id);
+
+    /// <summary>Pressed on a connector's quick-change spot near one end: select the connector and open the head
+    /// picker for that end (<paramref name="atStart"/>).</summary>
+    void HeadSpotDown(PointerEventArgs e, string id, bool atStart);
 }

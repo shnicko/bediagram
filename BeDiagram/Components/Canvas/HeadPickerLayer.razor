@@ -1,0 +1,22 @@
+@inherits CanvasLayer
+
+@if (Picked is not null)
+{
+    <g transform="@PickerTransform">
+        <foreignObject x="8" y="8" width="@F(Width)" height="@F(Height)">
+            <div class="head-picker" @onpointerdown:stopPropagation="true" @onwheel:stopPropagation="true">
+                <div class="head-picker-title"><span>@Title</span><button class="icon" title="Close" @onclick="Close">✕</button></div>
+                @foreach (HeadFamily f in ArrowHeads.Families)
+                {
+                    <div class="head-family">@f.Name</div>
+                    <div class="head-grid">
+                        @foreach (IArrowHead h in f.Heads)
+                        {
+                            <button class="@HeadClass(h)" title="@HeadTip(h)" data-head="@HeadName(h)" @onclick="() => Choose(h)">@HeadPreview(h, AtStart)</button>
+                        }
+                    </div>
+                }
+            </div>
+        </foreignObject>
+    </g>
+}
