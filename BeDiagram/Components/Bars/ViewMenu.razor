@@ -3,6 +3,7 @@
 <DropMenu Title="View" OpenMenu="@Host.OpenMenu" OpenMenuChanged="Host.SetOpenMenu">
     <div class="menu-settings" @onclick:stopPropagation="true">
         <label title="Show each shape's step number (the order is kept either way)"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
+        <label title="Lists, IPO boxes, classes and entities show connector ports on their rows only, not on the node itself"><input type="checkbox" checked="@D.RowPortsOnly" @onchange="RowPortsOnlyChanged" /> Row ports only</label>
     </div>
     <hr class="menu-divider" />
     <button @onclick="() => Run(Cmd.ZoomIn)">Zoom in<span class="menu-key">@KeyText(Cmd.ZoomIn)</span></button>

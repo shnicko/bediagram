@@ -50,6 +50,12 @@ public class Diagram : IJsonOnDeserialized
     /// lanes, resizing a lane by hand and "Fit to contents" still change the size. False is left out of the file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool LockLanes { get; set; }
+    /// <summary>Lists, IPO boxes, classes and entities show the ● connector ports on their rows only, not the four on
+    /// the node itself, to keep a busy canvas clean. A look only: connectors already on the node stay, and a connector
+    /// dropped on the node's title still connects to the whole node. A panel showing no rows (empty, or a class drawn name only) keeps its node ports.
+    /// False is left out of the file.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool RowPortsOnly { get; set; }
     public List<Group> Groups { get; set; } = new();
     public List<Node> Nodes { get; set; } = new();
     public List<Edge> Edges { get; set; } = new();

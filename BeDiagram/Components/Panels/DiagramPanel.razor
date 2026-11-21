@@ -37,6 +37,9 @@ else if (PageHeader.Shown(D))
 <label class="check"><input type="checkbox" checked="@D.ShowSteps" @onchange="e => Editor.SetShowSteps(e.Value is true)" /> Show step numbers</label>
 <button class="small" @onclick="Host.ShowStepOrder">Step order…</button>
 
+<h4>Connector ports <InfoTip>With <em>Row ports only</em>, lists, IPO boxes, classes and entities show the ● ports on their rows but not the four on the node itself, so a busy diagram is cleaner. Connectors already on a node stay; drop a connector on a node's title to connect to the whole node.</InfoTip></h4>
+<label class="check"><input type="checkbox" checked="@D.RowPortsOnly" @onchange="RowPortsOnlyChanged" /> Row ports only</label>
+
 <h4>Swim lanes <InfoTip>Each top-level group is a lane. <em>Arrange</em> lines the lanes up edge to edge and puts their shapes in columns by step number, so step 3 sits in the same column in every lane. Select two or more groups to arrange just those. Undo puts everything back.</InfoTip></h4>
 <div class="seg wide">
     <button title="@Cmd.LanesTip(Cmd.LanesAcross)" disabled="@(!CanRun(Cmd.LanesAcross))" @onclick="() => Run(Cmd.LanesAcross)">@IconSvg("rows-3", 16) Left → right</button>
