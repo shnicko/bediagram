@@ -278,4 +278,43 @@ public partial class Designer : IDesignerHost, ICanvasInput
     {
         headPick = null;
     }
+
+    void ICanvasInput.RowEditorDown(PointerEventArgs e, string id)
+    {
+        RowEditorDown(e, id);
+    }
+
+    bool IDesignerHost.RowEditorOpen
+    {
+        get
+        {
+            return rowEditorOpen;
+        }
+    }
+
+    double IDesignerHost.RowEditorLeft
+    {
+        get
+        {
+            return rowEditorShownLeft;
+        }
+    }
+
+    double IDesignerHost.RowEditorTop
+    {
+        get
+        {
+            return rowEditorShownTop;
+        }
+    }
+
+    void IDesignerHost.OpenRowEditor()
+    {
+        OpenRowEditor();
+    }
+
+    void IDesignerHost.CloseRowEditor()
+    {
+        CloseRowEditor();
+    }
 }

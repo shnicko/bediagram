@@ -314,6 +314,12 @@ is already working:
   them. Row sections are `RowSection` (shared with IPO boxes; was `IpoSection`). `Node.Abstract` and `Node.NameOnly`
   (conceptual view) are cleared by `NodeKind.Adopt` when a node stops being a model. A package is a group with
   `HeaderStyle = tag` (`Editor.AddPackageAt` / `AddPackageQuick`), not a node.
+- **Row editor window.** `RowEditorWindow` (`Components/Panels/`) is a floating part over the page showing the
+  selected panel node's rows as a table (`PanelKind.RowGroups(n)` gives the blocks and their `ModelRowFields`; one
+  `RowEditorRow` per row). The page keeps whether it's open and where (`Designer.RowEditor.cs`, `IDesignerHost.RowEditor…`);
+  its style is fixed while open so redraws don't undo the browser's own drag (designer.js, `[data-window-handle]`,
+  reported back by `OnWindowMoved`) or corner resize. Opened from the ⤢ on the node (`ICanvasInput.RowEditorDown`) or
+  the shape panel. `Diagram.RowPortsOnly` hides node ports on panels that show row ports (`NodeLayer.NodePorts`).
 - **Connector ends use the Strategy pattern.** What is drawn at an end is an `IArrowHead` (`Models/Heads/`), reached
   with `ArrowHeads.Of`. Read an end with `e.StartHead()` / `e.EndHead()` (never test `e.Arrows` directly: `fromHead` /
   `toHead` win over it) and set ends with `e.SetHeads` (via `Editor.SetEdgeHead` / `ApplyRelationship` /

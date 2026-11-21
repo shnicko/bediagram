@@ -120,4 +120,16 @@ public interface IDesignerHost
     HeadPick? HeadPick { get; }
 
     void CloseHeadPicker();
+
+    /// <summary>The row editor window is open (it shows the rows of the selected list, IPO box, class or entity).</summary>
+    bool RowEditorOpen { get; }
+
+    /// <summary>Screen position of the row editor window's top-left corner.</summary>
+    double RowEditorLeft { get; }
+
+    double RowEditorTop { get; }
+
+    void OpenRowEditor();
+
+    void CloseRowEditor();
 }

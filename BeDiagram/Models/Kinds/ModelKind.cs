@@ -141,6 +141,17 @@ public abstract class ModelKind : PanelKind
         return result;
     }
 
+    /// <summary>One block per compartment, with the structured fields that compartment uses.</summary>
+    public override List<RowGroup> RowGroups(Node n)
+    {
+        List<RowGroup> result = new List<RowGroup>();
+        foreach (RowSection s in Sections)
+        {
+            result.Add(new RowGroup(s, SectionName(s), Fields(s), RowsIn(n, s)));
+        }
+        return result;
+    }
+
     /// <summary>A new row after the last row of its compartment (the first compartment when none is given or this
     /// kind doesn't have it), keeping the file in drawing order.</summary>
     public override ListItem AddRow(Node n, RowSection? section)

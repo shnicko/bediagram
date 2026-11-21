@@ -1,0 +1,76 @@
+@inherits DesignerPart
+@using BeDiagram.Models.Kinds
+
+<div class="floating-window row-editor" style="@WindowStyle">
+    <div class="floating-title" data-window-handle title="Drag to move · drag the bottom-right corner to resize">
+        <span>@Heading</span>
+        <button class="icon" title="Close" @onclick="Close">✕</button>
+    </div>
+    <div class="floating-body">
+        @if (Selected is null)
+        {
+            <p class="muted">Select a list, IPO box, class or entity to edit its rows here. The window follows the selection.</p>
+        }
+        else
+        {
+            <div class="row-editor-head">
+                <label>@TitleLabel</label>
+                <input class="row-editor-title" value="@Selected.Label" @onfocus="Editor.Checkpoint" @oninput="TitleTyped" />
+                <div class="row-editor-options">
+                    @if (Model is not null)
+                    {
+                        <label class="check"><input type="checkbox" checked="@Selected.NameOnly" @onchange="NameOnlyChanged" /> Name only (conceptual view)</label>
+                        @if (Model.CanBeAbstract)
+                        {
+                            <label class="check"><input type="checkbox" checked="@Selected.Abstract" @onchange="AbstractChanged" /> Abstract</label>
+                        }
+                    }
+                    else
+                    {
+                        <label class="check"><input type="checkbox" checked="@Selected.NumberRows" @onchange="NumberRowsChanged" /> Number rows</label>
+                    }
+                </div>
+            </div>
+            @foreach (RowGroup g in Groups)
+            {
+                <div class="row-group">
+                    <div class="row-group-title">@g.Title <span class="muted">(@g.Rows.Count)</span></div>
+                    <table class="row-table">
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                @if (g.Fields.Visibility)
+                                {
+                                    <th title="Visibility: + public, - private, # protected, ~ package">Vis.</th>
+                                }
+                                <th>@NameHeader</th>
+                                @if (g.Fields.DataType)
+                                {
+                                    <th>@TypeHeader(g)</th>
+                                }
+                                @if (g.Fields.Multiplicity)
+                                {
+                                    <th title="Multiplicity, e.g. 1, 0..1, 1..*, *">Mult.</th>
+                                }
+                                @if (g.Fields.Keys)
+                                {
+                                    <th class="chk" title="Primary key">PK</th>
+                                    <th class="chk" title="Foreign key">FK</th>
+                                }
+                                <th title="@DescriptionTip">Description</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ((int number, ListItem item) in Numbered(g))
+                            {
+                                <RowEditorRow @key="item.Id" Editor="Editor" Node="Selected" Item="item" Number="number" Section="g.Section" Fields="g.Fields" OnChanged="Redraw" />
+                            }
+                        </tbody>
+                    </table>
+                    <button class="small" @onclick="() => Add(g)">+ Add to @g.Title</button>
+                </div>
+            }
+        }
+    </div>
+</div>

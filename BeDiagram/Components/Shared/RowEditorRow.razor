@@ -1,0 +1,36 @@
+@using BeDiagram.Models.Serialization
+<tr>
+    <td class="num">@Number</td>
+    @if (Fields.Visibility)
+    {
+        <td>
+            <select class="cell-vis" value="@VisibilityValue" title="Visibility" @onchange="VisibilityPicked">
+                <option value="">·</option>
+                @foreach (Visibility v in Visibilities.All)
+                {
+                    <option value="@EnumNames.Of(v)">@Visibilities.Display(v)</option>
+                }
+            </select>
+        </td>
+    }
+    <td><input class="cell-name" value="@Item.Label" placeholder="@NamePlaceholder" @onfocus="Editor.Checkpoint" @oninput="LabelTyped" /></td>
+    @if (Fields.DataType)
+    {
+        <td><input class="cell-type" value="@TypeValue" placeholder="@TypePlaceholder" @onfocus="Editor.Checkpoint" @oninput="TypeTyped" /></td>
+    }
+    @if (Fields.Multiplicity)
+    {
+        <td><input class="cell-mult" value="@MultiplicityValue" placeholder="mult." @onfocus="Editor.Checkpoint" @oninput="MultiplicityTyped" /></td>
+    }
+    @if (Fields.Keys)
+    {
+        <td class="chk"><input type="checkbox" checked="@Item.PrimaryKey" title="Primary key" @onchange="PrimaryKeyChanged" /></td>
+        <td class="chk"><input type="checkbox" checked="@Item.ForeignKey" title="Foreign key" @onchange="ForeignKeyChanged" /></td>
+    }
+    <td><input class="cell-desc" value="@DescriptionValue" placeholder="Description" @onfocus="Editor.Checkpoint" @oninput="DescriptionTyped" /></td>
+    <td class="row-actions">
+        <button class="icon" title="Move up" disabled="@(!Editor.CanMoveItem(Node, Item.Id, -1))" @onclick="Up">↑</button>
+        <button class="icon" title="Move down" disabled="@(!Editor.CanMoveItem(Node, Item.Id, 1))" @onclick="Down">↓</button>
+        <button class="icon" title="Remove this row (and connectors to it)" @onclick="Remove">✕</button>
+    </td>
+</tr>

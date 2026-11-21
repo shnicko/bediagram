@@ -40,4 +40,7 @@ public interface ICanvasInput
     /// <summary>Pressed on a connector's quick-change spot near one end: select the connector and open the head
     /// picker for that end (<paramref name="atStart"/>).</summary>
     void HeadSpotDown(PointerEventArgs e, string id, bool atStart);
+
+    /// <summary>Pressed on the ⤢ of a list, IPO box, class or entity: select it and open the row editor window.</summary>
+    void RowEditorDown(PointerEventArgs e, string id);
 }

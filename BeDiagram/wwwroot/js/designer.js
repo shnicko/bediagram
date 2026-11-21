@@ -73,6 +73,38 @@ function onDragStart(e) {
     }
 }
 
+// Floating windows (the row editor): dragged by an element marked data-window-handle, moved here so a drag doesn't
+// redraw the page on every move; where it was dropped goes back to .NET (OnWindowMoved) so a redraw keeps it there.
+let windowDrag = null;
+
+function onWindowDown(e) {
+    if (e.button !== 0 || !e.target.closest) return;
+    const handle = e.target.closest('[data-window-handle]');
+    if (!handle || e.target.closest('button, input, select, textarea')) return;
+    const win = handle.closest('.floating-window');
+    if (!win) return;
+    const r = win.getBoundingClientRect();
+    windowDrag = { win: win, dx: e.clientX - r.left, dy: e.clientY - r.top };
+    e.preventDefault();
+}
+
+function onWindowMove(e) {
+    if (!windowDrag) return;
+    const w = windowDrag.win;
+    // Keep the title on screen.
+    const left = Math.min(Math.max(0, e.clientX - windowDrag.dx), window.innerWidth - 80);
+    const top = Math.min(Math.max(0, e.clientY - windowDrag.dy), window.innerHeight - 40);
+    w.style.left = left + 'px';
+    w.style.top = top + 'px';
+}
+
+function onWindowUp() {
+    if (!windowDrag) return;
+    const r = windowDrag.win.getBoundingClientRect();
+    windowDrag = null;
+    if (dotnet) dotnet.invokeMethodAsync('OnWindowMoved', r.left, r.top);
+}
+
 function sendRect() {
     if (!dotnet || !canvas) return;
     const r = canvas.getBoundingClientRect();
@@ -89,6 +121,9 @@ export function init(ref, el) {
     // Firefox only starts an HTML5 drag when data is set; the dragged type is tracked in .NET.
     document.addEventListener('dragstart', onDragStart);
     window.addEventListener('resize', sendRect);
+    document.addEventListener('pointerdown', onWindowDown);
+    document.addEventListener('pointermove', onWindowMove);
+    document.addEventListener('pointerup', onWindowUp);
     new ResizeObserver(sendRect).observe(canvas);
     sendRect();
 }
@@ -99,6 +134,9 @@ export function dispose() {
     unsaved = false;
     document.removeEventListener('dragstart', onDragStart);
     window.removeEventListener('resize', sendRect);
+    document.removeEventListener('pointerdown', onWindowDown);
+    document.removeEventListener('pointermove', onWindowMove);
+    document.removeEventListener('pointerup', onWindowUp);
     if (canvas) canvas.removeEventListener('wheel', onWheel);
     dotnet = null;
 }
