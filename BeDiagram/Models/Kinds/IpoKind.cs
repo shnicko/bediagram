@@ -10,23 +10,44 @@ public class IpoKind : PanelKind
     static readonly IPanelLayout Columns = new IpoColumnsLayout();
     static readonly IPanelLayout Stacked = new IpoStackedLayout();
 
-    public override string? PaletteInnerPath =>
-        "M0,8 H48 M16,8 V28 M32,8 V28 M3,13 H13 V18 H3 Z M19,13 H29 V18 H19 Z M35,13 H45 V18 H35 Z";
+    public override string? PaletteInnerPath
+    {
+        get
+        {
+            return "M0,8 H48 M16,8 V28 M32,8 V28 M3,13 H13 V18 H3 Z M19,13 H29 V18 H19 Z M35,13 H45 V18 H35 Z";
+        }
+    }
 
-    public override IPanelLayout LayoutOf(Node n) => n.Stacked ? Stacked : Columns;
+    public override IPanelLayout LayoutOf(Node n)
+    {
+        if (n.Stacked)
+        {
+            return Stacked;
+        }
+        return Columns;
+    }
 
     /// <summary>The box is named for its process, so it starts as "Process" rather than the type's long name.</summary>
-    public override string NewLabel(Node n) => "Process";
+    public override string NewLabel(Node n)
+    {
+        return "Process";
+    }
 
-    public override string RetypeLabel(Node n) => "Process";
+    public override string RetypeLabel(Node n)
+    {
+        return "Process";
+    }
 
     /// <summary>One row per section to start with.</summary>
-    public override List<ListItem> NewItems() => new List<ListItem>
+    public override List<ListItem> NewItems()
     {
-        new() { Label = "Inputs", Section = RowSection.Input },
-        new() { Label = "Work done", Section = RowSection.Process },
-        new() { Label = "Results", Section = RowSection.Output },
-    };
+        return new List<ListItem>
+        {
+            new ListItem { Label = "Inputs", Section = RowSection.Input },
+            new ListItem { Label = "Work done", Section = RowSection.Process },
+            new ListItem { Label = "Results", Section = RowSection.Output },
+        };
+    }
 
     /// <summary>A new row "Item N" after the last row of its section, keeping the file in reading order.</summary>
     public override ListItem AddRow(Node n, RowSection? section)
@@ -41,8 +62,20 @@ public class IpoKind : PanelKind
 
     public override List<ListItem> Peers(Node n, string itemId)
     {
-        if (n.Items is null) return new List<ListItem>();
-        RowSection section = IpoSections.Of(n.Items.FirstOrDefault(i => i.Id == itemId)?.Section);
+        if (n.Items is null)
+        {
+            return new List<ListItem>();
+        }
+        ListItem? row = null;
+        foreach (ListItem i in n.Items)
+        {
+            if (i.Id == itemId)
+            {
+                row = i;
+                break;
+            }
+        }
+        RowSection section = IpoSections.Of(row?.Section);
         return n.RowsIn(section);
     }
 
@@ -50,7 +83,10 @@ public class IpoKind : PanelKind
     public override void TidyRows(Node n)
     {
         n.Items ??= NewItems();
-        foreach (ListItem i in n.Items) i.Section = IpoSections.Of(i.Section);
+        foreach (ListItem i in n.Items)
+        {
+            i.Section = IpoSections.Of(i.Section);
+        }
         n.Items = n.Items.OrderBy(i => IpoSections.IndexOf(i.Section)).ToList();
     }
 }
