@@ -59,8 +59,10 @@ BeDiagram/
   Components/Bars/        toolbar and menus, shape palette, status bar
   Components/Dialogs/     pop-ups (parameters in, EventCallbacks out)
   Components/Shared/      small reusable components
-  Cli/                    command-line tools — Command (CommandLine → ICliCommand: tidy, layout, export, check),
+  Cli/                    command-line tools — Command (CommandLine → ICliCommand: tidy, layout, export, check, mcp),
                           run through DiagramEditor with ConsoleEditorView; DiagramChecker
+  Mcp/                    MCP server for Claude Desktop / Code (`BeDiagram mcp`): McpServer (JSON-RPC over stdio, hand-written),
+                          IMcpTool — Command (McpToolRegistry), DiagramTool — Template Method; tools in Mcp/Tools/
   wwwroot/js/             designer.js (keys, wheel, focus, drag data), export.js (PNG rasterising)
   wwwroot/app.css         all styling
 tools/Check-OneTypePerFile.ps1

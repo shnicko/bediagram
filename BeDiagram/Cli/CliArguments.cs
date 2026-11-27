@@ -7,7 +7,7 @@ namespace BeDiagram.Cli;
 public class CliArguments
 {
     /// <summary>Options that are followed by a value.</summary>
-    static readonly HashSet<string> ValueOptions = new HashSet<string> { "out" };
+    static readonly HashSet<string> ValueOptions = new HashSet<string> { "out", "folder" };
 
     /// <summary>The paths given (files or folders), in order.</summary>
     public List<string> Paths { get; } = new List<string>();

@@ -80,6 +80,27 @@ public partial class DiagramEditor
 
     public void RemoveProp(Node n, string key) { Checkpoint(); n.Properties.Remove(key); }
 
+    /// <summary>
+    /// Sets a shape's label and / or description as one undo step (the MCP server's update_shape). Null leaves that
+    /// text as it is; a blank description removes it.
+    /// </summary>
+    public void SetNodeText(Node n, string? label, string? description)
+    {
+        if (label is null && description is null)
+        {
+            return;
+        }
+        Change();
+        if (label is not null)
+        {
+            n.Label = label;
+        }
+        if (description is not null)
+        {
+            n.Description = description;
+        }
+    }
+
     // ───────────── Inline text editing ─────────────
 
     public void BeginEdit(string id) => BeginEdit(id, checkpoint: true);

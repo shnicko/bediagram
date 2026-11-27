@@ -16,9 +16,13 @@ public class ConsoleEditorView : IEditorView
         Messages.Add(message);
     }
 
+    /// <summary>Where the editor treats the middle of the view as being: where a shape added with nothing selected
+    /// goes. (0, 0) unless the caller picks a spot (the MCP server's add_shape puts it below the drawing).</summary>
+    public (double X, double Y) Centre { get; set; } = (0, 0);
+
     public (double X, double Y) ViewCentre()
     {
-        return (0, 0);
+        return Centre;
     }
 
     public void CentreOn(double x, double y)

@@ -40,6 +40,50 @@ The exit code is 0 when everything worked and 1 when a file couldn't be read or 
 commands can run in a script. From a published build, run `BeDiagram.exe tidy …` (or `dotnet BeDiagram.dll tidy …`).
 A first argument that starts with `-` (such as `--urls`) still starts the web app.
 
+### Using BeDiagram from Claude (MCP server)
+
+`BeDiagram mcp` runs BeDiagram as a [Model Context Protocol](https://modelcontextprotocol.io) server, so Claude
+Desktop or Claude Code can read and edit your diagrams through tools, on your own Claude plan. Claude starts the
+program itself and talks to it over standard input / output, one JSON message per line. You don't run it by hand.
+It uses the same storage folder as the web app (`Storage:Folder`, or `--folder <path>`), so whatever Claude makes
+shows in the app's Open list. If a diagram is open in the app while Claude changes it, reopen it there to see the
+change. The app warns before saving over a file that changed.
+
+**Set it up (once):**
+
+1. Publish a copy to a folder that Visual Studio builds won't lock:
+   `dotnet publish BeDiagram -c Release -o C:\Tools\BeDiagram`. Republish after pulling changes.
+2. **Claude Desktop:** Settings → Developer → Edit Config, add the server to `claude_desktop_config.json`, then
+   quit and restart Claude Desktop:
+   ```json
+   {
+     "mcpServers": {
+       "bediagram": {
+         "command": "C:\\Tools\\BeDiagram\\BeDiagram.exe",
+         "args": ["mcp"]
+       }
+     }
+   }
+   ```
+   **Claude Code:** `claude mcp add bediagram -- C:\Tools\BeDiagram\BeDiagram.exe mcp`
+3. Ask Claude something like "list my BeDiagram diagrams". It asks before the first use of each tool that changes
+   files. Server messages are in Claude Desktop's MCP logs (`%APPDATA%\Claude\logs\mcp-server-bediagram.log`).
+
+| Tool | What it does |
+|---|---|
+| `list_diagrams` | Diagram names, newest first |
+| `describe_diagram` | A short outline with every id: shapes (type, step, label, position, rows), groups, text boxes, connectors |
+| `get_diagram_json` | The whole file JSON |
+| `check_diagram` | The `check` command's problems |
+| `new_diagram` | An empty diagram: page size, orientation, flow direction, title, description |
+| `add_shape` | A shape by type, placed and joined after an item like quick-add (optional connector label) |
+| `connect` | A connector between two items, or rows of panels |
+| `update_shape` | A shape's label, description or type |
+| `save_diagram_json` | Create or replace (`overwrite`) a diagram from file JSON, validated like Edit as JSON, then checked |
+| `tidy_connectors` | Tidy connectors, as the `tidy` command |
+| `auto_layout` | Auto-layout or swim lanes, as the `layout` command |
+| `export_diagram` | SVG, PDF or Mermaid next to the diagram (Mermaid text is returned too) |
+
 ## Where files go
 
 By default: `Documents\BeDiagram\` (Windows) or `~/Documents/BeDiagram/` (macOS/Linux).
@@ -268,7 +312,11 @@ BeDiagram/                   the web app project
                                the copied style: CopiedStyle (look + a copy of the item for Paste special), PasteParts
   Cli/                         the command-line tools (Command pattern): CommandLine picks an ICliCommand — TidyCommand,
                                LayoutCommand, ExportCommand, CheckCommand (DiagramChecker) — run through DiagramEditor
-                               with a ConsoleEditorView, the same editing code as the app
+                               with a ConsoleEditorView, the same editing code as the app; McpCommand starts the MCP server
+  Mcp/                         the MCP server for Claude: McpServer (JSON-RPC over stdio, no library), IMcpTool (Command
+                               pattern; McpToolRegistry lists them), DiagramTool (Template Method: open → edit → save),
+                               DiagramWorkspace (the storage folder), DiagramOutline, McpInstructions
+  Mcp/Tools/                   one class per tool (ListDiagramsTool, AddShapeTool, SaveDiagramJsonTool, …)
   Services/DiagramStore.cs     local folder save / open / list / delete, subfolders (names are paths like `Folder/Name`)
   Services/StylePresetStore.cs the saved styles, shared by every diagram (`styles.json` in the storage folder)
   Services/StyleClipboard.cs   the copied style (Copy style, format painter), shared by every tab and window, not saved
