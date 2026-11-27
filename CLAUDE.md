@@ -59,6 +59,8 @@ BeDiagram/
   Components/Bars/        toolbar and menus, shape palette, status bar
   Components/Dialogs/     pop-ups (parameters in, EventCallbacks out)
   Components/Shared/      small reusable components
+  Cli/                    command-line tools — Command (CommandLine → ICliCommand: tidy, layout, export, check),
+                          run through DiagramEditor with ConsoleEditorView; DiagramChecker
   wwwroot/js/             designer.js (keys, wheel, focus, drag data), export.js (PNG rasterising)
   wwwroot/app.css         all styling
 tools/Check-OneTypePerFile.ps1
@@ -350,6 +352,9 @@ is already working:
     Playwright (pre-installed: `NODE_PATH=$(npm root -g) node test.js`). Take screenshots and look at them; check the
     browser console and the exported SVG / Mermaid files (`mmdc` validates Mermaid).
   - Tell Nick plainly that the .NET 10 build was compile-checked but click-tested on .NET 8.
+- **Generated or hand-edited diagram files:** use the command-line tools on the .NET 8 build, no browser needed:
+  `dotnet <build>/BeDiagram.dll check <folder>` (problems), `tidy <folder>` (Tidy connectors and save),
+  `layout <file> [--right|--down|--lanes]`, `export <folder> --pdf --svg [--out dir]` to look at the result.
 - **Regression suites:** `tools/regression/run.sh [base-ref]` builds master (or `base-ref`) and the working copy, runs
   the suites on both, and prints `ALL THE SAME` or the steps that differ. A full run takes ~15 min: run it in the
   background and poll. Refactors must come out ALL THE SAME; features should differ only where they change things.

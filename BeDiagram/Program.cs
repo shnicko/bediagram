@@ -1,8 +1,16 @@
+using BeDiagram.Cli;
 using BeDiagram.Components;
 using BeDiagram.Components.Pages.Commands;
 using BeDiagram.Services;
 using BeDiagram.Services.Export;
 using BeDiagram.Services.Export.Pdf;
+
+// A command as the first argument (tidy, layout, export, check, help) runs the command-line tool instead of the web app.
+CommandLine commandLine = new CommandLine();
+if (commandLine.Handles(args))
+{
+    return await commandLine.RunAsync(args, Console.Out);
+}
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -57,3 +65,4 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+return 0;
