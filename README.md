@@ -15,6 +15,31 @@ dotnet run
 
 Then open http://localhost:5070. Requires the .NET 10 SDK.
 
+### Command-line tools
+
+Give a command as the first argument and BeDiagram works on diagram files directly, without starting the web app.
+Each command takes diagram files and / or folders (folders are searched for `*.diagram.json`, including subfolders):
+
+```
+cd BeDiagram
+dotnet run -- tidy   "C:\Users\Nick\Documents\BeDiagram\DEXP"          # Tidy connectors in every diagram, then save
+dotnet run -- layout "My flow.diagram.json" --right                    # Auto-layout by step (or --lanes [--tidy]), then save
+dotnet run -- export "DEXP" --pdf --svg --mermaid --out exports        # the page as PDF / SVG / Mermaid (default: SVG + PDF)
+dotnet run -- check  "DEXP" --quiet                                    # report problems, change nothing
+dotnet run -- help
+```
+
+| Command | What it does |
+|---|---|
+| `tidy` | Arrange → Tidy connectors on every connector, as in the app with nothing selected. Saves only when a route changed. `--dry-run` reports without saving. |
+| `layout` | Arrange → Auto-layout by step in the diagram's flow direction, or `--right` / `--down`. `--lanes` arranges the top-level groups as swim lanes instead (add `--tidy` to tidy after). `--dry-run` reports without saving. |
+| `export` | The whole page (or drawing extents) through the Export menu's own formats, written next to each diagram or into `--out`. PNG is drawn by the browser, so it stays in the app. |
+| `check` | Lists repeated ids, connectors and row ends that point nowhere, missing groups, connectors through shapes or their text, items outside the page's drawing area, shapes on top of each other, and list / IPO rows cut short with "…". `--quiet` lists only files with problems. |
+
+The exit code is 0 when everything worked and 1 when a file couldn't be read or `check` found a problem, so the
+commands can run in a script. From a published build, run `BeDiagram.exe tidy …` (or `dotnet BeDiagram.dll tidy …`).
+A first argument that starts with `-` (such as `--urls`) still starts the web app.
+
 ## Where files go
 
 By default: `Documents\BeDiagram\` (Windows) or `~/Documents/BeDiagram/` (macOS/Linux).
@@ -241,6 +266,9 @@ BeDiagram/                   the web app project
   Models/ListItem.cs           one row of a list / IPO / class / entity node
   Models/Presets/              saved styles: StylePreset (name + one of ShapePreset, GroupPreset, TextBoxPreset, ConnectorPreset), PresetText;
                                the copied style: CopiedStyle (look + a copy of the item for Paste special), PasteParts
+  Cli/                         the command-line tools (Command pattern): CommandLine picks an ICliCommand — TidyCommand,
+                               LayoutCommand, ExportCommand, CheckCommand (DiagramChecker) — run through DiagramEditor
+                               with a ConsoleEditorView, the same editing code as the app
   Services/DiagramStore.cs     local folder save / open / list / delete, subfolders (names are paths like `Folder/Name`)
   Services/StylePresetStore.cs the saved styles, shared by every diagram (`styles.json` in the storage folder)
   Services/StyleClipboard.cs   the copied style (Copy style, format painter), shared by every tab and window, not saved
