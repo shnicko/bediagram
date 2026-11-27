@@ -12,6 +12,7 @@ public class CommandLine
         new LayoutCommand(),
         new ExportCommand(),
         new CheckCommand(),
+        new McpCommand(),
     };
 
     /// <summary>
